@@ -3,9 +3,6 @@
 
 #include "forchess/board.h"
 
-/*
- * NOTE:  This macro can also be used as an l-value.
- */
 #define FC_BITBOARD(board, player, piece) (board[player * 6 + piece])
 
 int fc_set_piece (fc_board_t *board,
@@ -104,10 +101,10 @@ int fc_setup_board (fc_board_t *board, const char *filename)
 }
 
 #define FC_ALL_PIECES(b, p) \
-	(b[p] | b[p+1] | b[p+2] | b[p+3] | b[p+4] | b[p+5])
+	(b[6*p] | b[6*p+1] | b[6*p+2] | b[6*p+3] | b[6*p+4] | b[6*p+5])
 
-#define FC_ALL_ALLIES(board, player) \
-	(FC_ALL_PIECES(board, player) | FC_ALL_PIECES(board, (player + 2) % 4))
+#define FC_ALL_ALLIES(b, p) \
+	(FC_ALL_PIECES(b, p) | FC_ALL_PIECES(b, ((p + 2) % 4)))
 
 /*
  * Simply determines if the space 'm' is empty or occupied by a piece belonging
@@ -118,69 +115,100 @@ static inline int may_capture (fc_board_t *b, fc_player_t p, uint64_t m)
 	return !(m & FC_ALL_ALLIES((*b), p));
 }
 
+/*
+ * This function updates the move list with the new move if the piece in
+ * question is allowed to move to the given space.
+ */
+static inline void move_if_valid (fc_board_t *board,
+				  fc_mlist_t *moves,
+				  fc_player_t player,
+				  fc_piece_t type,
+				  uint64_t piece,
+				  uint64_t space)
+{
+	if (space && may_capture(board, player, space)) {
+		fc_mlist_append(moves, player, type, piece | space);
+	}
+}
+
 #define FC_LEFT_COL  (UINT64_C(0x0101010101010101))
 #define FC_RIGHT_COL (UINT64_C(0x8080808080808080))
 
 /* assuming there is only one king per player */
-int fc_get_king_moves (fc_board_t *board, fc_mlist_t *moves, fc_player_t player)
+void fc_get_king_moves (fc_board_t *board, fc_mlist_t *moves, fc_player_t player)
 {
 	uint64_t king = FC_BITBOARD((*board), player, FC_KING);
 	if (!king) {
-		return 0;
+		return;
 	}
 
-	int i = 0;
-	uint64_t space;
 	if (!(king & FC_LEFT_COL)) {
-		space = king << 7;
-		if (space && may_capture(board, player, space)) {
-			fc_mlist_append(moves, player, FC_KING, king | space);
-		}
-		space = king >> 1;
-		if (may_capture(board, player, space)) {
-			fc_mlist_append(moves, player, FC_KING, king | space);
-		}
-		space = king >> 9;
-		if (space && may_capture(board, player, space)) {
-			fc_mlist_append(moves, player, FC_KING, king | space);
-		}
+		move_if_valid(board, moves, player, FC_KING, king, king << 7);
+		move_if_valid(board, moves, player, FC_KING, king, king >> 1);
+		move_if_valid(board, moves, player, FC_KING, king, king >> 9);
 	}
-	space = king << 8;
-	if (space && may_capture(board, player, space)) {
-		fc_mlist_append(moves, player, FC_KING, king | space);
-	}
-	space = king >> 8;
-	if (space && may_capture(board, player, space)) {
-		fc_mlist_append(moves, player, FC_KING, king | space);
-	}
+
+	move_if_valid(board, moves, player, FC_KING, king, king << 8);
+	move_if_valid(board, moves, player, FC_KING, king, king >> 8);
+
 	if (!(king & FC_RIGHT_COL)) {
-		space = king << 9;
-		if (space && may_capture(board, player, space)) {
-			fc_mlist_append(moves, player, FC_KING, king | space);
-		}
-		space = king << 1;
-		if (may_capture(board, player, space)) {
-			fc_mlist_append(moves, player, FC_KING, king | space);
-		}
-		space = king >> 7;
-		if (space && may_capture(board, player, space)) {
-			fc_mlist_append(moves, player, FC_KING, king | space);
-		}
+		move_if_valid(board, moves, player, FC_KING, king, king << 9);
+		move_if_valid(board, moves, player, FC_KING, king, king << 1);
+		move_if_valid(board, moves, player, FC_KING, king, king >> 7);
 	}
-	return 1;
 }
 
 #define FC_2LEFT_COL  (UINT64_C(0x0202020202020202))
 #define FC_2RIGHT_COL (UINT64_C(0x4040404040404040))
 
-int fc_get_knight_moves (fc_board_t *board,
+/*
+ * Cycles through each piece (bit) on the bitboard.
+ * piece is the bit
+ * x is a bitboard
+ */
+#define FC_FOREACH(piece, x) \
+	for(piece = (x & (~x + 1)); x; x ^= piece, piece = (x & (~x + 1)))
+
+void fc_get_knight_moves (fc_board_t *board,
 			 fc_mlist_t *moves,
 			 fc_player_t player)
 {
-	/* TODO this whole function */
+	uint64_t knight, bb = FC_BITBOARD((*board), player, FC_KNIGHT);
+	if (!bb) {
+		return;
+	}
+
+	FC_FOREACH(knight, bb)
+	{
+		if (!(knight & (FC_LEFT_COL | FC_2LEFT_COL))) {
+			move_if_valid(board, moves, player, FC_KNIGHT, knight,
+				      knight << 6);
+			move_if_valid(board, moves, player, FC_KNIGHT, knight,
+				      knight >> 10);
+		}
+		if (!(knight & FC_LEFT_COL)) {
+			move_if_valid(board, moves, player, FC_KNIGHT, knight,
+				      knight << 15);
+			move_if_valid(board, moves, player, FC_KNIGHT, knight,
+				      knight >> 17);
+		}
+		if (!(knight & (FC_RIGHT_COL | FC_2RIGHT_COL))) {
+			move_if_valid(board, moves, player, FC_KNIGHT, knight,
+				      knight << 10);
+			move_if_valid(board, moves, player, FC_KNIGHT, knight,
+				      knight >> 6);
+		}
+		if (!(knight & FC_RIGHT_COL)) {
+			move_if_valid(board, moves, player, FC_KNIGHT, knight,
+				      knight << 17);
+			move_if_valid(board, moves, player, FC_KNIGHT, knight,
+				      knight >> 15);
+		}
+	}
 }
 
-int fc_get_moves (fc_board_t *board, fc_mlist_t *moves, fc_player_t player)
+void fc_get_moves (fc_board_t *board, fc_mlist_t *moves, fc_player_t player)
 {
-	return fc_get_king_moves(board, moves, player);
+	fc_get_king_moves(board, moves, player);
+	fc_get_knight_moves(board, moves, player);
 }

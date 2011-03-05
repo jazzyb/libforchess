@@ -37,8 +37,9 @@ int fc_get_piece (fc_board_t *board,
 		  fc_player_t *player,
 		  fc_piece_t *piece,
 		  int row, int col);
-/* TODO fix the code for the move list structure */
-int fc_get_moves (fc_board_t *board, fc_mlist_t *moves, fc_player_t player);
+/* NOTE because there is no return value for this function, if one of the mlist
+ * functions fails, the user will not know about it. */
+void fc_get_moves (fc_board_t *board, fc_mlist_t *moves, fc_player_t player);
 /* other possible functions for the API
 int fc_get_removes (fc_board_t *board,
 		    fc_player_t player,

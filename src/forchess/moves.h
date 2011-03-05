@@ -41,5 +41,8 @@ int fc_mlist_append (fc_mlist_t *list,
 int fc_mlist_copy (fc_mlist_t *dst, fc_mlist_t *src);
 int fc_mlist_cat  (fc_mlist_t *dst, fc_mlist_t *src);
 void fc_mlist_free (fc_mlist_t *list);
+int fc_mlist_length (fc_mlist_t *list);
+void fc_mlist_clear (fc_mlist_t *list);
+fc_move_t *fc_mlist_get (fc_mlist_t *list, int index);
 
 #endif

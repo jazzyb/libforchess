@@ -111,3 +111,31 @@ void fc_mlist_free (fc_mlist_t *list)
 	free(list->moves);
 	list->index = list->size = 0;
 }
+
+/*
+ * Return the length of the list.
+ */
+int fc_mlist_length (fc_mlist_t *list)
+{
+	return list->index;
+}
+
+/*
+ * Clear the entries in the list so it can be reused.
+ */
+void fc_mlist_clear (fc_mlist_t *list)
+{
+	//bzero(list->moves, list->size * sizeof(fc_move_t));
+	list->index = 0;
+}
+
+/*
+ * Return a pointer to the move at index.
+ */
+fc_move_t *fc_mlist_get (fc_mlist_t *list, int index)
+{
+	if (index >= list->index) {
+		return NULL;
+	}
+	return list->moves + index;
+}
