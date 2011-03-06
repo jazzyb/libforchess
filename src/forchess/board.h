@@ -19,33 +19,34 @@ typedef uint64_t fc_board_t[FC_TOTAL_BITBOARDS];
 /*
  * Initializes the board based on a config file.
  */
-int fc_setup_board (fc_board_t *board, const char *filename);
+int fc_board_setup (fc_board_t *board, const char *filename);
 
 /*
  * Places the given piece on the board.
  */
-int fc_set_piece (fc_board_t *board,
-		  fc_player_t player,
-		  fc_piece_t piece,
-		  int row, int col);
+int fc_board_set_piece (fc_board_t *board,
+			fc_player_t player,
+			fc_piece_t piece,
+			int row, int col);
 
 /*
  * Sets the value of the player and piece to that of the piece at the given
  * location.
  */
-int fc_get_piece (fc_board_t *board,
+int fc_board_get_piece (fc_board_t *board,
 		  fc_player_t *player,
 		  fc_piece_t *piece,
 		  int row, int col);
 /* NOTE because there is no return value for this function, if one of the mlist
  * functions fails, the user will not know about it. */
-void fc_get_moves (fc_board_t *board, fc_mlist_t *moves, fc_player_t player);
+void fc_board_get_moves (fc_board_t *board,
+			 fc_mlist_t *moves,
+			 fc_player_t player);
+void fc_board_get_removes (fc_board_t *board,
+			  fc_mlist_t *moves,
+			  fc_player_t player);
+int fc_board_make_move (fc_board_t *board, fc_move_t *move);
 /* other possible functions for the API
-int fc_get_removes (fc_board_t *board,
-		    fc_player_t player,
-		    fc_move_t *moves,
-		    int moves_len);
-int fc_make_move (fc_board_t *board, fc_move_t *move);
 #define FC_CHECK 1
 #define FC_CHECKMATE 2
 int fc_is_king_in_check (fc_board_t *board, fc_player_t player);

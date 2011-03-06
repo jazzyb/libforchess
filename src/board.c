@@ -5,10 +5,10 @@
 
 #define FC_BITBOARD(board, player, piece) (board[player * 6 + piece])
 
-int fc_set_piece (fc_board_t *board,
-		  fc_player_t player,
-		  fc_piece_t piece,
-		  int row, int col)
+int fc_board_set_piece (fc_board_t *board,
+			fc_player_t player,
+			fc_piece_t piece,
+			int row, int col)
 {
 	/*
 	 * FIXME make sure there is not already a piece on this position.
@@ -19,10 +19,14 @@ int fc_set_piece (fc_board_t *board,
 	return 1;
 }
 
-int fc_get_piece (fc_board_t *board,
-		  fc_player_t *player,
-		  fc_piece_t *piece,
-		  int row, int col)
+/*
+ * Returns 1 and sets the values of player and piece if it found a piece at the
+ * given row and col.  Returns 0 if the space was empty.
+ */
+int fc_board_get_piece (fc_board_t *board,
+			fc_player_t *player,
+			fc_piece_t *piece,
+			int row, int col)
 {
 	uint64_t bb = ((uint64_t)1) << (row * 8 + col);
 	/* NOTE: I'm using 24 below instead of FC_TOTAL_BITBOARDS because I
@@ -47,7 +51,7 @@ int fc_get_piece (fc_board_t *board,
  * two different pieces are allowed to occupy the same space; we should
  * probably fail if that is the case.  Also think about adding errno.
  */
-int fc_setup_board (fc_board_t *board, const char *filename)
+int fc_board_setup (fc_board_t *board, const char *filename)
 {
 	FILE *fp = fopen(filename, "r");
 	if (!fp) {
@@ -93,7 +97,7 @@ int fc_setup_board (fc_board_t *board, const char *filename)
 			return 0;
 		}
 
-		fc_set_piece(board, player, p, row - '1', col - 'a');
+		fc_board_set_piece(board, player, p, row - '1', col - 'a');
 		read = fscanf(fp, "%d %c %c%c \n", &player, &piece, &col, &row);
 	}
 	fclose(fp);
@@ -519,11 +523,89 @@ void fc_get_queen_moves (fc_board_t *board,
 	}
 }
 
-void fc_get_moves (fc_board_t *board, fc_mlist_t *moves, fc_player_t player)
+void fc_board_get_moves (fc_board_t *board,
+			 fc_mlist_t *moves,
+			 fc_player_t player)
 {
 	fc_get_king_moves(board, moves, player);
-	fc_get_knight_moves(board, moves, player);
 	fc_get_pawn_moves(board, moves, player);
+	fc_get_knight_moves(board, moves, player);
 	fc_get_bishop_moves(board, moves, player);
 	fc_get_rook_moves(board, moves, player);
+	fc_get_queen_moves(board, moves, player);
+}
+
+/*
+ * Return the pieces that the player is allowed to remove (i.e. all the pieces
+ * the player has).
+ */
+void fc_board_get_removes (fc_board_t *board,
+			   fc_mlist_t *moves,
+			   fc_player_t player)
+{
+	for (fc_piece_t type = FC_PAWN; type <= FC_KING; type++) {
+		uint64_t piece, bb = FC_BITBOARD((*board), player, type);
+		FC_FOREACH(piece, bb) {
+			fc_mlist_append(moves, player, type, piece);
+		}
+	}
+}
+
+/*
+ * Give all player 'from's pieces to player 'to'.
+ */
+static void fc_convert_pieces (fc_board_t *board,
+			       fc_player_t from,
+			       fc_player_t to)
+{
+	for (fc_piece_t i = FC_PAWN + 1; i < FC_KING; i++) {
+		FC_BITBOARD((*board), to, i) |= FC_BITBOARD((*board), from, i);
+		FC_BITBOARD((*board), from, i) = UINT64_C(0);
+	}
+}
+
+/*
+ * Update the board with the given move.
+ */
+int fc_board_make_move (fc_board_t *board, fc_move_t *move)
+{
+	/*
+	 * Move the player's piece; then get the second bit (b) that represents
+	 * the captured piece.  If there is no second bit, then we only removed
+	 * a piece.
+	 */
+	FC_BITBOARD((*board), move->player, move->piece) ^= move->move;
+	uint64_t b = FC_BITBOARD((*board), move->player, move->piece) &
+		     move->move;
+	if (!b) {
+		return 1;
+	}
+
+	/*
+	 * Cycle through the bitboards of all our enemies assuming that we
+	 * aren't trying to capture our own allies.
+	 */
+	fc_player_t enemy = (move->player + 1) % 4;
+	for (fc_piece_t type = FC_PAWN; type <= FC_KING; type++) {
+		if (b & FC_BITBOARD((*board), enemy, type)) {
+			FC_BITBOARD((*board), enemy, type) ^= b;
+			if (type == FC_KING) {
+				fc_convert_pieces(board, enemy, move->player);
+			}
+			return 1;
+		}
+	}
+
+	enemy = (enemy + 2) % 4;
+	for (fc_piece_t type = FC_PAWN; type <= FC_KING; type++) {
+		if (b & FC_BITBOARD((*board), enemy, type)) {
+			FC_BITBOARD((*board), enemy, type) ^= b;
+			if (type == FC_KING) {
+				fc_convert_pieces(board, enemy, move->player);
+			}
+			return 1;
+		}
+	}
+
+	return 1;
 }
