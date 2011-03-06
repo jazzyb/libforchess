@@ -118,6 +118,10 @@ static inline int may_move_to (fc_board_t *b, fc_player_t p, uint64_t m)
 /*
  * This function updates the move list with the new move if the piece in
  * question is allowed to move to the given space.
+ *
+ * NOTE: This function is only used for king and knight; the corresponding
+ * function for pawns is called pawn_move_if_valid() and move_and_continue()
+ * for bishop, rook, and queen.
  */
 static inline void move_if_valid (fc_board_t *board,
 				  fc_mlist_t *moves,
@@ -287,29 +291,45 @@ void fc_get_pawn_moves (fc_board_t *board,
 	}
 }
 
-/* FIXME The following static functions are pretty repetetive, but I've not
- * sure there is a straight-forward way of correcting that. */
+/*
+ * This function appends a move to the mlist if piece is allowed to move to
+ * space.  Returns 1 if the calling function may continue evaluating moves
+ * (i.e. the space is empty); 0 otherwise.
+ */
+static inline int move_and_continue (fc_board_t *board,
+					  fc_mlist_t *moves,
+					  fc_player_t player,
+					  fc_piece_t type,
+					  uint64_t piece,
+					  uint64_t space)
+{
+	if (is_empty(board, space)) {
+		fc_mlist_append(moves, player, type, piece | space);
+		return 1;
+	} else if (is_occupied_by_enemy(board, player, space)) {
+		fc_mlist_append(moves, player, type, piece | space);
+	}
+	return 0;
+}
+
 static void fc_get_northwest_moves (fc_board_t *board,
 				    fc_mlist_t *moves,
 				    fc_player_t player,
 				    fc_piece_t type,
 				    uint64_t piece)
 {
-	uint64_t i = piece << 7;
-	while (i) {
-		if (is_empty(board, i)) {
-			fc_mlist_append(moves, player, type, piece | i);
-		} else if (is_occupied_by_enemy(board, player, i)) {
-			fc_mlist_append(moves, player, type, piece | i);
-			break;
-		} else {
+	if (piece & FC_LEFT_COL) {
+		return;
+	}
+
+	for (uint64_t i = piece << 7; i; i <<= 7) {
+		if (!move_and_continue(board, moves, player, type, piece, i)) {
 			break;
 		}
 
 		if (i & FC_LEFT_COL) {
 			break;
 		}
-		i <<= 7;
 	}
 }
 
@@ -319,21 +339,18 @@ static void fc_get_southwest_moves (fc_board_t *board,
 				    fc_piece_t type,
 				    uint64_t piece)
 {
-	uint64_t i = piece >> 9;
-	while (i) {
-		if (is_empty(board, i)) {
-			fc_mlist_append(moves, player, type, piece | i);
-		} else if (is_occupied_by_enemy(board, player, i)) {
-			fc_mlist_append(moves, player, type, piece | i);
-			break;
-		} else {
+	if (piece & FC_LEFT_COL) {
+		return;
+	}
+
+	for (uint64_t i = piece >> 9; i; i >>= 9) {
+		if (!move_and_continue(board, moves, player, type, piece, i)) {
 			break;
 		}
 
 		if (i & FC_LEFT_COL) {
 			break;
 		}
-		i >>= 9;
 	}
 }
 
@@ -343,21 +360,18 @@ static void fc_get_northeast_moves (fc_board_t *board,
 				    fc_piece_t type,
 				    uint64_t piece)
 {
-	uint64_t i = piece << 9;
-	while (i) {
-		if (is_empty(board, i)) {
-			fc_mlist_append(moves, player, type, piece | i);
-		} else if (is_occupied_by_enemy(board, player, i)) {
-			fc_mlist_append(moves, player, type, piece | i);
-			break;
-		} else {
+	if (piece & FC_RIGHT_COL) {
+		return;
+	}
+
+	for (uint64_t i = piece << 9; i; i <<= 9) {
+		if (!move_and_continue(board, moves, player, type, piece, i)) {
 			break;
 		}
 
 		if (i & FC_RIGHT_COL) {
 			break;
 		}
-		i <<= 9;
 	}
 }
 
@@ -367,21 +381,18 @@ static void fc_get_southeast_moves (fc_board_t *board,
 				    fc_piece_t type,
 				    uint64_t piece)
 {
-	uint64_t i = piece >> 7;
-	while (i) {
-		if (is_empty(board, i)) {
-			fc_mlist_append(moves, player, type, piece | i);
-		} else if (is_occupied_by_enemy(board, player, i)) {
-			fc_mlist_append(moves, player, type, piece | i);
-			break;
-		} else {
+	if (piece & FC_RIGHT_COL) {
+		return;
+	}
+
+	for (uint64_t i = piece >> 7; i; i >>= 7) {
+		if (!move_and_continue(board, moves, player, type, piece, i)) {
 			break;
 		}
 
 		if (i & FC_RIGHT_COL) {
 			break;
 		}
-		i >>= 7;
 	}
 }
 
@@ -402,9 +413,117 @@ void fc_get_bishop_moves (fc_board_t *board,
 	}
 }
 
+static void fc_get_upward_moves (fc_board_t *board,
+				 fc_mlist_t *moves,
+				 fc_player_t player,
+				 fc_piece_t type,
+				 uint64_t piece)
+{
+	for (uint64_t i = piece << 8; i; i <<= 8) {
+		if (!move_and_continue(board, moves, player, type, piece, i)) {
+			break;
+		}
+	}
+}
+
+static void fc_get_downward_moves (fc_board_t *board,
+				   fc_mlist_t *moves,
+				   fc_player_t player,
+				   fc_piece_t type,
+				   uint64_t piece)
+{
+	for (uint64_t i = piece >> 8; i; i >>= 8) {
+		if (!move_and_continue(board, moves, player, type, piece, i)) {
+			break;
+		}
+	}
+}
+
+static void fc_get_leftward_moves (fc_board_t *board,
+				   fc_mlist_t *moves,
+				   fc_player_t player,
+				   fc_piece_t type,
+				   uint64_t piece)
+{
+	if (piece & FC_LEFT_COL) {
+		return;
+	}
+
+	for (uint64_t i = piece >> 1; i; i >>= 1) {
+		if (!move_and_continue(board, moves, player, type, piece, i)) {
+			break;
+		}
+
+		if (i & FC_LEFT_COL) {
+			break;
+		}
+	}
+}
+
+static void fc_get_rightward_moves (fc_board_t *board,
+				    fc_mlist_t *moves,
+				    fc_player_t player,
+				    fc_piece_t type,
+				    uint64_t piece)
+{
+	if (piece & FC_RIGHT_COL) {
+		return;
+	}
+
+	for (uint64_t i = piece << 1; i; i <<= 1) {
+		if (!move_and_continue(board, moves, player, type, piece, i)) {
+			break;
+		}
+
+		if (i & FC_RIGHT_COL) {
+			break;
+		}
+	}
+}
+
+void fc_get_rook_moves (fc_board_t *board,
+			fc_mlist_t *moves,
+			fc_player_t player)
+{
+	uint64_t rook, bb = FC_BITBOARD((*board), player, FC_ROOK);
+	if (!bb) {
+		return;
+	}
+
+	FC_FOREACH(rook, bb) {
+		fc_get_upward_moves(board, moves, player, FC_ROOK, rook);
+		fc_get_downward_moves(board, moves, player, FC_ROOK, rook);
+		fc_get_leftward_moves(board, moves, player, FC_ROOK, rook);
+		fc_get_rightward_moves(board, moves, player, FC_ROOK, rook);
+	}
+}
+
+void fc_get_queen_moves (fc_board_t *board,
+			 fc_mlist_t *moves,
+			 fc_player_t player)
+{
+	uint64_t queen, bb = FC_BITBOARD((*board), player, FC_QUEEN);
+	if (!bb) {
+		return;
+	}
+
+	FC_FOREACH(queen, bb) {
+		fc_get_upward_moves(board, moves, player, FC_QUEEN, queen);
+		fc_get_downward_moves(board, moves, player, FC_QUEEN, queen);
+		fc_get_leftward_moves(board, moves, player, FC_QUEEN, queen);
+		fc_get_rightward_moves(board, moves, player, FC_QUEEN, queen);
+		fc_get_northwest_moves(board, moves, player, FC_QUEEN, queen);
+		fc_get_southwest_moves(board, moves, player, FC_QUEEN, queen);
+		fc_get_northeast_moves(board, moves, player, FC_QUEEN, queen);
+		fc_get_southeast_moves(board, moves, player, FC_QUEEN, queen);
+	}
+}
+
 void fc_get_moves (fc_board_t *board, fc_mlist_t *moves, fc_player_t player)
 {
 	fc_get_king_moves(board, moves, player);
 	fc_get_knight_moves(board, moves, player);
 	fc_get_pawn_moves(board, moves, player);
+	fc_get_bishop_moves(board, moves, player);
+	fc_get_rook_moves(board, moves, player);
 }

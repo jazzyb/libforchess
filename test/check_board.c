@@ -104,6 +104,8 @@ START_TEST (test_forchess_king_moves)
 	fc_mlist_clear(&moves);
 	fc_get_king_moves(&board, &moves, FC_FOURTH);
 	fail_unless(moves.index == 0);
+
+	fc_mlist_free(&moves);
 }
 END_TEST
 
@@ -156,6 +158,8 @@ START_TEST (test_forchess_knight_moves)
 	fail_unless(fc_mlist_get(&moves, 3)->move == fc_uint64("g6-f4"));
 	fail_unless(fc_mlist_get(&moves, 4)->move == fc_uint64("g6-h4"));
 	fail_unless(fc_mlist_get(&moves, 5)->move == fc_uint64("h8-f7"));
+
+	fc_mlist_free(&moves);
 }
 END_TEST
 
@@ -206,12 +210,150 @@ START_TEST (test_forchess_pawn_moves)
 	fail_unless(fc_mlist_get(&moves, 1)->move == fc_uint64("d1-d2"));
 	fail_unless(fc_mlist_get(&moves, 2)->move == fc_uint64("e6-d7"));
 	fail_unless(fc_mlist_get(&moves, 3)->move == fc_uint64("e6-d6"));
+
+	fc_mlist_free(&moves);
 }
 END_TEST
 
+extern void fc_get_bishop_moves (fc_board_t *board,
+				 fc_mlist_t *moves,
+				 fc_player_t player);
+
 START_TEST (test_forchess_bishop_moves)
 {
-	/* TODO */
+	fc_board_t board;
+	bzero(board, sizeof(board));
+	fc_set_piece(&board, FC_FIRST, FC_BISHOP, 5, 3);
+	fc_set_piece(&board, FC_SECOND, FC_BISHOP, 2, 6);
+	fc_set_piece(&board, FC_THIRD, FC_BISHOP, 2, 3);
+	fc_set_piece(&board, FC_THIRD, FC_PAWN, 2, 0);
+	fc_set_piece(&board, FC_FOURTH, FC_BISHOP, 4, 1);
+	fc_set_piece(&board, FC_FOURTH, FC_PAWN, 3, 7);
+
+	fc_mlist_t moves;
+	fc_mlist_init(&moves, 0);
+	fc_get_bishop_moves(&board, &moves, FC_FIRST);
+	fail_unless(fc_mlist_length(&moves) == 9);
+	fail_unless(fc_mlist_get(&moves, 0)->move == fc_uint64("d6-c7"));
+	fail_unless(fc_mlist_get(&moves, 1)->move == fc_uint64("d6-b8"));
+	fail_unless(fc_mlist_get(&moves, 2)->move == fc_uint64("d6-c5"));
+	fail_unless(fc_mlist_get(&moves, 3)->move == fc_uint64("d6-b4"));
+	fail_unless(fc_mlist_get(&moves, 4)->move == fc_uint64("d6-e7"));
+	fail_unless(fc_mlist_get(&moves, 5)->move == fc_uint64("d6-f8"));
+	fail_unless(fc_mlist_get(&moves, 6)->move == fc_uint64("d6-e5"));
+	fail_unless(fc_mlist_get(&moves, 7)->move == fc_uint64("d6-f4"));
+	fail_unless(fc_mlist_get(&moves, 8)->move == fc_uint64("d6-g3"));
+
+	fc_mlist_clear(&moves);
+	fc_get_bishop_moves(&board, &moves, FC_SECOND);
+	fail_unless(fc_mlist_length(&moves) == 6);
+	fail_unless(fc_mlist_get(&moves, 0)->move == fc_uint64("g3-f4"));
+	fail_unless(fc_mlist_get(&moves, 1)->move == fc_uint64("g3-e5"));
+	fail_unless(fc_mlist_get(&moves, 2)->move == fc_uint64("g3-d6"));
+	fail_unless(fc_mlist_get(&moves, 3)->move == fc_uint64("g3-f2"));
+	fail_unless(fc_mlist_get(&moves, 4)->move == fc_uint64("g3-e1"));
+	fail_unless(fc_mlist_get(&moves, 5)->move == fc_uint64("g3-h2"));
+
+	fc_mlist_clear(&moves);
+	fc_get_bishop_moves(&board, &moves, FC_THIRD);
+	fail_unless(fc_mlist_length(&moves) == 10);
+	fail_unless(fc_mlist_get(&moves, 0)->move == fc_uint64("d3-c4"));
+	fail_unless(fc_mlist_get(&moves, 1)->move == fc_uint64("d3-b5"));
+	fail_unless(fc_mlist_get(&moves, 2)->move == fc_uint64("d3-c2"));
+	fail_unless(fc_mlist_get(&moves, 3)->move == fc_uint64("d3-b1"));
+	fail_unless(fc_mlist_get(&moves, 4)->move == fc_uint64("d3-e4"));
+	fail_unless(fc_mlist_get(&moves, 5)->move == fc_uint64("d3-f5"));
+	fail_unless(fc_mlist_get(&moves, 6)->move == fc_uint64("d3-g6"));
+	fail_unless(fc_mlist_get(&moves, 7)->move == fc_uint64("d3-h7"));
+	fail_unless(fc_mlist_get(&moves, 8)->move == fc_uint64("d3-e2"));
+	fail_unless(fc_mlist_get(&moves, 9)->move == fc_uint64("d3-f1"));
+
+	fc_mlist_clear(&moves);
+	fc_get_bishop_moves(&board, &moves, FC_FOURTH);
+	fail_unless(fc_mlist_length(&moves) == 7);
+	fail_unless(fc_mlist_get(&moves, 0)->move == fc_uint64("b5-a6"));
+	fail_unless(fc_mlist_get(&moves, 1)->move == fc_uint64("b5-a4"));
+	fail_unless(fc_mlist_get(&moves, 2)->move == fc_uint64("b5-c6"));
+	fail_unless(fc_mlist_get(&moves, 3)->move == fc_uint64("b5-d7"));
+	fail_unless(fc_mlist_get(&moves, 4)->move == fc_uint64("b5-e8"));
+	fail_unless(fc_mlist_get(&moves, 5)->move == fc_uint64("b5-c4"));
+	fail_unless(fc_mlist_get(&moves, 6)->move == fc_uint64("b5-d3"));
+
+	fc_mlist_free(&moves);
+}
+END_TEST
+
+extern void fc_get_rook_moves (fc_board_t *board,
+			       fc_mlist_t *moves,
+			       fc_player_t player);
+
+START_TEST (test_forchess_rook_moves)
+{
+	fc_board_t board;
+	bzero(board, sizeof(board));
+	fc_set_piece(&board, FC_FIRST, FC_ROOK, 1, 0);
+	fc_set_piece(&board, FC_FIRST, FC_ROOK, 0, 1);
+	fc_set_piece(&board, FC_SECOND, FC_ROOK, 5, 1);
+	fc_set_piece(&board, FC_SECOND, FC_ROOK, 4, 1);
+	fc_set_piece(&board, FC_THIRD, FC_ROOK, 3, 0);
+	fc_set_piece(&board, FC_THIRD, FC_ROOK, 4, 5);
+	fc_set_piece(&board, FC_FOURTH, FC_ROOK, 2, 3);
+	fc_set_piece(&board, FC_FOURTH, FC_ROOK, 5, 6);
+
+	/* TODO fill in all the moves for these */
+	fc_mlist_t moves;
+	fc_mlist_init(&moves, 0);
+	fc_get_rook_moves(&board, &moves, FC_FIRST);
+	fail_unless(fc_mlist_length(&moves) == 20);
+
+	fc_mlist_clear(&moves);
+	fc_get_rook_moves(&board, &moves, FC_SECOND);
+	fail_unless(fc_mlist_length(&moves) == 16);
+
+	fc_mlist_clear(&moves);
+	fc_get_rook_moves(&board, &moves, FC_THIRD);
+	fail_unless(fc_mlist_length(&moves) == 25);
+
+	fc_mlist_clear(&moves);
+	fc_get_rook_moves(&board, &moves, FC_FOURTH);
+	fail_unless(fc_mlist_length(&moves) == 26);
+}
+END_TEST
+
+extern void fc_get_queen_moves (fc_board_t *board,
+				fc_mlist_t *moves,
+				fc_player_t player);
+
+START_TEST (test_forchess_queen_moves)
+{
+	fc_board_t board;
+	bzero(board, sizeof(board));
+	fc_set_piece(&board, FC_FIRST, FC_QUEEN, 1, 0);
+	fc_set_piece(&board, FC_FIRST, FC_QUEEN, 0, 1);
+	fc_set_piece(&board, FC_SECOND, FC_QUEEN, 5, 2);
+	fc_set_piece(&board, FC_SECOND, FC_QUEEN, 4, 1);
+	fc_set_piece(&board, FC_THIRD, FC_QUEEN, 3, 0);
+	fc_set_piece(&board, FC_THIRD, FC_QUEEN, 4, 5);
+	fc_set_piece(&board, FC_FOURTH, FC_QUEEN, 2, 3);
+	fc_set_piece(&board, FC_FOURTH, FC_QUEEN, 5, 6);
+
+	/* TODO fill in all the moves for these */
+	fc_mlist_t moves;
+	fc_mlist_init(&moves, 0);
+	fc_get_queen_moves(&board, &moves, FC_FIRST);
+	fail_unless(fc_mlist_length(&moves) == 15 + 13);
+
+	fc_mlist_clear(&moves);
+	fc_get_queen_moves(&board, &moves, FC_SECOND);
+	fail_unless(fc_mlist_length(&moves) == 15 + 21);
+
+	fc_mlist_clear(&moves);
+	fc_get_queen_moves(&board, &moves, FC_THIRD);
+	fail_unless(fc_mlist_length(&moves) == 16 + 21);
+
+	fc_mlist_clear(&moves);
+	fc_get_queen_moves(&board, &moves, FC_FOURTH);
+	fail_unless(fc_mlist_length(&moves) == 21 + 16);
 }
 END_TEST
 
@@ -224,7 +366,9 @@ Suite *board_suite (void)
 	tcase_add_test(tc_board, test_forchess_king_moves);
 	tcase_add_test(tc_board, test_forchess_knight_moves);
 	tcase_add_test(tc_board, test_forchess_pawn_moves);
-	//tcase_add_test(tc_board, test_forchess_bishop_moves);
+	tcase_add_test(tc_board, test_forchess_bishop_moves);
+	tcase_add_test(tc_board, test_forchess_rook_moves);
+	tcase_add_test(tc_board, test_forchess_queen_moves);
 	suite_add_tcase(s, tc_board);
 	return s;
 }
