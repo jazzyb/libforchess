@@ -31,6 +31,7 @@ typedef struct {
 	int index;
 } fc_mlist_t;
 
+uint64_t fc_uint64(const char *move);
 void fc_move_copy (fc_move_t *dst, fc_move_t *src);
 int fc_mlist_init (fc_mlist_t *list, int size);
 int fc_mlist_resize (fc_mlist_t *list, int new_size);

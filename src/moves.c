@@ -1,9 +1,21 @@
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "forchess/moves.h"
 
-#define FC_DEFAULT_MLIST_SIZE 130 /* totally arbitrary */
+/* NOTE: no sanitization of string */
+uint64_t fc_uint64 (const char *str)
+{
+	char x1, x2, y1, y2;
+	sscanf(str, "%c%c-%c%c", &x1, &y1, &x2, &y2);
+	x1 -= 'a';
+	x2 -= 'a';
+	y1 -= '1';
+	y2 -= '1';
+	return ((UINT64_C(1)) << (y1 * 8) + x1) |
+	       ((UINT64_C(1)) << (y2 * 8) + x2);
+}
 
 void fc_move_copy (fc_move_t *dst, fc_move_t *src)
 {
@@ -11,6 +23,8 @@ void fc_move_copy (fc_move_t *dst, fc_move_t *src)
 	dst->piece = src->piece;
 	dst->move = src->move;
 }
+
+#define FC_DEFAULT_MLIST_SIZE 130 /* totally arbitrary */
 
 /*
  * This must be called before the append, copy, and cat functions can be used.

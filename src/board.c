@@ -110,7 +110,7 @@ int fc_setup_board (fc_board_t *board, const char *filename)
  * Simply determines if the space 'm' is empty or occupied by a piece belonging
  * to a friendly ally.
  */
-static inline int may_capture (fc_board_t *b, fc_player_t p, uint64_t m)
+static inline int may_move_to (fc_board_t *b, fc_player_t p, uint64_t m)
 {
 	return !(m & FC_ALL_ALLIES((*b), p));
 }
@@ -126,7 +126,7 @@ static inline void move_if_valid (fc_board_t *board,
 				  uint64_t piece,
 				  uint64_t space)
 {
-	if (space && may_capture(board, player, space)) {
+	if (space && may_move_to(board, player, space)) {
 		fc_mlist_append(moves, player, type, piece | space);
 	}
 }
@@ -178,8 +178,7 @@ void fc_get_knight_moves (fc_board_t *board,
 		return;
 	}
 
-	FC_FOREACH(knight, bb)
-	{
+	FC_FOREACH(knight, bb) {
 		if (!(knight & (FC_LEFT_COL | FC_2LEFT_COL))) {
 			move_if_valid(board, moves, player, FC_KNIGHT, knight,
 				      knight << 6);
@@ -207,8 +206,205 @@ void fc_get_knight_moves (fc_board_t *board,
 	}
 }
 
+/*
+ * NOTE: I am utilizing the double-!'s below because if I simply return the
+ * value, then the int will truncate the uint64_t resulting in false negatives.
+ * The double-! forces the value to be 0 or 1.
+ */
+static inline int is_occupied_by_enemy (fc_board_t *b,
+					fc_player_t p,
+					uint64_t m)
+{
+	return !!(m & FC_ALL_ALLIES((*b), ((p + 1) % 4)));
+}
+
+static inline int is_empty (fc_board_t *b, uint64_t m)
+{
+	return !!(m & ~(FC_ALL_PIECES((*b), 0) | FC_ALL_PIECES((*b), 1) |
+			FC_ALL_PIECES((*b), 2) | FC_ALL_PIECES((*b), 3)));
+}
+
+/*
+ * Basically the same as move_if_valid() above with the following changes:
+ * 	m1 represents the single available pawn diagonal movement
+ * 	m2 and m3 are the lateral capture moves
+ */
+static inline void pawn_move_if_valid (fc_board_t *board,
+				       fc_mlist_t *moves,
+				       fc_player_t player,
+				       uint64_t pawn,
+				       uint64_t m1,
+				       uint64_t m2,
+				       uint64_t m3)
+{
+	if (is_empty(board, m1)) {
+		fc_mlist_append(moves, player, FC_PAWN, pawn | m1);
+	}
+
+	if (is_occupied_by_enemy(board, player, m2)) {
+		fc_mlist_append(moves, player, FC_PAWN, pawn | m2);
+	}
+	if (is_occupied_by_enemy(board, player, m3)) {
+		fc_mlist_append(moves, player, FC_PAWN, pawn | m3);
+	}
+}
+
+/*
+ * NOTE:  I am not doing the regular checks to determine if the pawn is on the
+ * edge of the board because in any normal game the pawn will be promoted once
+ * it reaches the edge; this means that you could setup a board arrangement
+ * that would return invalid moves for pawns or potentially crash this API.
+ * Don't do that.
+ */
+void fc_get_pawn_moves (fc_board_t *board,
+			fc_mlist_t *moves,
+			fc_player_t player)
+{
+	uint64_t pawn, bb = FC_BITBOARD((*board), player, FC_PAWN);
+	if (!bb) {
+		return;
+	}
+
+	FC_FOREACH(pawn, bb) {
+		switch (player) {
+		case FC_FIRST:
+			pawn_move_if_valid(board, moves, FC_FIRST, pawn,
+					   pawn << 9, pawn << 8, pawn << 1);
+			break;
+		case FC_SECOND:
+			pawn_move_if_valid(board, moves, FC_SECOND, pawn,
+					   pawn >> 7, pawn >> 8, pawn << 1);
+			break;
+		case FC_THIRD:
+			pawn_move_if_valid(board, moves, FC_THIRD, pawn,
+					   pawn >> 9, pawn >> 8, pawn >> 1);
+			break;
+		case FC_FOURTH:
+			pawn_move_if_valid(board, moves, FC_FOURTH, pawn,
+					   pawn << 7, pawn << 8, pawn >> 1);
+			break;
+		}
+	}
+}
+
+/* FIXME The following static functions are pretty repetetive, but I've not
+ * sure there is a straight-forward way of correcting that. */
+static void fc_get_northwest_moves (fc_board_t *board,
+				    fc_mlist_t *moves,
+				    fc_player_t player,
+				    fc_piece_t type,
+				    uint64_t piece)
+{
+	uint64_t i = piece << 7;
+	while (i) {
+		if (is_empty(board, i)) {
+			fc_mlist_append(moves, player, type, piece | i);
+		} else if (is_occupied_by_enemy(board, player, i)) {
+			fc_mlist_append(moves, player, type, piece | i);
+			break;
+		} else {
+			break;
+		}
+
+		if (i & FC_LEFT_COL) {
+			break;
+		}
+		i <<= 7;
+	}
+}
+
+static void fc_get_southwest_moves (fc_board_t *board,
+				    fc_mlist_t *moves,
+				    fc_player_t player,
+				    fc_piece_t type,
+				    uint64_t piece)
+{
+	uint64_t i = piece >> 9;
+	while (i) {
+		if (is_empty(board, i)) {
+			fc_mlist_append(moves, player, type, piece | i);
+		} else if (is_occupied_by_enemy(board, player, i)) {
+			fc_mlist_append(moves, player, type, piece | i);
+			break;
+		} else {
+			break;
+		}
+
+		if (i & FC_LEFT_COL) {
+			break;
+		}
+		i >>= 9;
+	}
+}
+
+static void fc_get_northeast_moves (fc_board_t *board,
+				    fc_mlist_t *moves,
+				    fc_player_t player,
+				    fc_piece_t type,
+				    uint64_t piece)
+{
+	uint64_t i = piece << 9;
+	while (i) {
+		if (is_empty(board, i)) {
+			fc_mlist_append(moves, player, type, piece | i);
+		} else if (is_occupied_by_enemy(board, player, i)) {
+			fc_mlist_append(moves, player, type, piece | i);
+			break;
+		} else {
+			break;
+		}
+
+		if (i & FC_RIGHT_COL) {
+			break;
+		}
+		i <<= 9;
+	}
+}
+
+static void fc_get_southeast_moves (fc_board_t *board,
+				    fc_mlist_t *moves,
+				    fc_player_t player,
+				    fc_piece_t type,
+				    uint64_t piece)
+{
+	uint64_t i = piece >> 7;
+	while (i) {
+		if (is_empty(board, i)) {
+			fc_mlist_append(moves, player, type, piece | i);
+		} else if (is_occupied_by_enemy(board, player, i)) {
+			fc_mlist_append(moves, player, type, piece | i);
+			break;
+		} else {
+			break;
+		}
+
+		if (i & FC_RIGHT_COL) {
+			break;
+		}
+		i >>= 7;
+	}
+}
+
+void fc_get_bishop_moves (fc_board_t *board,
+			  fc_mlist_t *moves,
+			  fc_player_t player)
+{
+	uint64_t bishop, bb = FC_BITBOARD((*board), player, FC_BISHOP);
+	if (!bb) {
+		return;
+	}
+
+	FC_FOREACH(bishop, bb) {
+		fc_get_northwest_moves(board, moves, player, FC_BISHOP, bishop);
+		fc_get_southwest_moves(board, moves, player, FC_BISHOP, bishop);
+		fc_get_northeast_moves(board, moves, player, FC_BISHOP, bishop);
+		fc_get_southeast_moves(board, moves, player, FC_BISHOP, bishop);
+	}
+}
+
 void fc_get_moves (fc_board_t *board, fc_mlist_t *moves, fc_player_t player)
 {
 	fc_get_king_moves(board, moves, player);
 	fc_get_knight_moves(board, moves, player);
+	fc_get_pawn_moves(board, moves, player);
 }
