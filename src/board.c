@@ -594,11 +594,40 @@ static void fc_convert_pieces (fc_board_t *board,
 }
 
 /*
+ * If the given pawn reaches its "back wall" it will get promoted.
+ */
+#define FC_FIRST_BACK_WALL  UINT64_C(0xff80808080808080)
+#define FC_SECOND_BACK_WALL UINT64_C(0x80808080808080ff)
+#define FC_THIRD_BACK_WALL  UINT64_C(0x01010101010101ff)
+#define FC_FOURTH_BACK_WALL UINT64_C(0xff01010101010101)
+static inline int must_promote (fc_player_t player, uint64_t pawn)
+{
+	switch (player) {
+	case FC_FIRST:
+		return !!(pawn & FC_FIRST_BACK_WALL);
+	case FC_SECOND:
+		return !!(pawn & FC_SECOND_BACK_WALL);
+	case FC_THIRD:
+		return !!(pawn & FC_THIRD_BACK_WALL);
+	case FC_FOURTH:
+		return !!(pawn & FC_FOURTH_BACK_WALL);
+	}
+}
+
+/*
  * Update the board with the given move.
  * FIXME refactor/clean-up
  */
 int fc_board_make_move (fc_board_t *board, fc_move_t *move)
 {
+	if (move->piece == FC_PAWN) {
+		uint64_t pawn = FC_BITBOARD((*board), move->player,
+					    FC_PAWN) & move->move;
+		if (must_promote(fc_get_pawn_orientation(board, pawn), pawn)) {
+			return 0;
+		}
+	}
+
 	/*
 	 * Move the player's piece; then get the second bit (b) that represents
 	 * the possible captured piece.

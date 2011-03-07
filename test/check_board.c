@@ -427,7 +427,29 @@ START_TEST (test_forchess_make_move)
 	fail_unless(fc_board_get_piece(&board, &player, &piece, 2, 1));
 	fail_unless(player == FC_FOURTH);
 	/* (5) check that pawns don't change orientation if they change sides */
-		/* (5a) ... even after changing sides multiple times */
+	fail_unless(fc_board_get_piece(&board, &player, &piece, 7, 3));
+	fail_unless(player == FC_FIRST);
+	fc_mlist_t moves;
+	fc_mlist_init(&moves, 0);
+	fc_get_rook_moves(&board, &moves, FC_FIRST);
+	fail_unless(fc_mlist_length(&moves) == 7);
+	fc_mlist_clear(&moves);
+	fc_get_pawn_moves(&board, &moves, FC_FIRST);
+	fail_unless(fc_mlist_length(&moves) == 4);
+	fail_unless(fc_mlist_get(&moves, 2)->move == fc_uint64("d6-e6"));
+	fail_unless(fc_mlist_get(&moves, 3)->move == fc_uint64("d8-e7"));
+	/* (5a) ... even after changing sides multiple times */
+	move.player = FC_FOURTH;
+	move.piece = FC_BISHOP;
+	move.move = fc_uint64("b3-c2");
+	fc_board_make_move(&board, &move);
+	fc_mlist_clear(&moves);
+	fc_get_pawn_moves(&board, &moves, FC_FOURTH);
+	fail_unless(fc_mlist_length(&moves) == 4);
+	fail_unless(fc_mlist_get(&moves, 0)->move == fc_uint64("d4-e5"));
+	fail_unless(fc_mlist_get(&moves, 1)->move == fc_uint64("d6-e5"));
+	fail_unless(fc_mlist_get(&moves, 2)->move == fc_uint64("e6-d7"));
+	fail_unless(fc_mlist_get(&moves, 3)->move == fc_uint64("d8-e7"));
 	/* TODO for pawns:
 	 * 	in fc_board_set_piece() add a condtion to update the new
 	 * 	pawn orientation bitboards if a pawn is set on the board
@@ -442,6 +464,8 @@ START_TEST (test_forchess_make_move)
 	 */
 	/* (6) check that moving a pawn to its backboard returns 0, and write
 	 * fc_board_make_pawn_move() */
+
+	fc_mlist_free(&moves);
 }
 END_TEST
 
