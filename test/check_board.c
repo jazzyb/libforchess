@@ -414,13 +414,7 @@ START_TEST (test_forchess_make_move)
 		fail_unless(board[i] == UINT64_C(0));
 	}
 	/* (4) check that pieces change sides on capture of king */
-	fc_board_set_piece(&board, FC_FIRST, FC_KING, 1, 2);
-	fc_board_set_piece(&board, FC_FIRST, FC_KNIGHT, 5, 1);
-	fc_board_set_piece(&board, FC_SECOND, FC_KING, 7, 0);
-	fc_board_set_piece(&board, FC_SECOND, FC_ROOK, 0, 7);
-	fc_board_set_piece(&board, FC_SECOND, FC_KNIGHT, 0, 0);
-	fc_board_set_piece(&board, FC_FOURTH, FC_KING, 1, 7);
-	fc_board_set_piece(&board, FC_FOURTH, FC_BISHOP, 2, 1);
+	fc_board_setup(&board, "test/boards/test_forchess_make_move.1");
 	move.player = FC_FIRST;
 	move.piece = FC_KNIGHT;
 	move.move = fc_uint64("b6-a8");
@@ -434,6 +428,20 @@ START_TEST (test_forchess_make_move)
 	fail_unless(player == FC_FOURTH);
 	/* (5) check that pawns don't change orientation if they change sides */
 		/* (5a) ... even after changing sides multiple times */
+	/* TODO for pawns:
+	 * 	in fc_board_set_piece() add a condtion to update the new
+	 * 	pawn orientation bitboards if a pawn is set on the board
+	 *
+	 * 	check for orientation in fc_get_pawn_moves(); switch on
+	 * 	orientation before calling pawn_move_if_valid(), but you should
+	 * 	be able to keep everything else the same
+	 *
+	 * 	when exercising fc_board_make_move() you'll need to update pawn
+	 * 	moves on both the pawn bitboard and orientation bitboard; same
+	 * 	goes for conversion
+	 */
+	/* (6) check that moving a pawn to its backboard returns 0, and write
+	 * fc_board_make_pawn_move() */
 }
 END_TEST
 

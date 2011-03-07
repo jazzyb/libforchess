@@ -9,10 +9,14 @@
 
 /*
  * Why 24?  Because we have to keep track of 6 different pieces for 4 players.
- * NOTE:  We will need to change how we organize the board_t type if we decide
- * to optimize by adding more bitboards.
  */
-#define FC_TOTAL_BITBOARDS 24
+typedef enum {
+	FC_FIRST_PAWNS = 24,
+	FC_SECOND_PAWNS,
+	FC_THIRD_PAWNS,
+	FC_FOURTH_PAWNS,
+	FC_TOTAL_BITBOARDS
+} fc_bitboards_t;
 
 typedef uint64_t fc_board_t[FC_TOTAL_BITBOARDS];
 

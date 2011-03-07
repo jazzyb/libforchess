@@ -3,7 +3,11 @@
 
 #include "forchess/board.h"
 
+/* macro to get the first 24 bitboards representing pieces */
 #define FC_BITBOARD(board, player, piece) (board[player * 6 + piece])
+
+/* macro to get a particular pawn orientation bitboard */
+#define FC_PAWN_BB(board, orientation) (board[FC_FIRST_PAWNS + orientation])
 
 int fc_board_set_piece (fc_board_t *board,
 			fc_player_t player,
@@ -16,6 +20,9 @@ int fc_board_set_piece (fc_board_t *board,
 	 */
 	uint64_t bb = ((uint64_t)1) << (row * 8 + col);
 	FC_BITBOARD((*board), player, piece) |= bb;
+	if (piece == FC_PAWN) {
+		FC_PAWN_BB((*board), player) |= bb;
+	}
 	return 1;
 }
 
@@ -257,6 +264,20 @@ static inline void pawn_move_if_valid (fc_board_t *board,
 	}
 }
 
+static inline fc_player_t fc_get_pawn_orientation (fc_board_t *board,
+						   uint64_t pawn)
+{
+	if (pawn & (*board)[FC_FIRST_PAWNS]) {
+		return FC_FIRST;
+	} else if (pawn & (*board)[FC_SECOND_PAWNS]) {
+		return FC_SECOND;
+	} else if (pawn & (*board)[FC_THIRD_PAWNS]) {
+		return FC_THIRD;
+	} else {
+		return FC_FOURTH;
+	}
+}
+
 /*
  * NOTE:  I am not doing the regular checks to determine if the pawn is on the
  * edge of the board because in any normal game the pawn will be promoted once
@@ -274,21 +295,21 @@ void fc_get_pawn_moves (fc_board_t *board,
 	}
 
 	FC_FOREACH(pawn, bb) {
-		switch (player) {
+		switch (fc_get_pawn_orientation(board, pawn)) {
 		case FC_FIRST:
-			pawn_move_if_valid(board, moves, FC_FIRST, pawn,
+			pawn_move_if_valid(board, moves, player, pawn,
 					   pawn << 9, pawn << 8, pawn << 1);
 			break;
 		case FC_SECOND:
-			pawn_move_if_valid(board, moves, FC_SECOND, pawn,
+			pawn_move_if_valid(board, moves, player, pawn,
 					   pawn >> 7, pawn >> 8, pawn << 1);
 			break;
 		case FC_THIRD:
-			pawn_move_if_valid(board, moves, FC_THIRD, pawn,
+			pawn_move_if_valid(board, moves, player, pawn,
 					   pawn >> 9, pawn >> 8, pawn >> 1);
 			break;
 		case FC_FOURTH:
-			pawn_move_if_valid(board, moves, FC_FOURTH, pawn,
+			pawn_move_if_valid(board, moves, player, pawn,
 					   pawn << 7, pawn << 8, pawn >> 1);
 			break;
 		}
@@ -558,6 +579,14 @@ static void fc_convert_pieces (fc_board_t *board,
 			       fc_player_t from,
 			       fc_player_t to)
 {
+	uint64_t pawns = FC_BITBOARD((*board), from, FC_PAWN);
+	for (fc_bitboards_t i = FC_FIRST_PAWNS; i <= FC_FOURTH_PAWNS; i++) {
+		if (pawns & (*board)[i]) {
+			FC_BITBOARD((*board), to, FC_PAWN) |= (*board)[i];
+		}
+	}
+	FC_BITBOARD((*board), from, FC_PAWN) = UINT64_C(0);
+
 	for (fc_piece_t i = FC_PAWN + 1; i < FC_KING; i++) {
 		FC_BITBOARD((*board), to, i) |= FC_BITBOARD((*board), from, i);
 		FC_BITBOARD((*board), from, i) = UINT64_C(0);
@@ -566,17 +595,29 @@ static void fc_convert_pieces (fc_board_t *board,
 
 /*
  * Update the board with the given move.
+ * FIXME refactor/clean-up
  */
 int fc_board_make_move (fc_board_t *board, fc_move_t *move)
 {
 	/*
 	 * Move the player's piece; then get the second bit (b) that represents
-	 * the captured piece.  If there is no second bit, then we only removed
-	 * a piece.
+	 * the possible captured piece.
 	 */
 	FC_BITBOARD((*board), move->player, move->piece) ^= move->move;
 	uint64_t b = FC_BITBOARD((*board), move->player, move->piece) &
 		     move->move;
+
+	/* update pawn orientation bitboards */
+	fc_piece_t side;
+	if (move->piece == FC_PAWN) {
+		side = fc_get_pawn_orientation(board, b ^ move->move);
+		FC_PAWN_BB((*board), side) ^= move->move;
+	}
+
+	/*
+	 * If there is no second bit, then this was only a remove, and we can
+	 * return.
+	 */
 	if (!b) {
 		return 1;
 	}
@@ -589,6 +630,10 @@ int fc_board_make_move (fc_board_t *board, fc_move_t *move)
 	for (fc_piece_t type = FC_PAWN; type <= FC_KING; type++) {
 		if (b & FC_BITBOARD((*board), enemy, type)) {
 			FC_BITBOARD((*board), enemy, type) ^= b;
+			if (type == FC_PAWN) {
+				side = fc_get_pawn_orientation(board, b);
+				FC_PAWN_BB((*board), side) ^= b;
+			}
 			if (type == FC_KING) {
 				fc_convert_pieces(board, enemy, move->player);
 			}
@@ -600,6 +645,10 @@ int fc_board_make_move (fc_board_t *board, fc_move_t *move)
 	for (fc_piece_t type = FC_PAWN; type <= FC_KING; type++) {
 		if (b & FC_BITBOARD((*board), enemy, type)) {
 			FC_BITBOARD((*board), enemy, type) ^= b;
+			if (type == FC_PAWN) {
+				side = fc_get_pawn_orientation(board, b);
+				FC_PAWN_BB((*board), side) ^= b;
+			}
 			if (type == FC_KING) {
 				fc_convert_pieces(board, enemy, move->player);
 			}
