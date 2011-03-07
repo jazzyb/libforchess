@@ -464,6 +464,15 @@ START_TEST (test_forchess_make_move)
 	 */
 	/* (6) check that moving a pawn to its backboard returns 0, and write
 	 * fc_board_make_pawn_move() */
+	fail_unless(fc_board_make_move(&board, fc_mlist_get(&moves, 2)));
+	move.player = FC_FOURTH;
+	move.piece = FC_PAWN;
+	move.move = fc_uint64("d7-c8");
+	fail_unless(!fc_board_make_move(&board, &move));
+	fail_unless(fc_board_make_pawn_move(&board, &move, FC_QUEEN));
+	fc_mlist_clear(&moves);
+	fc_get_queen_moves(&board, &moves, FC_FOURTH);
+	fail_unless(fc_mlist_length(&moves) != 0);
 
 	fc_mlist_free(&moves);
 }

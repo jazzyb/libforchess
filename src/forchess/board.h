@@ -50,6 +50,9 @@ void fc_board_get_removes (fc_board_t *board,
 			  fc_mlist_t *moves,
 			  fc_player_t player);
 int fc_board_make_move (fc_board_t *board, fc_move_t *move);
+int fc_board_make_pawn_move (fc_board_t *board,
+			     fc_move_t *move,
+			     fc_piece_t promote);
 /* other possible functions for the API
 #define FC_CHECK 1
 #define FC_CHECKMATE 2

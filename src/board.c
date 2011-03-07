@@ -621,8 +621,9 @@ static inline int must_promote (fc_player_t player, uint64_t pawn)
 int fc_board_make_move (fc_board_t *board, fc_move_t *move)
 {
 	if (move->piece == FC_PAWN) {
-		uint64_t pawn = FC_BITBOARD((*board), move->player,
-					    FC_PAWN) & move->move;
+		uint64_t pawn = (FC_BITBOARD((*board), move->player,
+					    FC_PAWN) ^ move->move) &
+				move->move;
 		if (must_promote(fc_get_pawn_orientation(board, pawn), pawn)) {
 			return 0;
 		}
@@ -637,7 +638,7 @@ int fc_board_make_move (fc_board_t *board, fc_move_t *move)
 		     move->move;
 
 	/* update pawn orientation bitboards */
-	fc_piece_t side;
+	fc_player_t side;
 	if (move->piece == FC_PAWN) {
 		side = fc_get_pawn_orientation(board, b ^ move->move);
 		FC_PAWN_BB((*board), side) ^= move->move;
@@ -686,4 +687,37 @@ int fc_board_make_move (fc_board_t *board, fc_move_t *move)
 	}
 
 	return 1;
+}
+
+/*
+ * If a pawn is moved in such a way that it must be promoted, then
+ * fc_board_make_move() will return 0.  In that case, the user must call the
+ * below function with a third argument declaring what piece the pawn should be
+ * promoted to.
+ */
+int fc_board_make_pawn_move (fc_board_t *board,
+			     fc_move_t *move,
+			     fc_piece_t new_piece)
+{
+	if (move->piece != FC_PAWN) {
+		return 0;
+	}
+	uint64_t pawn = FC_BITBOARD((*board), move->player,
+				    FC_PAWN) & move->move;
+
+	switch(new_piece) {
+	case FC_BISHOP:
+	case FC_KNIGHT:
+	case FC_ROOK:
+	case FC_QUEEN:
+		FC_BITBOARD((*board), move->player, new_piece) |= pawn;
+		break;
+	default:
+		return 0;
+	}
+	FC_BITBOARD((*board), move->player, FC_PAWN) ^= pawn;
+	fc_player_t orientation = fc_get_pawn_orientation(board, pawn);
+	FC_PAWN_BB((*board), orientation) ^= pawn;
+	move->piece = new_piece;
+	return fc_board_make_move(board, move);
 }
