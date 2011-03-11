@@ -721,3 +721,10 @@ int fc_board_make_pawn_move (fc_board_t *board,
 	move->piece = new_piece;
 	return fc_board_make_move(board, move);
 }
+
+void fc_board_copy (fc_board_t *dst, fc_board_t *src)
+{
+	for (int i = 0; i < FC_TOTAL_BITBOARDS; i++) {
+		(*dst)[i] = (*src)[i];
+	}
+}

@@ -15,6 +15,8 @@ typedef enum {
 	FC_SECOND_PAWNS,
 	FC_THIRD_PAWNS,
 	FC_FOURTH_PAWNS,
+
+	/* This must always be last. */
 	FC_TOTAL_BITBOARDS
 } fc_bitboards_t;
 
@@ -53,6 +55,7 @@ int fc_board_make_move (fc_board_t *board, fc_move_t *move);
 int fc_board_make_pawn_move (fc_board_t *board,
 			     fc_move_t *move,
 			     fc_piece_t promote);
+void fc_board_copy (fc_board_t *dst, fc_board_t *src);
 /* other possible functions for the API
 #define FC_CHECK 1
 #define FC_CHECKMATE 2

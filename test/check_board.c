@@ -478,6 +478,19 @@ START_TEST (test_forchess_make_move)
 }
 END_TEST
 
+START_TEST (test_forchess_board_copy)
+{
+	fc_board_t dst, src;
+	for (int i = 0; i < sizeof(src) / sizeof(uint64_t); i++) {
+		src[i] = i * 1000;
+	}
+	fc_board_copy(&dst, &src);
+	for (int i = 0; i < sizeof(src) / sizeof(uint64_t); i++) {
+		fail_unless(dst[i] == src[i]);
+	}
+}
+END_TEST
+
 Suite *board_suite (void)
 {
 	Suite *s = suite_create("Board");
@@ -492,6 +505,7 @@ Suite *board_suite (void)
 	tcase_add_test(tc_board, test_forchess_queen_moves);
 	tcase_add_test(tc_board, test_forchess_get_removes);
 	tcase_add_test(tc_board, test_forchess_make_move);
+	tcase_add_test(tc_board, test_forchess_board_copy);
 	suite_add_tcase(s, tc_board);
 	return s;
 }
