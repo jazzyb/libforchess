@@ -10,6 +10,9 @@ typedef enum {
 	FC_FOURTH
 } fc_player_t;
 
+#define FC_NEXT_PLAYER(player) ((player + 1) % 4)
+#define FC_PARTNER(player) ((player + 2) % 4)
+
 typedef enum {
 	FC_PAWN = 0,
 	FC_BISHOP,

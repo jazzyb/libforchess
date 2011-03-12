@@ -22,6 +22,17 @@ typedef enum {
 
 typedef uint64_t fc_board_t[FC_TOTAL_BITBOARDS];
 
+/* macro to get the first 24 bitboards representing pieces */
+#define FC_BITBOARD(board, player, piece) (board[player * 6 + piece])
+
+/*
+ * Cycles through each piece (bit) on the bitboard.
+ * piece is the bit
+ * x is a bitboard
+ */
+#define FC_FOREACH(piece, x) \
+	for(piece = (x & (~x + 1)); x; x ^= piece, piece = (x & (~x + 1)))
+
 /*
  * Initializes the board based on a config file.
  */
@@ -56,15 +67,8 @@ int fc_board_make_pawn_move (fc_board_t *board,
 			     fc_move_t *move,
 			     fc_piece_t promote);
 void fc_board_copy (fc_board_t *dst, fc_board_t *src);
-/* other possible functions for the API
 #define FC_CHECK 1
 #define FC_CHECKMATE 2
 int fc_is_king_in_check (fc_board_t *board, fc_player_t player);
-
-int fc_ai_get_move (fc_board_t *board,
-		    fc_move_t *move,
-		    fc_player_t player,
-		    int look_ahead);
-*/
 
 #endif
