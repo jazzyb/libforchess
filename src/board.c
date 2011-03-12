@@ -3,9 +3,6 @@
 
 #include "forchess/board.h"
 
-/* macro to get the first 24 bitboards representing pieces */
-#define FC_BITBOARD(board, player, piece) (board[player * 6 + piece])
-
 /* macro to get a particular pawn orientation bitboard */
 #define FC_PAWN_BB(board, orientation) (board[FC_FIRST_PAWNS + orientation])
 
@@ -175,14 +172,6 @@ void fc_get_king_moves (fc_board_t *board, fc_mlist_t *moves, fc_player_t player
 
 #define FC_2LEFT_COL  (UINT64_C(0x0202020202020202))
 #define FC_2RIGHT_COL (UINT64_C(0x4040404040404040))
-
-/*
- * Cycles through each piece (bit) on the bitboard.
- * piece is the bit
- * x is a bitboard
- */
-#define FC_FOREACH(piece, x) \
-	for(piece = (x & (~x + 1)); x; x ^= piece, piece = (x & (~x + 1)))
 
 void fc_get_knight_moves (fc_board_t *board,
 			 fc_mlist_t *moves,
@@ -718,6 +707,10 @@ int fc_board_make_pawn_move (fc_board_t *board,
 	FC_BITBOARD((*board), move->player, FC_PAWN) ^= pawn;
 	fc_player_t orientation = fc_get_pawn_orientation(board, pawn);
 	FC_PAWN_BB((*board), orientation) ^= pawn;
+	/* FIXME don't change the move structure.  We will be using this in the
+	 * AI code whiich assumes that the move structs aren't changing.
+	 * Change this to make a copy before calling make_move() with the copy.
+	 */
 	move->piece = new_piece;
 	return fc_board_make_move(board, move);
 }
@@ -727,4 +720,217 @@ void fc_board_copy (fc_board_t *dst, fc_board_t *src)
 	for (int i = 0; i < FC_TOTAL_BITBOARDS; i++) {
 		(*dst)[i] = (*src)[i];
 	}
+}
+
+/* NOTE everything below here is for determining whether the king is in check
+ * or not */
+/* FIXME Find a clean way of determining if the king is in check(mate). */
+
+static int king_in_check_upward (fc_board_t *board, fc_player_t player,
+		uint64_t king, uint64_t threats)
+{
+}
+
+static int king_in_check_downward (fc_board_t *board, fc_player_t player,
+		uint64_t king, uint64_t threats)
+{
+}
+
+static int king_in_check_leftward (fc_board_t *board, fc_player_t player,
+		uint64_t king, uint64_t threats)
+{
+}
+
+static int king_in_check_rightward (fc_board_t *board, fc_player_t player,
+		uint64_t king, uint64_t threats)
+{
+}
+
+static int king_in_check_laterally (fc_board_t *board, fc_player_t player,
+		uint64_t king)
+{
+	uint64_t threats = FC_BITBOARD((*board), FC_NEXT_PLAYER(player),
+			FC_QUEEN);
+	threats |= FC_BITBOARD((*board), FC_NEXT_PLAYER(player), FC_ROOK);
+	threats |= FC_BITBOARD((*board), FC_PARTNER(FC_NEXT_PLAYER(player)),
+			FC_QUEEN);
+	threats |= FC_BITBOARD((*board), FC_PARTNER(FC_NEXT_PLAYER(player)),
+			FC_ROOK);
+
+	return !!(king_in_check_upward(board, player, king, threats) ||
+		  king_in_check_downward(board, player, king, threats) ||
+		  king_in_check_leftward(board, player, king, threats) ||
+		  king_in_check_rightward(board, player, king, threats));
+}
+
+static int king_in_check_northwest (fc_board_t *board, fc_player_t player,
+		uint64_t king, uint64_t threats)
+{
+	if (king & LEFT_COL) {
+		return 0;
+	}
+
+	if ((king << 7) &
+		(FC_BITBOARD((*board), FC_NEXT_PLAYER(player), FC_KING) |
+		 FC_BITBOARD((*board), FC_PARTNER(FC_NEXT_PLAYER(player)),
+				FC_KING))) {
+		return 1;
+	}
+
+	for (uint64_t i = king << 7; i; i <<= 7) {
+		if (i & threats) {
+			return 1;
+		}
+		if (i & FC_ALL_ALLIES((*board), player)) {
+			break;
+		}
+		if (i & LEFT_COL) {
+			break;
+		}
+	}
+	return 0;
+}
+
+static int king_in_check_southwest (fc_board_t *board, fc_player_t player,
+		uint64_t king, uint64_t threats)
+{
+	if (king & LEFT_COL) {
+		return 0;
+	}
+
+	if ((king >> 9) &
+		(FC_BITBOARD((*board), FC_NEXT_PLAYER(player), FC_KING) |
+		 FC_BITBOARD((*board), FC_PARTNER(FC_NEXT_PLAYER(player)),
+				FC_KING))) {
+		return 1;
+	}
+
+	for (uint64_t i = king >> 9; i; i >>= 9) {
+		if (i & threats) {
+			return 1;
+		}
+		if (i & FC_ALL_ALLIES((*board), player)) {
+			break;
+		}
+		if (i & LEFT_COL) {
+			break;
+		}
+	}
+	return 0;
+}
+
+static int king_in_check_northeast (fc_board_t *board, fc_player_t player,
+		uint64_t king, uint64_t threats)
+{
+	if (king & RIGHT_COL) {
+		return 0;
+	}
+
+	if ((king << 9) &
+		(FC_BITBOARD((*board), FC_NEXT_PLAYER(player), FC_KING) |
+		 FC_BITBOARD((*board), FC_PARTNER(FC_NEXT_PLAYER(player)),
+				FC_KING))) {
+		return 1;
+	}
+
+	for (uint64_t i = king << 9; i; i <<= 9) {
+		if (i & threats) {
+			return 1;
+		}
+		if (i & FC_ALL_ALLIES((*board), player)) {
+			break;
+		}
+		if (i & RIGHT_COL) {
+			break;
+		}
+	}
+	return 0;
+}
+
+static int king_in_check_southeast (fc_board_t *board, fc_player_t player,
+		uint64_t king, uint64_t threats)
+{
+	if (king & RIGHT_COL) {
+		return 0;
+	}
+
+	if ((king >> 7) &
+		(FC_BITBOARD((*board), FC_NEXT_PLAYER(player), FC_KING) |
+		 FC_BITBOARD((*board), FC_PARTNER(FC_NEXT_PLAYER(player)),
+				FC_KING))) {
+		return 1;
+	}
+
+	for (uint64_t i = king >> 7; i; i >>= 7) {
+		if (i & threats) {
+			return 1;
+		}
+		if (i & FC_ALL_ALLIES((*board), player)) {
+			break;
+		}
+		if (i & RIGHT_COL) {
+			break;
+		}
+	}
+	return 0;
+}
+
+static int king_in_check_diagonally (fc_board_t *board, fc_player_t player,
+		uint64_t king)
+{
+	uint64_t threats = FC_BITBOARD((*board), FC_NEXT_PLAYER(player),
+			FC_QUEEN);
+	threats |= FC_BITBOARD((*board), FC_NEXT_PLAYER(player), FC_BISHOP);
+	threats |= FC_BITBOARD((*board), FC_PARTNER(FC_NEXT_PLAYER(player)),
+			FC_QUEEN);
+	threats |= FC_BITBOARD((*board), FC_PARTNER(FC_NEXT_PLAYER(player)),
+			FC_BISHOP);
+
+	return !!(king_in_check_northwest(board, player, king, threats) ||
+		  king_in_check_southwest(board, player, king, threats) ||
+		  king_in_check_northeast(board, player, king, threats) ||
+		  king_in_check_southeast(board, player, king, threats));
+}
+
+static int king_in_check_by_knight (fc_board_t *board, fc_player_t player,
+		uint64_t king)
+{
+}
+
+/*
+ * Returns FC_CHECK (1) if king is in check; 0 otherwise.
+ */
+static int is_check (fc_board_t *board, fc_player_t player)
+{
+	uint64_t king = FC_BITBOARD((*board), player, FC_KING);
+	return (king_in_check_laterally(board, player, king) ||
+		king_in_check_diagonally(board, player, king) ||
+		king_in_check_by_knight(board, player, king));
+}
+
+/*
+ * Returns FC_CHECK if player's king is in check, FC_CHECKMATE if checkmate,
+ * and 0 otherwise.
+ */
+int fc_is_king_in_check (fc_board_t *board, fc_player_t player)
+{
+	if (!is_check(board, player)) {
+		return 0;
+	}
+
+	fc_mlist_t moves;
+	fc_mlist_init(&moves);
+	fc_board_get_moves(board, &moves, player);
+	for (int i = 0; i < fc_mlist_length(&moves); i++) {
+		fc_board_t copy;
+		fc_board_copy(&copy, board);
+		fc_board_make_move(&copy, fc_mlist_get(&moves, i));
+		if (!is_check(&copy, player)) {
+			fc_mlist_free(&moves);
+			return FC_CHECK;
+		}
+	}
+
+	fc_mlist_free(&moves);
+	return FC_CHECKMATE;
 }
