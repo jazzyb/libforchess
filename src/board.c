@@ -920,21 +920,57 @@ static int is_threatened_by_pawn (fc_board_t *board, fc_player_t player,
 static int king_in_check_upward (fc_board_t *board, fc_player_t player,
 		uint64_t king, uint64_t threats)
 {
+	for (uint64_t i = king << 8; i; i <<= 8) {
+		if (i & threats) {
+			return 1;
+		}
+		if (i & FC_ALL_ALLIES((*board), player)) {
+			break;
+		}
+	}
+	return 0;
 }
 
 static int king_in_check_downward (fc_board_t *board, fc_player_t player,
 		uint64_t king, uint64_t threats)
 {
+	for (uint64_t i = king >> 8; i; i >>= 8) {
+		if (i & threats) {
+			return 1;
+		}
+		if (i & FC_ALL_ALLIES((*board), player)) {
+			break;
+		}
+	}
+	return 0;
 }
 
 static int king_in_check_leftward (fc_board_t *board, fc_player_t player,
 		uint64_t king, uint64_t threats)
 {
+	for (uint64_t i = king >> 1; i; i >>= 1) {
+		if (i & threats) {
+			return 1;
+		}
+		if (i & FC_ALL_ALLIES((*board), player)) {
+			break;
+		}
+	}
+	return 0;
 }
 
 static int king_in_check_rightward (fc_board_t *board, fc_player_t player,
 		uint64_t king, uint64_t threats)
 {
+	for (uint64_t i = king << 1; i; i <<= 1) {
+		if (i & threats) {
+			return 1;
+		}
+		if (i & FC_ALL_ALLIES((*board), player)) {
+			break;
+		}
+	}
+	return 0;
 }
 
 static int king_in_check_laterally (fc_board_t *board, fc_player_t player,
@@ -1058,6 +1094,31 @@ static int king_in_check_diagonally (fc_board_t *board, fc_player_t player,
 static int king_in_check_by_knight (fc_board_t *board, fc_player_t player,
 		uint64_t king)
 {
+	uint64_t knights;
+	knights = FC_BITBOARD((*board), FC_NEXT_PLAYER(player), FC_KNIGHT) |
+		  FC_BITBOARD((*board), FC_PARTNER(FC_NEXT_PLAYER(player)),
+					  FC_KNIGHT);
+	if (!(king & (FC_LEFT_COL | FC_2LEFT_COL))) {
+		if (((king << 6) & knights) || ((king >> 10) & knights)) {
+			return 1;
+		}
+	}
+	if (!(knight & FC_LEFT_COL)) {
+		if (((king << 15) & knights) || ((king >> 17) & knights)) {
+			return 1;
+		}
+	}
+	if (!(knight & (FC_RIGHT_COL | FC_2RIGHT_COL))) {
+		if (((king << 10) & knights) || ((king >> 6) & knights)) {
+			return 1;
+		}
+	}
+	if (!(knight & FC_RIGHT_COL)) {
+		if (((king << 17) & knights) || ((king >> 15) & knights)) {
+			return 1;
+		}
+	}
+	return 0;
 }
 
 /*
