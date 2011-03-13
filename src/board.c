@@ -726,6 +726,197 @@ void fc_board_copy (fc_board_t *dst, fc_board_t *src)
  * or not */
 /* FIXME Find a clean way of determining if the king is in check(mate). */
 
+static int is_threatened_by_king (fc_board_t *board, fc_player_t player,
+		uint64_t king)
+{
+	uint64_t enemy_kings;
+	enemy_kings = FC_BITBOARD((*board), FC_NEXT_PLAYER(player), FC_KING) |
+		FC_BITBOARD((*board), FC_PARTNER(FC_NEXT_PLAYER(player)),
+				FC_KING);
+	if (!(king & LEFT_COL)) {
+		if (((king << 7) & enemy_kings) ||
+		    ((king >> 9) & enemy_kings) ||
+		    ((king >> 1) & enemy_kings)) {
+			return 1;
+		}
+	}
+	if (((king >> 8) & enemy_kings) || ((king << 8) & enemy_kings)) {
+		return 1;
+	}
+	if (!(king & RIGTH_COL)) {
+		if (((king << 9) & enemy_kings) ||
+		    ((king >> 7) & enemy_kings) ||
+		    ((king << 1) & enemy_kings)) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static int is_threatened_by_pawn (fc_board_t *board, fc_player_t player,
+		uint64_t king)
+{
+	switch (player) {
+	case FC_FIRST:
+		uint64_t pawns2, pawns3, pawns4;
+		/* player 2 pawns that are originally player 2's pawns */
+		pawns2 = FC_BITBOARD((*board), FC_SECOND, FC_PAWN) &
+			 FC_PAWN_BB((*board), FC_SECOND);
+		/* player 2 pawns that (after TWO king captures) are under
+		 * player 4's control */
+		pawns2 |= FC_BITBOARD((*board), FC_FOURTH, FC_PAWN) &
+			  FC_PAWN_BB((*board), FC_SECOND);
+		/* partner pawns which are under enemy control */
+		pawns3 = FC_BITBOARD((*board), FC_SECOND, FC_PAWN) &
+			 FC_PAWN_BB((*board), FC_THIRD);
+		pawns3 |= FC_BITBOARD((*board), FC_FOURTH, FC_PAWN) &
+			  FC_PAWN_BB((*board), FC_THIRD);
+		/* player 4 pawns that are originally player 4's pawns */
+		pawns4 = FC_BITBOARD((*board), FC_FOURTH, FC_PAWN) &
+			 FC_PAWN_BB((*board), FC_FOURTH);
+		/* player 4 pawns that (after TWO king captures) are under
+		 * player 2's control */
+		pawns4 |= FC_BITBOARD((*board), FC_SECOND, FC_PAWN) &
+			  FC_PAWN_BB((*board), FC_FOURTH);
+		/* check left */
+		if (!(king & LEFT_COL) && ((king >> 1) & pawns2)) {
+			return 1;
+		}
+		/* check right */
+		if (!(king & RIGHT_COL) &&
+			(((king << 1) & pawns4) || ((king << 1) & pawns3))) {
+			return 1;
+		}
+		/* check up */
+		if (((king << 8) & pawns2) || ((king << 8) & pawns3)) {
+			return 1;
+		}
+		/* check down */
+		if ((king >> 8) & pawns4) {
+			return 1;
+		}
+		break;
+	case FC_SECOND:
+		uint64_t pawns1, pawns3, pawns4;
+		/* player 1 pawns that are originally player 1's pawns */
+		pawns1 = FC_BITBOARD((*board), FC_FIRST, FC_PAWN) &
+			 FC_PAWN_BB((*board), FC_FIRST);
+		/* player 1 pawns that (after TWO king captures) are under
+		 * player 3's control */
+		pawns1 |= FC_BITBOARD((*board), FC_THIRD, FC_PAWN) &
+			  FC_PAWN_BB((*board), FC_FIRST);
+		/* partner pawns which are under enemy control */
+		pawns4 = FC_BITBOARD((*board), FC_FIRST, FC_PAWN) &
+			 FC_PAWN_BB((*board), FC_FOURTH);
+		pawns4 |= FC_BITBOARD((*board), FC_THIRD, FC_PAWN) &
+			  FC_PAWN_BB((*board), FC_FOURTH);
+		/* player 3 pawns that are originally player 3's pawns */
+		pawns3 = FC_BITBOARD((*board), FC_THIRD, FC_PAWN) &
+			 FC_PAWN_BB((*board), FC_THIRD);
+		/* player 3 pawns that (after TWO king captures) are under
+		 * player 1's control */
+		pawns3 |= FC_BITBOARD((*board), FC_FIRST, FC_PAWN) &
+			  FC_PAWN_BB((*board), FC_THIRD);
+		/* check left */
+		if (!(king & LEFT_COL) && ((king >> 1) & pawns1)) {
+			return 1;
+		}
+		/* check right */
+		if (!(king & RIGHT_COL) &&
+			(((king << 1) & pawns3) || ((king << 1) & pawns4))) {
+			return 1;
+		}
+		/* check up */
+		if ((king << 8) & pawns3) {
+			return 1;
+		}
+		/* check down */
+		if (((king >> 8) & pawns1) || ((king >> 8) & pawns4)) {
+			return 1;
+		}
+		break;
+	case FC_THIRD:
+		uint64_t pawns1, pawns2, pawns4;
+		/* player 2 pawns that are originally player 2's pawns */
+		pawns2 = FC_BITBOARD((*board), FC_SECOND, FC_PAWN) &
+			 FC_PAWN_BB((*board), FC_SECOND);
+		/* player 2 pawns that (after TWO king captures) are under
+		 * player 4's control */
+		pawns2 |= FC_BITBOARD((*board), FC_FOURTH, FC_PAWN) &
+			  FC_PAWN_BB((*board), FC_SECOND);
+		/* partner pawns which are under enemy control */
+		pawns1 = FC_BITBOARD((*board), FC_SECOND, FC_PAWN) &
+			 FC_PAWN_BB((*board), FC_FIRST);
+		pawns1 |= FC_BITBOARD((*board), FC_FOURTH, FC_PAWN) &
+			  FC_PAWN_BB((*board), FC_FIRST);
+		/* player 4 pawns that are originally player 4's pawns */
+		pawns4 = FC_BITBOARD((*board), FC_FOURTH, FC_PAWN) &
+			 FC_PAWN_BB((*board), FC_FOURTH);
+		/* player 4 pawns that (after TWO king captures) are under
+		 * player 2's control */
+		pawns4 |= FC_BITBOARD((*board), FC_SECOND, FC_PAWN) &
+			  FC_PAWN_BB((*board), FC_FOURTH);
+		/* check left */
+		if (!(king & LEFT_COL) &&
+			(((king >> 1) & pawns2) || ((king >> 1) & pawns1))) {
+			return 1;
+		}
+		/* check right */
+		if (!(king & RIGHT_COL) && ((king << 1) & pawns4)) {
+			return 1;
+		}
+		/* check up */
+		if ((king << 8) & pawns2) {
+			return 1;
+		}
+		/* check down */
+		if (((king >> 8) & pawns4) || ((king >> 8) & pawns1)) {
+			return 1;
+		}
+		break;
+	case FC_FOURTH:
+		uint64_t pawns1, pawns2, pawns3;
+		/* player 1 pawns that are originally player 1's pawns */
+		pawns1 = FC_BITBOARD((*board), FC_FIRST, FC_PAWN) &
+			 FC_PAWN_BB((*board), FC_FIRST);
+		/* player 1 pawns that (after TWO king captures) are under
+		 * player 3's control */
+		pawns1 |= FC_BITBOARD((*board), FC_THIRD, FC_PAWN) &
+			  FC_PAWN_BB((*board), FC_FIRST);
+		/* partner pawns which are under enemy control */
+		pawns2 = FC_BITBOARD((*board), FC_FIRST, FC_PAWN) &
+			 FC_PAWN_BB((*board), FC_SECOND);
+		pawns2 |= FC_BITBOARD((*board), FC_THIRD, FC_PAWN) &
+			  FC_PAWN_BB((*board), FC_SECOND);
+		/* player 3 pawns that are originally player 3's pawns */
+		pawns3 = FC_BITBOARD((*board), FC_THIRD, FC_PAWN) &
+			 FC_PAWN_BB((*board), FC_THIRD);
+		/* player 3 pawns that (after TWO king captures) are under
+		 * player 1's control */
+		pawns3 |= FC_BITBOARD((*board), FC_FIRST, FC_PAWN) &
+			  FC_PAWN_BB((*board), FC_THIRD);
+		/* check left */
+		if (!(king & LEFT_COL) &&
+			(((king >> 1) & pawns1) || ((king >> 1) & pawns2))) {
+			return 1;
+		}
+		/* check right */
+		if (!(king & RIGHT_COL) && ((king << 1) & pawns3)) {
+			return 1;
+		}
+		/* check up */
+		if (((king << 8) & pawns3) || ((king << 8) & pawns2)) {
+			return 1;
+		}
+		/* check down */
+		if ((king >> 8) & pawns1) {
+			return 1;
+		}
+		break;
+	}
+	return 0;
+}
+
 static int king_in_check_upward (fc_board_t *board, fc_player_t player,
 		uint64_t king, uint64_t threats)
 {
@@ -770,13 +961,6 @@ static int king_in_check_northwest (fc_board_t *board, fc_player_t player,
 		return 0;
 	}
 
-	if ((king << 7) &
-		(FC_BITBOARD((*board), FC_NEXT_PLAYER(player), FC_KING) |
-		 FC_BITBOARD((*board), FC_PARTNER(FC_NEXT_PLAYER(player)),
-				FC_KING))) {
-		return 1;
-	}
-
 	for (uint64_t i = king << 7; i; i <<= 7) {
 		if (i & threats) {
 			return 1;
@@ -796,13 +980,6 @@ static int king_in_check_southwest (fc_board_t *board, fc_player_t player,
 {
 	if (king & LEFT_COL) {
 		return 0;
-	}
-
-	if ((king >> 9) &
-		(FC_BITBOARD((*board), FC_NEXT_PLAYER(player), FC_KING) |
-		 FC_BITBOARD((*board), FC_PARTNER(FC_NEXT_PLAYER(player)),
-				FC_KING))) {
-		return 1;
 	}
 
 	for (uint64_t i = king >> 9; i; i >>= 9) {
@@ -826,13 +1003,6 @@ static int king_in_check_northeast (fc_board_t *board, fc_player_t player,
 		return 0;
 	}
 
-	if ((king << 9) &
-		(FC_BITBOARD((*board), FC_NEXT_PLAYER(player), FC_KING) |
-		 FC_BITBOARD((*board), FC_PARTNER(FC_NEXT_PLAYER(player)),
-				FC_KING))) {
-		return 1;
-	}
-
 	for (uint64_t i = king << 9; i; i <<= 9) {
 		if (i & threats) {
 			return 1;
@@ -852,13 +1022,6 @@ static int king_in_check_southeast (fc_board_t *board, fc_player_t player,
 {
 	if (king & RIGHT_COL) {
 		return 0;
-	}
-
-	if ((king >> 7) &
-		(FC_BITBOARD((*board), FC_NEXT_PLAYER(player), FC_KING) |
-		 FC_BITBOARD((*board), FC_PARTNER(FC_NEXT_PLAYER(player)),
-				FC_KING))) {
-		return 1;
 	}
 
 	for (uint64_t i = king >> 7; i; i >>= 7) {
@@ -886,10 +1049,10 @@ static int king_in_check_diagonally (fc_board_t *board, fc_player_t player,
 	threats |= FC_BITBOARD((*board), FC_PARTNER(FC_NEXT_PLAYER(player)),
 			FC_BISHOP);
 
-	return !!(king_in_check_northwest(board, player, king, threats) ||
-		  king_in_check_southwest(board, player, king, threats) ||
-		  king_in_check_northeast(board, player, king, threats) ||
-		  king_in_check_southeast(board, player, king, threats));
+	return (king_in_check_northwest(board, player, king, threats) ||
+		king_in_check_southwest(board, player, king, threats) ||
+		king_in_check_northeast(board, player, king, threats) ||
+		king_in_check_southeast(board, player, king, threats));
 }
 
 static int king_in_check_by_knight (fc_board_t *board, fc_player_t player,
@@ -905,7 +1068,9 @@ static int is_check (fc_board_t *board, fc_player_t player)
 	uint64_t king = FC_BITBOARD((*board), player, FC_KING);
 	return (king_in_check_laterally(board, player, king) ||
 		king_in_check_diagonally(board, player, king) ||
-		king_in_check_by_knight(board, player, king));
+		king_in_check_by_knight(board, player, king) ||
+		is_threatened_by_king(board, player, king) ||
+		is_threatened_by_pawn(board, player, king));
 }
 
 /*
