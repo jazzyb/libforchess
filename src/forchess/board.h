@@ -54,6 +54,7 @@ int fc_board_get_piece (fc_board_t *board,
 		  fc_player_t *player,
 		  fc_piece_t *piece,
 		  int row, int col);
+int fc_board_remove_piece (fc_board_t *board, int row, int col);
 /* NOTE because there is no return value for this function, if one of the mlist
  * functions fails, the user will not know about it. */
 void fc_board_get_moves (fc_board_t *board,
