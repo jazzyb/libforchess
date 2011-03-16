@@ -33,6 +33,21 @@ typedef uint64_t fc_board_t[FC_TOTAL_BITBOARDS];
 #define FC_FOREACH(piece, x) \
 	for(piece = (x & (~x + 1)); x; x ^= piece, piece = (x & (~x + 1)))
 
+/* macro to get a particular pawn orientation bitboard */
+#define FC_PAWN_BB(board, orientation) (board[FC_FIRST_PAWNS + orientation])
+
+/* used to check a piece's position on the board */
+#define FC_LEFT_COL  (UINT64_C(0x0101010101010101))
+#define FC_RIGHT_COL (UINT64_C(0x8080808080808080))
+#define FC_2LEFT_COL  (UINT64_C(0x0202020202020202))
+#define FC_2RIGHT_COL (UINT64_C(0x4040404040404040))
+
+#define FC_ALL_PIECES(b, p) \
+	(b[6*p] | b[6*p+1] | b[6*p+2] | b[6*p+3] | b[6*p+4] | b[6*p+5])
+
+#define FC_ALL_ALLIES(b, p) \
+	(FC_ALL_PIECES(b, p) | FC_ALL_PIECES(b, ((p + 2) % 4)))
+
 /*
  * Initializes the board based on a config file.
  */
