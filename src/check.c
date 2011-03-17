@@ -274,10 +274,10 @@ static int king_in_check_laterally (fc_board_t *board, fc_player_t player,
 	threats |= FC_BITBOARD((*board), FC_PARTNER(FC_NEXT_PLAYER(player)),
 			FC_ROOK);
 
-	return !!(king_in_check_upward(board, player, king, threats) ||
-		  king_in_check_downward(board, player, king, threats) ||
-		  king_in_check_leftward(board, player, king, threats) ||
-		  king_in_check_rightward(board, player, king, threats));
+	return (king_in_check_upward(board, player, king, threats) ||
+		king_in_check_downward(board, player, king, threats) ||
+		king_in_check_leftward(board, player, king, threats) ||
+		king_in_check_rightward(board, player, king, threats));
 }
 
 static int king_in_check_northwest (fc_board_t *board, fc_player_t player,
@@ -448,6 +448,15 @@ int fc_is_king_in_check (fc_board_t *board, fc_player_t player)
 		fc_board_copy(&copy, board);
 		fc_board_make_move(&copy, fc_mlist_get(&moves, i));
 		if (!is_check(&copy, player)) {
+			/* We must never move such that our opponent is put in
+			 * check because of us. Even if it would get us out of
+			 * checkmate.  However, I am interpreting this rule to
+			 * mean that if our partner is already in check, then
+			 * all bets are off.*/
+			if (is_check(&copy, FC_PARTNER(player)) &&
+			    !is_check(board, FC_PARTNER(player))) {
+				continue;
+			}
 			fc_mlist_free(&moves);
 			return FC_CHECK;
 		}

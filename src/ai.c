@@ -7,7 +7,17 @@
 
 #include "forchess/ai.h"
 #include "forchess/board.h"
-#include "forchess/move.h"
+#include "forchess/moves.h"
+
+int _fc_ai_piece_values[] = {
+	100,	/* pawns */
+	300,	/* bishops */
+	350,	/* knights -- because of the closeness of the pieces, I value
+		   them slightly more than bishops */
+	500,	/* rooks */
+	900,	/* queens */
+	100000	/* kings */
+};
 
 /*
  * Return 1 if player is no longer present in the game; 0 otherwise.
@@ -55,7 +65,7 @@ static int alphabeta (fc_board_t *board, fc_player_t player, int depth,
 	 */
 	for (int i = 0; i < fc_mlist_length(&list); i++) {
 
-		fc_move_t *move = fc_mlist_get(list, i);
+		fc_move_t *move = fc_mlist_get(&list, i);
 		if (!fc_ai_is_move_valid(board, move)) {
 			continue;
 		}
@@ -113,7 +123,7 @@ int fc_ai_next_move (fc_board_t *board, fc_move_t *ret, fc_player_t player,
 		int score = alphabeta(&copy, FC_NEXT_PLAYER(player), depth - 1,
 				alpha, BETA_MAX, 0);
 		if (score > alpha) {
-			alpha = value;
+			alpha = score;
 			fc_move_copy(ret, move);
 		}
 	}
@@ -156,11 +166,15 @@ int fc_ai_is_move_valid (fc_board_t *board, fc_move_t *move)
 {
 	fc_board_t copy;
 	fc_board_copy(&copy, board);
-	fc_board_make_move(copy, move);
+	fc_board_make_move(&copy, move);
 
 	int check_status_before = fc_is_king_in_check(board, move->player);
-	if (check_status_before == FC_CHECKMATE && move->piece == FC_KING) {
-		return 0;
+	if (check_status_before == FC_CHECKMATE) {
+		if (move->piece == FC_KING) {
+			return 0;
+		} else {
+			return 1;
+		}
 	}
 	int check_status_after = fc_is_king_in_check(&copy, move->player);
 	if (!check_status_before && check_status_after) {
