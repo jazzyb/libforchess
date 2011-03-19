@@ -24,7 +24,7 @@ int _fc_ai_piece_values[] = {
  */
 static inline int is_player_out (fc_board_t *board, fc_player_t player)
 {
-	return !FC_BITBOARD((*board), player, FC_KING);
+	return !(FC_BITBOARD((*board), player, FC_KING));
 }
 
 /*
@@ -49,26 +49,33 @@ static int alphabeta (fc_board_t *board, fc_player_t player, int depth,
 	int score;
 	if (game_over(board) || depth == 0) {
 		score = fc_ai_score_position(board, player);
-		return (max) ? score : (-1 * score);
+		/*
+		 * Adjusting the scores with the current depth expedites the
+		 * end of the game.  Otherwise the AI will just move from one
+		 * position to the next without making the killing blow.
+		 */
+		return (max) ? score - depth : (-1 * score) + depth;
 	}
 	if (is_player_out(board, player)) {
 		return alphabeta(board, FC_NEXT_PLAYER(player), depth, alpha,
 				beta, !max);
 	}
 
+	int invalid_mlist_flag = 1;
 	fc_mlist_t list;
 	fc_mlist_init(&list, 0);
 	fc_board_get_moves(board, &list, player);
-	/* TODO add logic for removes */
 	/* TODO add logic for those weird times when we won't be able to move,
 	 * but we will have to remove a piece that will put us in check(mate).
 	 */
+evaluate_moves:
 	for (int i = 0; i < fc_mlist_length(&list); i++) {
 
 		fc_move_t *move = fc_mlist_get(&list, i);
 		if (!fc_ai_is_move_valid(board, move)) {
 			continue;
 		}
+		invalid_mlist_flag = 0;
 
 		fc_board_t copy;
 		fc_board_copy(&copy, board);
@@ -90,6 +97,12 @@ static int alphabeta (fc_board_t *board, fc_player_t player, int depth,
 			break;
 		}
 	}
+	if (invalid_mlist_flag) {
+		fc_mlist_clear(&list);
+		fc_board_get_removes(board, &list, player);
+		goto evaluate_moves;
+	}
+
 	fc_mlist_free(&list);
 
 	return (max) ? alpha : beta;
@@ -106,15 +119,18 @@ int fc_ai_next_move (fc_board_t *board, fc_move_t *ret, fc_player_t player,
 {
 	/* TODO check that this request is valid */
 	int alpha = ALPHA_MIN;
+	int invalid_mlist_flag = 1;
 	fc_mlist_t list;
 	fc_mlist_init(&list, 0);
 	fc_board_get_moves(board, &list, player);
+evaluate_moves:
 	for (int i = 0; i < fc_mlist_length(&list); i++) {
 
 		fc_move_t *move = fc_mlist_get(&list, i);
 		if (!fc_ai_is_move_valid(board, move)) {
 			continue;
 		}
+		invalid_mlist_flag = 0;
 
 		fc_board_t copy;
 		fc_board_copy(&copy, board);
@@ -126,6 +142,11 @@ int fc_ai_next_move (fc_board_t *board, fc_move_t *ret, fc_player_t player,
 			alpha = score;
 			fc_move_copy(ret, move);
 		}
+	}
+	if (invalid_mlist_flag) {
+		fc_mlist_clear(&list);
+		fc_board_get_removes(board, &list, player);
+		goto evaluate_moves;
 	}
 	fc_mlist_free(&list);
 	return 1;
@@ -170,7 +191,8 @@ int fc_ai_is_move_valid (fc_board_t *board, fc_move_t *move)
 
 	int check_status_before = fc_is_king_in_check(board, move->player);
 	if (check_status_before == FC_CHECKMATE) {
-		if (move->piece == FC_KING) {
+		uint64_t king = FC_BITBOARD((*board), move->player, FC_KING);
+		if (move->piece == FC_KING && move->move != king) {
 			return 0;
 		} else {
 			return 1;

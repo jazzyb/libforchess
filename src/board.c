@@ -538,12 +538,12 @@ void fc_board_get_moves (fc_board_t *board,
 			 fc_mlist_t *moves,
 			 fc_player_t player)
 {
-	fc_get_king_moves(board, moves, player);
 	fc_get_pawn_moves(board, moves, player);
 	fc_get_knight_moves(board, moves, player);
 	fc_get_bishop_moves(board, moves, player);
 	fc_get_rook_moves(board, moves, player);
 	fc_get_queen_moves(board, moves, player);
+	fc_get_king_moves(board, moves, player);
 }
 
 /*

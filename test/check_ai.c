@@ -1,4 +1,5 @@
 #include <check.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
@@ -59,77 +60,31 @@ START_TEST (test_ai_is_move_valid)
 }
 END_TEST
 
-START_TEST (test_ai_next_move)
+START_TEST (test_ai_next_move1)
 {
 	fc_board_t board;
 	bzero(&board, sizeof(board));
 	fc_board_setup(&board, "test/boards/test_ai_next_move.1");
 	fc_move_t move;
-	fc_ai_next_move(&board, &move, FC_FIRST, 6);
-	printf("1: %d, 0x%llx\n", move.piece, move.move);
+	fc_ai_next_move(&board, &move, FC_FIRST, 4);
+	fail_unless(move.move == fc_uint64("c8-c1"));
+	//printf("1: %d, 0x%llx\n", move.piece, move.move);
 	fc_board_make_move(&board, &move);
-	fc_mlist_t list;
-	fc_mlist_init(&list, 0);
-	fc_board_get_moves(&board, &list, FC_SECOND);
-	printf("# moves == %d\n", fc_mlist_length(&list));
-	for (int i = 0; i < fc_mlist_length(&list); i++) {
-		fc_board_t copy;
-		fc_board_copy(&copy, &board);
-		fc_board_make_move(&copy, fc_mlist_get(&list, i));
-		printf("%d %d\n", i, fc_is_king_in_check(&copy, FC_SECOND));
-	}
-	fc_ai_next_move(&board, &move, FC_SECOND, 6);
-	printf("2: %d, 0x%llx\n", move.piece, move.move);
+	fc_ai_next_move(&board, &move, FC_FOURTH, 4);
+	fail_unless(move.move == fc_uint64("a8-c7"));
+	//printf("4: %d, 0x%llx\n", move.piece, move.move);
 	fc_board_make_move(&board, &move);
-	fc_ai_next_move(&board, &move, FC_FOURTH, 6);
-	printf("4: %d, 0x%llx\n", move.piece, move.move);
-	fc_board_make_move(&board, &move);
-	fc_ai_next_move(&board, &move, FC_FIRST, 6);
-	printf("1: %d, 0x%llx\n", move.piece, move.move);
-	fc_board_make_move(&board, &move);
-	fc_ai_next_move(&board, &move, FC_SECOND, 6);
-	printf("2: %d, 0x%llx\n", move.piece, move.move);
-	fc_board_make_move(&board, &move);
-	fc_ai_next_move(&board, &move, FC_FOURTH, 6);
-	printf("4: %d, 0x%llx\n", move.piece, move.move);
-	fc_board_make_move(&board, &move);
-	fc_ai_next_move(&board, &move, FC_FIRST, 6);
-	printf("1: %d, 0x%llx\n", move.piece, move.move);
-	fc_board_make_move(&board, &move);
-	fc_ai_next_move(&board, &move, FC_SECOND, 6);
-	printf("2: %d, 0x%llx\n", move.piece, move.move);
-	fc_board_make_move(&board, &move);
-	fc_ai_next_move(&board, &move, FC_FOURTH, 6);
-	printf("4: %d, 0x%llx\n", move.piece, move.move);
-	fc_board_make_move(&board, &move);
-	fc_ai_next_move(&board, &move, FC_FIRST, 6);
-	printf("1: %d, 0x%llx\n", move.piece, move.move);
-	fc_board_make_move(&board, &move);
-	fc_ai_next_move(&board, &move, FC_SECOND, 6);
-	printf("2: %d, 0x%llx\n", move.piece, move.move);
-	fc_board_make_move(&board, &move);
-	fc_ai_next_move(&board, &move, FC_FOURTH, 6);
-	printf("4: %d, 0x%llx\n", move.piece, move.move);
-	fc_board_make_move(&board, &move);
-	//fail_unless(move.move == fc_uint64("b8-h8"));
-#if 0
-	fc_board_make_move(&board, &move);
-	bzero(&move, sizeof(move));
-	fc_mlist_t list;
-	fc_mlist_init(&list, 0);
-	fc_board_get_moves(&board, &list, FC_SECOND);
-	printf("# moves == %d\n", fc_mlist_length(&list));
-	for (int i = 0; i < fc_mlist_length(&list); i++) {
-		fc_board_t copy;
-		fc_board_copy(&copy, &board);
-		fc_board_make_move(&copy, fc_mlist_get(&list, i));
-		printf("%d %d\n", i, fc_is_king_in_check(&copy, FC_SECOND));
-	}
-	fc_ai_next_move(&board, &move, FC_SECOND, 3);
-	printf("0x%llx\n0x%llx\n", move.move, fc_uint64("d5-e4"));
-#endif
-	//fail_unless(move.move == fc_uint64("d5-e4"));
-	//fc_board_make_move(&board, &move);
+	fc_ai_next_move(&board, &move, FC_FIRST, 4);
+	fail_unless(move.move == fc_uint64("c1-h1"));
+}
+END_TEST
+
+START_TEST (test_ai_next_move2)
+{
+	fc_board_t board;
+	bzero(&board, sizeof(board));
+	fc_board_setup(&board, "test/boards/test_ai_next_move.1");
+	fc_move_t move;
 }
 END_TEST
 
@@ -139,7 +94,8 @@ Suite *ai_suite (void)
 	TCase *tc_ai = tcase_create("Core");
 	tcase_add_test(tc_ai, test_ai_score_position);
 	tcase_add_test(tc_ai, test_ai_is_move_valid);
-	tcase_add_test(tc_ai, test_ai_next_move);
+	tcase_add_test(tc_ai, test_ai_next_move1);
+	tcase_add_test(tc_ai, test_ai_next_move2);
 	suite_add_tcase(s, tc_ai);
 	return s;
 }
