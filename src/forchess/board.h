@@ -87,4 +87,7 @@ void fc_board_copy (fc_board_t *dst, fc_board_t *src);
 #define FC_CHECKMATE 2
 int fc_is_king_in_check (fc_board_t *board, fc_player_t player);
 
+void fc_move2str (fc_board_t *board, char *str, fc_move_t *move);
+void fc_str2move (fc_board_t *board, fc_move_t *move, char *str);
+
 #endif

@@ -722,3 +722,51 @@ void fc_board_copy (fc_board_t *dst, fc_board_t *src)
 		(*dst)[i] = (*src)[i];
 	}
 }
+
+/*
+ * Clean the below functions up.
+ */
+void fc_move2str (fc_board_t *board, char *str, fc_move_t *move)
+{
+	uint64_t m = FC_BITBOARD((*board), move->player, move->piece) &
+			move->move;
+	int i = 0;
+	uint64_t bit = m;
+	while (bit) {
+		bit >>= 1;
+		i++;
+	}
+	char y2 = (i / 8) + '1';
+	char x2 = (i % 8) - 1 + 'a';
+
+	m ^= move->move;
+	i = 0;
+	bit = m;
+	while (bit) {
+		bit >>= 1;
+		i++;
+	}
+	char x1, y1;
+	if (i) {
+		y1 = (i / 8) + '1';
+		x1 = (i % 8) - 1 + 'a';
+	} else {
+		x1 = y1 = '\0';
+	}
+	sprintf(str, "%c%c-%c%c", x1, y1, x2, y2);
+}
+
+void fc_str2move (fc_board_t *board, fc_move_t *move, char *str)
+{
+	char x1, x2, y1, y2;
+	int ret = sscanf(str, "%c%c-%c%c", &x1, &y1, &x2, &y2);
+	x1 -= 'a';
+	x2 -= 'a';
+	if (ret > 2) {
+		y1 -= '1';
+		y2 -= '1';
+	}
+	fc_board_get_piece(board, &(move->player), &(move->piece), y1, x1);
+	move->move = ((UINT64_C(1)) << (y1 * 8) + x1) |
+		       ((UINT64_C(1)) << (y2 * 8) + x2);
+}

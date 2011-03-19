@@ -1,8 +1,6 @@
 #include <limits.h>
 
-/* FIXME write tests for the below code.
- * FIXME add logic to remove pieces as well as move them.
- * FIXME add logic to handle pawn promotions
+/* FIXME add logic to handle pawn promotions
  */
 
 #include "forchess/ai.h"
@@ -80,22 +78,44 @@ evaluate_moves:
 
 		fc_board_t copy;
 		fc_board_copy(&copy, board);
-		fc_board_make_move(&copy, move);
+		if (fc_board_make_move(&copy, move)) {
+			score = alphabeta(&copy, FC_NEXT_PLAYER(player),
+					depth - 1, alpha, beta, !max);
 
-		score = alphabeta(&copy, FC_NEXT_PLAYER(player), depth - 1,
-				alpha, beta, !max);
+			if (max) {
+				if (score > alpha) {
+					alpha = score;
+				}
+			} else {
+				if (score < beta) {
+					beta = score;
+				}
+			}
+			if (beta <= alpha) {
+				break;
+			}
+		} else { /* pawn promotion */
+			for (fc_piece_t p = FC_KNIGHT;; p = FC_QUEEN) {
+				fc_board_make_pawn_move(&copy, move, p);
+				score = alphabeta(&copy, FC_NEXT_PLAYER(player),
+						depth - 1, alpha, beta, !max);
 
-		if (max) {
-			if (score > alpha) {
-				alpha = score;
+				if (max) {
+					if (score > alpha) {
+						alpha = score;
+					}
+				} else {
+					if (score < beta) {
+						beta = score;
+					}
+				}
+				if (beta <= alpha) {
+					break;
+				}
+				if (p == FC_QUEEN) {
+					break;
+				}
 			}
-		} else {
-			if (score < beta) {
-				beta = score;
-			}
-		}
-		if (beta <= alpha) {
-			break;
 		}
 	}
 	if (invalid_mlist_flag) {
@@ -144,13 +164,27 @@ evaluate_moves:
 
 		fc_board_t copy;
 		fc_board_copy(&copy, board);
-		fc_board_make_move(&copy, move);
-
-		int score = alphabeta(&copy, FC_NEXT_PLAYER(player), depth - 1,
-				alpha, BETA_MAX, 0);
-		if (score > alpha) {
-			alpha = score;
-			fc_move_copy(ret, move);
+		int score;
+		if (fc_board_make_move(&copy, move)) {
+			score = alphabeta(&copy, FC_NEXT_PLAYER(player),
+					depth - 1, alpha, BETA_MAX, 0);
+			if (score > alpha) {
+				alpha = score;
+				fc_move_copy(ret, move);
+			}
+		} else { /* pawn promotion */
+			for (fc_piece_t p = FC_KNIGHT;; p = FC_QUEEN) {
+				fc_board_make_pawn_move(&copy, move, p);
+				score = alphabeta(&copy, FC_NEXT_PLAYER(player),
+						depth - 1, alpha, BETA_MAX, 0);
+				if (score > alpha) {
+					alpha = score;
+					fc_move_copy(ret, move);
+				}
+				if (p == FC_QUEEN) {
+					break;
+				}
+			}
 		}
 	}
 	if (invalid_mlist_flag) {
