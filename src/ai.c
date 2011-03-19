@@ -62,6 +62,7 @@ static int alphabeta (fc_board_t *board, fc_player_t player, int depth,
 	}
 
 	int invalid_mlist_flag = 1;
+	int count = 0;
 	fc_mlist_t list;
 	fc_mlist_init(&list, 0);
 	fc_board_get_moves(board, &list, player);
@@ -100,6 +101,10 @@ evaluate_moves:
 	if (invalid_mlist_flag) {
 		fc_mlist_clear(&list);
 		fc_board_get_removes(board, &list, player);
+		count += 1;
+		if (count > 1) {
+			printf("here\n");
+		}
 		goto evaluate_moves;
 	}
 
@@ -118,8 +123,13 @@ int fc_ai_next_move (fc_board_t *board, fc_move_t *ret, fc_player_t player,
 		int depth)
 {
 	/* TODO check that this request is valid */
+	if (is_player_out(board, player)) {
+		ret->move = 0;
+		return 0;
+	}
 	int alpha = ALPHA_MIN;
 	int invalid_mlist_flag = 1;
+	int count = 0;
 	fc_mlist_t list;
 	fc_mlist_init(&list, 0);
 	fc_board_get_moves(board, &list, player);
@@ -146,6 +156,10 @@ evaluate_moves:
 	if (invalid_mlist_flag) {
 		fc_mlist_clear(&list);
 		fc_board_get_removes(board, &list, player);
+		count += 1;
+		if (count > 1) {
+			printf("here\n");
+		}
 		goto evaluate_moves;
 	}
 	fc_mlist_free(&list);
