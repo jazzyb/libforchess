@@ -488,6 +488,31 @@ START_TEST (test_forchess_make_move)
 	fc_get_queen_moves(&board, &moves, FC_FOURTH);
 	fail_unless(fc_mlist_length(&moves) != 0);
 
+	/* check that pawn bitboards are updating properly */
+	bzero(&board, sizeof(board));
+	fc_board_setup(&board, "test/boards/test_forchess_make_move.2");
+	move.player = FC_FIRST;
+	move.piece = FC_PAWN;
+	move.move = fc_uint64("a4-a5");
+	fc_board_make_move(&board, &move);
+	move.player = FC_SECOND;
+	move.piece = FC_PAWN;
+	move.move = fc_uint64("d8-e8");
+	fc_board_make_move(&board, &move);
+	move.player = FC_THIRD;
+	move.piece = FC_PAWN;
+	move.move = fc_uint64("h5-h4");
+	fc_board_make_move(&board, &move);
+	move.player = FC_FOURTH;
+	move.piece = FC_PAWN;
+	move.move = fc_uint64("e1-d1");
+	fc_board_make_move(&board, &move);
+
+	fc_mlist_clear(&moves);
+	fc_get_pawn_moves(&board, &moves, FC_FIRST);
+	//printf("%d\n", fc_mlist_length(&moves));
+	fail_unless(fc_mlist_length(&moves) == 8);
+
 	fc_mlist_free(&moves);
 }
 END_TEST

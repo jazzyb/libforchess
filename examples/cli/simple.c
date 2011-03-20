@@ -65,7 +65,6 @@ int main (int argc, char **argv)
 	int player_is_human[] = {0, 0, 0, 0};
 	for (int i = 1; i < argc; i++) {
 		int n = strtol(argv[i], NULL, 10);
-		printf("%d\n", n);
 		if (n > 0 && n <= 4) {
 			player_is_human[n-1] = 1;
 		} else {
@@ -89,6 +88,7 @@ int main (int argc, char **argv)
 		if (player_is_human[player]) {
 			do {
 				printf("%d: ", player + 1);
+				fflush(stdout);
 				gets(move_buf);
 				fc_str2move(&board, &move, move_buf);
 				if (!validate_move(&board, &move, player)) {
@@ -101,6 +101,7 @@ int main (int argc, char **argv)
 				/* pawn promotion */
 retry:
 				printf("new piece: ");
+				fflush(stdout);
 				scanf("%c", &piece);
 				fc_piece_t type;
 				switch (piece) {
@@ -166,6 +167,7 @@ retry:
 				strcat(move_buf, "++");
 			}
 			printf("%d: %c%s\n", player + 1, piece, move_buf);
+			fflush(stdout);
 		}
 	}
 
