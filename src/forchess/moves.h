@@ -3,12 +3,17 @@
 
 #include <stdint.h>
 
+#define FC_NONE (-1)
+
 typedef enum {
 	FC_FIRST = 0,
 	FC_SECOND,
 	FC_THIRD,
 	FC_FOURTH
 } fc_player_t;
+
+#define FC_NEXT_PLAYER(player) ((player + 1) % 4)
+#define FC_PARTNER(player) ((player + 2) % 4)
 
 typedef enum {
 	FC_PAWN = 0,

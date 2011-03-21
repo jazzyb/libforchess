@@ -8,7 +8,7 @@
 START_TEST (test_forchess_getters_and_setters)
 {
 	fc_board_t board;
-	bzero(board, sizeof(board));
+	bzero(&board, sizeof(board));
 	fc_player_t player = -1;
 	fc_piece_t piece = -1;
 	int ret = fc_board_get_piece(&board, &player, &piece, 3, 3);
@@ -20,10 +20,24 @@ START_TEST (test_forchess_getters_and_setters)
 }
 END_TEST
 
+START_TEST (test_forchess_remove_piece)
+{
+	fc_board_t board;
+	bzero(&board, sizeof(board));
+	fail_unless(!fc_board_remove_piece(&board, 5, 6));
+	fc_board_set_piece(&board, FC_THIRD, FC_KING, 5, 6);
+	fail_unless(fc_board_remove_piece(&board, 5, 6));
+	fc_player_t player = -1;
+	fc_piece_t piece = -1;
+	fail_unless(!fc_board_get_piece(&board, &player, &piece, 5, 6));
+	fail_unless(player == -1 && piece == -1);
+}
+END_TEST
+
 START_TEST (test_forchess_board_setup)
 {
 	fc_board_t board;
-	bzero(board, sizeof(board));
+	bzero(&board, sizeof(board));
 
 	/* check bad boards */
 	int ret = fc_board_setup(&board,
@@ -67,7 +81,7 @@ extern void fc_get_king_moves (fc_board_t *board,
 START_TEST (test_forchess_king_moves)
 {
 	fc_board_t board;
-	bzero(board, sizeof(board));
+	bzero(&board, sizeof(board));
 
 	fc_board_set_piece(&board, FC_FIRST, FC_KING, 0, 0);
 	fc_board_set_piece(&board, FC_SECOND, FC_PAWN, 2, 2);
@@ -116,7 +130,7 @@ extern void fc_get_knight_moves (fc_board_t *board,
 START_TEST (test_forchess_knight_moves)
 {
 	fc_board_t board;
-	bzero(board, sizeof(board));
+	bzero(&board, sizeof(board));
 
 	fc_board_set_piece(&board, FC_FIRST, FC_KNIGHT, 2, 2);
 	fc_board_set_piece(&board, FC_SECOND, FC_KNIGHT, 1, 0);
@@ -474,7 +488,45 @@ START_TEST (test_forchess_make_move)
 	fc_get_queen_moves(&board, &moves, FC_FOURTH);
 	fail_unless(fc_mlist_length(&moves) != 0);
 
+	/* check that pawn bitboards are updating properly */
+	bzero(&board, sizeof(board));
+	fc_board_setup(&board, "test/boards/test_forchess_make_move.2");
+	move.player = FC_FIRST;
+	move.piece = FC_PAWN;
+	move.move = fc_uint64("a4-a5");
+	fc_board_make_move(&board, &move);
+	move.player = FC_SECOND;
+	move.piece = FC_PAWN;
+	move.move = fc_uint64("d8-e8");
+	fc_board_make_move(&board, &move);
+	move.player = FC_THIRD;
+	move.piece = FC_PAWN;
+	move.move = fc_uint64("h5-h4");
+	fc_board_make_move(&board, &move);
+	move.player = FC_FOURTH;
+	move.piece = FC_PAWN;
+	move.move = fc_uint64("e1-d1");
+	fc_board_make_move(&board, &move);
+
+	fc_mlist_clear(&moves);
+	fc_get_pawn_moves(&board, &moves, FC_FIRST);
+	//printf("%d\n", fc_mlist_length(&moves));
+	fail_unless(fc_mlist_length(&moves) == 8);
+
 	fc_mlist_free(&moves);
+}
+END_TEST
+
+START_TEST (test_forchess_board_copy)
+{
+	fc_board_t dst, src;
+	for (int i = 0; i < sizeof(src) / sizeof(uint64_t); i++) {
+		src[i] = i * 1000;
+	}
+	fc_board_copy(&dst, &src);
+	for (int i = 0; i < sizeof(src) / sizeof(uint64_t); i++) {
+		fail_unless(dst[i] == src[i]);
+	}
 }
 END_TEST
 
@@ -483,6 +535,7 @@ Suite *board_suite (void)
 	Suite *s = suite_create("Board");
 	TCase *tc_board = tcase_create("Core");
 	tcase_add_test(tc_board, test_forchess_getters_and_setters);
+	tcase_add_test(tc_board, test_forchess_remove_piece);
 	tcase_add_test(tc_board, test_forchess_board_setup);
 	tcase_add_test(tc_board, test_forchess_king_moves);
 	tcase_add_test(tc_board, test_forchess_knight_moves);
@@ -492,6 +545,7 @@ Suite *board_suite (void)
 	tcase_add_test(tc_board, test_forchess_queen_moves);
 	tcase_add_test(tc_board, test_forchess_get_removes);
 	tcase_add_test(tc_board, test_forchess_make_move);
+	tcase_add_test(tc_board, test_forchess_board_copy);
 	suite_add_tcase(s, tc_board);
 	return s;
 }
