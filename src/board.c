@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -48,9 +49,15 @@ int fc_board_get_piece (fc_board_t *board,
  */
 int fc_board_remove_piece (fc_board_t *board, int row, int col)
 {
+	fc_player_t player;
+	fc_piece_t piece;
+	fc_board_get_piece(board, &player, &piece, row, col);
 	uint64_t bit = UINT64_C(1) << (row * 8 + col);
 	for (int i = 0; i < 24; i++) {
 		if ((*board)[i] & bit) {
+			if (piece == FC_PAWN) {
+				FC_PAWN_BB((*board), player) ^= bit;
+			}
 			(*board)[i] ^= bit;
 			return 1;
 		}
@@ -263,8 +270,10 @@ static inline fc_player_t fc_get_pawn_orientation (fc_board_t *board,
 		return FC_SECOND;
 	} else if (pawn & (*board)[FC_THIRD_PAWNS]) {
 		return FC_THIRD;
-	} else {
+	} else if (pawn & (*board)[FC_FOURTH_PAWNS]) {
 		return FC_FOURTH;
+	} else {
+		return FC_NONE;
 	}
 }
 
@@ -610,11 +619,14 @@ static inline int must_promote (fc_player_t player, uint64_t pawn)
  */
 int fc_board_make_move (fc_board_t *board, fc_move_t *move)
 {
+	fc_player_t side;
 	if (move->piece == FC_PAWN) {
 		uint64_t pawn = (FC_BITBOARD((*board), move->player,
 					    FC_PAWN) ^ move->move) &
 				move->move;
-		if (must_promote(fc_get_pawn_orientation(board, pawn), pawn)) {
+		side = fc_get_pawn_orientation(board, pawn ^ move->move);
+		//printf("0x%llx - %d\n", pawn, tmp);
+		if (must_promote(side, pawn)) {
 			return 0;
 		}
 	}
@@ -628,7 +640,7 @@ int fc_board_make_move (fc_board_t *board, fc_move_t *move)
 		     move->move;
 
 	/* update pawn orientation bitboards */
-	fc_player_t side;
+	fc_player_t enemy_side = fc_get_pawn_orientation(board, b);
 	if (move->piece == FC_PAWN) {
 		side = fc_get_pawn_orientation(board, b ^ move->move);
 		FC_PAWN_BB((*board), side) ^= move->move;
@@ -651,8 +663,8 @@ int fc_board_make_move (fc_board_t *board, fc_move_t *move)
 		if (b & FC_BITBOARD((*board), enemy, type)) {
 			FC_BITBOARD((*board), enemy, type) ^= b;
 			if (type == FC_PAWN) {
-				side = fc_get_pawn_orientation(board, b);
-				FC_PAWN_BB((*board), side) ^= b;
+				assert(enemy_side != FC_NONE);
+				FC_PAWN_BB((*board), enemy_side) ^= b;
 			}
 			if (type == FC_KING) {
 				fc_convert_pieces(board, enemy, move->player);
@@ -666,8 +678,8 @@ int fc_board_make_move (fc_board_t *board, fc_move_t *move)
 		if (b & FC_BITBOARD((*board), enemy, type)) {
 			FC_BITBOARD((*board), enemy, type) ^= b;
 			if (type == FC_PAWN) {
-				side = fc_get_pawn_orientation(board, b);
-				FC_PAWN_BB((*board), side) ^= b;
+				assert(enemy_side != FC_NONE);
+				FC_PAWN_BB((*board), enemy_side) ^= b;
 			}
 			if (type == FC_KING) {
 				fc_convert_pieces(board, enemy, move->player);
@@ -712,8 +724,10 @@ int fc_board_make_pawn_move (fc_board_t *board,
 	 * AI code whiich assumes that the move structs aren't changing.
 	 * Change this to make a copy before calling make_move() with the copy.
 	 */
-	move->piece = new_piece;
-	return fc_board_make_move(board, move);
+	fc_move_t copy;
+	fc_move_copy(&copy, move);
+	copy.piece = new_piece;
+	return fc_board_make_move(board, &copy);
 }
 
 void fc_board_copy (fc_board_t *dst, fc_board_t *src)
@@ -736,8 +750,8 @@ void fc_move2str (fc_board_t *board, char *str, fc_move_t *move)
 		bit >>= 1;
 		i++;
 	}
-	char y2 = (i / 8) + '1';
-	char x2 = (i % 8) - 1 + 'a';
+	char y1 = ((i - 1) / 8) + '1';
+	char x1 = ((i - 1) % 8) + 'a';
 
 	m ^= move->move;
 	i = 0;
@@ -746,12 +760,12 @@ void fc_move2str (fc_board_t *board, char *str, fc_move_t *move)
 		bit >>= 1;
 		i++;
 	}
-	char x1, y1;
+	char x2, y2;
 	if (i) {
-		y1 = (i / 8) + '1';
-		x1 = (i % 8) - 1 + 'a';
+		y2 = ((i - 1) / 8) + '1';
+		x2 = ((i - 1) % 8) + 'a';
 	} else {
-		x1 = y1 = '\0';
+		x2 = y2 = '\0';
 	}
 	sprintf(str, "%c%c-%c%c", x1, y1, x2, y2);
 }

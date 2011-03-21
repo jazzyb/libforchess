@@ -145,6 +145,11 @@ retry:
 				fprintf(stderr, "error: invalid AI move 2\n");
 				exit(1);
 			}
+			fc_move2str(&board, move_buf, &move);
+			int check_flag_before = fc_is_king_in_check(&board,
+					FC_NEXT_PLAYER(player)) |
+				fc_is_king_in_check(&board,
+					FC_PARTNER(FC_NEXT_PLAYER(player)));
 			ret = fc_board_make_move(&board, &move);
 			if (!ret) {
 				/* FIXME: until we improve the API, just assume
@@ -156,14 +161,13 @@ retry:
 				}
 			}
 
-			fc_move2str(&board, move_buf, &move);
-			int check_flag = fc_is_king_in_check(&board,
+			int check_flag_after = fc_is_king_in_check(&board,
 					FC_NEXT_PLAYER(player)) |
 				fc_is_king_in_check(&board,
 					FC_PARTNER(FC_NEXT_PLAYER(player)));
-			if (check_flag == 1) {
+			if (check_flag_after == 1 && check_flag_after != check_flag_before) {
 				strcat(move_buf, "+");
-			} else if (check_flag > 1) {
+			} else if (check_flag_after > 1 && check_flag_after != check_flag_before) {
 				strcat(move_buf, "++");
 			}
 			printf("%d: %c%s\n", player + 1, piece, move_buf);

@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define FC_NONE (-1)
+
 typedef enum {
 	FC_FIRST = 0,
 	FC_SECOND,

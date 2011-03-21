@@ -444,6 +444,11 @@ int fc_is_king_in_check (fc_board_t *board, fc_player_t player)
 	fc_mlist_init(&moves, 0);
 	fc_board_get_moves(board, &moves, player);
 	for (int i = 0; i < fc_mlist_length(&moves); i++) {
+		/*
+		fc_move_t *mv = fc_mlist_get(&moves, i);
+		printf("%d %d 0x%llx\n", mv->player, mv->piece, mv->move);
+		fflush(stdout);
+		*/
 		fc_board_t copy;
 		fc_board_copy(&copy, board);
 		fc_board_make_move(&copy, fc_mlist_get(&moves, i));

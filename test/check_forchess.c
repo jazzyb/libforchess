@@ -15,6 +15,8 @@ int main (int argc, char **argv)
 	srunner_add_suite(sr, board_suite());
 	srunner_add_suite(sr, check_suite());
 	srunner_add_suite(sr, ai_suite());
+	/* uncomment the below if we need to run gdb */
+	//srunner_set_fork_status(sr, CK_NOFORK);
 	srunner_run_all(sr, CK_NORMAL);
 	number_failed = srunner_ntests_failed(sr);
 	srunner_free(sr);
