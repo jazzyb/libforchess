@@ -431,8 +431,6 @@ static int is_check (fc_board_t *board, fc_player_t player)
 /* FIXME TODO
  * 1. rename this function to something more in line with the rest of the API
  *    so far, e.g. fc_board_check_status().
- * 2. Move all the check code to it's own source file, but keep the board.h
- *    header the same.
  */
 int fc_is_king_in_check (fc_board_t *board, fc_player_t player)
 {
@@ -444,15 +442,13 @@ int fc_is_king_in_check (fc_board_t *board, fc_player_t player)
 	fc_mlist_init(&moves, 0);
 	fc_board_get_moves(board, &moves, player);
 	for (int i = 0; i < fc_mlist_length(&moves); i++) {
-		/*
-		fc_move_t *mv = fc_mlist_get(&moves, i);
-		printf("%d %d 0x%llx\n", mv->player, mv->piece, mv->move);
-		fflush(stdout);
-		*/
 		fc_board_t copy;
 		fc_board_copy(&copy, board);
 		fc_board_make_move(&copy, fc_mlist_get(&moves, i));
 		if (!is_check(&copy, player)) {
+			/* FIXME Is this the right place for this code?  This
+			 * API call should be concerned with the check status
+			 * of a particular king, not the partner. */
 			/* We must never move such that our opponent is put in
 			 * check because of us. Even if it would get us out of
 			 * checkmate.  However, I am interpreting this rule to

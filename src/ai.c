@@ -10,8 +10,7 @@
 int _fc_ai_piece_values[] = {
 	100,	/* pawns */
 	300,	/* bishops */
-	350,	/* knights -- because of the closeness of the pieces, I value
-		   them slightly more than bishops */
+	350,	/* knights */
 	500,	/* rooks */
 	900,	/* queens */
 	100000	/* kings */
@@ -121,6 +120,8 @@ evaluate_moves:
 	if (invalid_mlist_flag) {
 		fc_mlist_clear(&list);
 		fc_board_get_removes(board, &list, player);
+		/* TODO replace this counting bullshit with some sort of assert
+		 * */
 		count += 1;
 		if (count > 1) {
 			printf("here\n");
@@ -190,6 +191,8 @@ evaluate_moves:
 	if (invalid_mlist_flag) {
 		fc_mlist_clear(&list);
 		fc_board_get_removes(board, &list, player);
+		/* TODO replace this counting bullshit with some sort of assert
+		 * */
 		count += 1;
 		if (count > 1) {
 			printf("here\n");

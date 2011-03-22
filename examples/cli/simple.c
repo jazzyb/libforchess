@@ -6,6 +6,7 @@
 #include "forchess/board.h"
 #include "forchess/moves.h"
 
+/* TODO should be an API call */
 int num_players (fc_board_t *board)
 {
 	int ret = 0;
@@ -24,6 +25,7 @@ int num_players (fc_board_t *board)
 	return ret;
 }
 
+/* TODO should be an API call */
 int validate_move (fc_board_t *board, fc_move_t *move, fc_player_t player)
 {
 	if (move->player != player) {
@@ -75,6 +77,7 @@ int main (int argc, char **argv)
 	}
 
 	fc_board_t board;
+	/* TODO need some sort of fc_board_init() call */
 	bzero(&board, sizeof(board));
 	if (!fc_board_setup(&board, "examples/cli/simple.fc")) {
 		fprintf(stderr, "error: cannot read start file\n");
@@ -84,12 +87,16 @@ int main (int argc, char **argv)
 	char piece;
 	fc_move_t move;
 	char move_buf[10]; /* FIXME: can overflow */
+	/* TODO see what we can do to ease the cycling through players; perhaps
+	 * by using a macro FOREACH call or just creating some API calls for
+	 * fc_get_next_player() and fc_game_is_over() */
 	for (fc_player_t player = FC_FIRST;; player = FC_NEXT_PLAYER(player)) {
 		if (player_is_human[player]) {
 			do {
 				printf("%d: ", player + 1);
 				fflush(stdout);
 				gets(move_buf);
+				/* TODO clean up this API call */
 				fc_str2move(&board, &move, move_buf);
 				if (!validate_move(&board, &move, player)) {
 					fprintf(stderr, "error: invalid move\n");
@@ -117,6 +124,8 @@ retry:
 					fprintf(stderr, "error: invalid promotion\n");
 					goto retry;
 				}
+				/* TODO find a way to combine make_move() and
+				 * make_pawn_move() */
 				if (!fc_board_make_pawn_move(&board, &move, type)) {
 					fprintf(stderr, "error: unknown; quitting\n");
 				}
@@ -145,7 +154,10 @@ retry:
 				fprintf(stderr, "error: invalid AI move 2\n");
 				exit(1);
 			}
+			/* TODO clean up this API call */
 			fc_move2str(&board, move_buf, &move);
+			/* TODO create an API call which will determine whether
+			 * or not a move will put a king in check(mate) */
 			int check_flag_before = fc_is_king_in_check(&board,
 					FC_NEXT_PLAYER(player)) |
 				fc_is_king_in_check(&board,

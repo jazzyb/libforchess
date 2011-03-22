@@ -625,7 +625,6 @@ int fc_board_make_move (fc_board_t *board, fc_move_t *move)
 					    FC_PAWN) ^ move->move) &
 				move->move;
 		side = fc_get_pawn_orientation(board, pawn ^ move->move);
-		//printf("0x%llx - %d\n", pawn, tmp);
 		if (must_promote(side, pawn)) {
 			return 0;
 		}
