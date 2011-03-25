@@ -1,7 +1,5 @@
+#include <assert.h>
 #include <limits.h>
-
-/* FIXME add logic to handle pawn promotions
- */
 
 #include "forchess/ai.h"
 #include "forchess/board.h"
@@ -35,15 +33,27 @@ static inline int game_over (fc_board_t *board)
 		is_player_out(board, FC_FOURTH)));
 }
 
+static inline void append_pawn_promotions_to_moves(fc_mlist_t *list,
+		fc_move_t *move)
+{
+	fc_mlist_append(list, move->player, move->piece, FC_BISHOP, move->move);
+	fc_mlist_append(list, move->player, move->piece, FC_KNIGHT, move->move);
+	fc_mlist_append(list, move->player, move->piece, FC_ROOK, move->move);
+	fc_mlist_append(list, move->player, move->piece, FC_QUEEN, move->move);
+}
+
+#define BAD_MOVES 0xdeadbeef /* an unlikely score */
 /*
  * Returns the value of the subtree.  If the variable max is set to 1, then the
  * function will try to maximize the value.  If max is set to 0, then it will
  * try to minimize the value.
+ *
+ * If ret is !NULL, then ret will be set to the move with the best score.
  */
-static int alphabeta (fc_board_t *board, fc_player_t player, int depth,
-		int alpha, int beta, int max)
+static int alphabeta (fc_board_t *board, fc_move_t *ret, fc_player_t player,
+		int depth, int alpha, int beta, int max)
 {
-	int score;
+	int score = BAD_MOVES;
 	if (game_over(board) || depth == 0) {
 		score = fc_ai_score_position(board, player);
 		/*
@@ -54,12 +64,10 @@ static int alphabeta (fc_board_t *board, fc_player_t player, int depth,
 		return (max) ? score - depth : (-1 * score) + depth;
 	}
 	if (is_player_out(board, player)) {
-		return alphabeta(board, FC_NEXT_PLAYER(player), depth, alpha,
-				beta, !max);
+		return alphabeta(board, NULL, FC_NEXT_PLAYER(player), depth,
+				alpha, beta, !max);
 	}
 
-	int invalid_mlist_flag = 1;
-	int count = 0;
 	fc_mlist_t list;
 	fc_mlist_init(&list, 0);
 	fc_board_get_moves(board, &list, player);
@@ -73,62 +81,38 @@ evaluate_moves:
 		if (!fc_ai_is_move_valid(board, move)) {
 			continue;
 		}
-		invalid_mlist_flag = 0;
 
 		fc_board_t copy;
 		fc_board_copy(&copy, board);
 		if (fc_board_make_move(&copy, move)) {
-			score = alphabeta(&copy, FC_NEXT_PLAYER(player),
+			score = alphabeta(&copy, NULL, FC_NEXT_PLAYER(player),
 					depth - 1, alpha, beta, !max);
+		} else { /* move requires pawn promotion */
+			append_pawn_promotions_to_moves(&list, move);
+			continue;
+		}
 
-			if (max) {
-				if (score > alpha) {
-					alpha = score;
-				}
-			} else {
-				if (score < beta) {
-					beta = score;
-				}
+		if (max && score > alpha) {
+			alpha = score;
+			if (ret) {
+				fc_move_copy(ret, move);
 			}
-			if (beta <= alpha) {
-				break;
+		} else if (!max && score < beta) {
+			beta = score;
+			if (ret) {
+				fc_move_copy(ret, move);
 			}
-		} else { /* pawn promotion */
-			for (fc_piece_t p = FC_KNIGHT;; p = FC_QUEEN) {
-				fc_move_set_promotion(move, p);
-				fc_board_make_move(&copy, move);
-				fc_move_set_promotion(move, FC_NONE);
-				//fc_board_make_pawn_move(&copy, move, p);
-				score = alphabeta(&copy, FC_NEXT_PLAYER(player),
-						depth - 1, alpha, beta, !max);
+		}
 
-				if (max) {
-					if (score > alpha) {
-						alpha = score;
-					}
-				} else {
-					if (score < beta) {
-						beta = score;
-					}
-				}
-				if (beta <= alpha) {
-					break;
-				}
-				if (p == FC_QUEEN) {
-					break;
-				}
-			}
+		if (beta <= alpha) {
+			break;
 		}
 	}
-	if (invalid_mlist_flag) {
+
+	if (score == BAD_MOVES) {
 		fc_mlist_clear(&list);
 		fc_board_get_removes(board, &list, player);
-		/* TODO replace this counting bullshit with some sort of assert
-		 * */
-		count += 1;
-		if (count > 1) {
-			printf("here\n");
-		}
+		assert(BAD_MOVES + 1 != score++);
 		goto evaluate_moves;
 	}
 
@@ -146,66 +130,12 @@ evaluate_moves:
 int fc_ai_next_move (fc_board_t *board, fc_move_t *ret, fc_player_t player,
 		int depth)
 {
-	/* TODO check that this request is valid */
-	if (is_player_out(board, player)) {
+	assert(board && ret);
+	if (is_player_out(board, player) || depth < 1) {
 		ret->move = 0;
 		return 0;
 	}
-	int alpha = ALPHA_MIN;
-	int invalid_mlist_flag = 1;
-	int count = 0;
-	fc_mlist_t list;
-	fc_mlist_init(&list, 0);
-	fc_board_get_moves(board, &list, player);
-evaluate_moves:
-	for (int i = 0; i < fc_mlist_length(&list); i++) {
-
-		fc_move_t *move = fc_mlist_get(&list, i);
-		if (!fc_ai_is_move_valid(board, move)) {
-			continue;
-		}
-		invalid_mlist_flag = 0;
-
-		fc_board_t copy;
-		fc_board_copy(&copy, board);
-		int score;
-		if (fc_board_make_move(&copy, move)) {
-			score = alphabeta(&copy, FC_NEXT_PLAYER(player),
-					depth - 1, alpha, BETA_MAX, 0);
-			if (score > alpha) {
-				alpha = score;
-				fc_move_copy(ret, move);
-			}
-		} else { /* pawn promotion */
-			for (fc_piece_t p = FC_KNIGHT;; p = FC_QUEEN) {
-				fc_move_set_promotion(move, p);
-				fc_board_make_move(&copy, move);
-				//fc_board_make_pawn_move(&copy, move, p);
-				score = alphabeta(&copy, FC_NEXT_PLAYER(player),
-						depth - 1, alpha, BETA_MAX, 0);
-				if (score > alpha) {
-					alpha = score;
-					fc_move_copy(ret, move);
-				}
-				fc_move_set_promotion(move, FC_NONE);
-				if (p == FC_QUEEN) {
-					break;
-				}
-			}
-		}
-	}
-	if (invalid_mlist_flag) {
-		fc_mlist_clear(&list);
-		fc_board_get_removes(board, &list, player);
-		/* TODO replace this counting bullshit with some sort of assert
-		 * */
-		count += 1;
-		if (count > 1) {
-			printf("here\n");
-		}
-		goto evaluate_moves;
-	}
-	fc_mlist_free(&list);
+	(void)alphabeta(board, ret, player, depth, ALPHA_MIN, BETA_MAX, 1);
 	return 1;
 }
 
