@@ -1,4 +1,10 @@
+#include <stdlib.h>
+#include <strings.h>
+
+#include "forchess/ai.h"
+#include "forchess/board.h"
 #include "forchess/game.h"
+#include "forchess/moves.h"
 
 /*
  * A wrapper around the forchess API.
@@ -28,7 +34,7 @@ fc_player_t fc_game_current_player (fc_game_t *game)
 fc_player_t fc_game_next_player (fc_game_t *game)
 {
 	fc_player_t next;
-	for (next = FC_NEXT_PLAYER(player);
+	for (next = FC_NEXT_PLAYER(game->player);
 	     !FC_BITBOARD((*(game->board)), next, FC_KING);
 	     next = FC_NEXT_PLAYER(next));
 	game->player = next;
@@ -46,6 +52,16 @@ int fc_game_number_of_players (fc_game_t *game)
 int fc_game_king_check_status (fc_game_t *game, fc_player_t player)
 {
 	return fc_is_king_in_check(game->board, player);
+}
+
+/*
+ * Returns the highest check status of player's opponents.
+ */
+int fc_game_opponent_kings_check_status (fc_game_t *game, fc_player_t player)
+{
+	return fc_is_king_in_check(game->board, FC_NEXT_PLAYER(player)) |
+		fc_is_king_in_check(game->board,
+				FC_PARTNER(FC_NEXT_PLAYER(player)));
 }
 
 int fc_game_is_move_valid (fc_game_t *game, fc_move_t *move)
@@ -88,7 +104,7 @@ void fc_game_set_promote_pawn (fc_move_t *move, fc_piece_t promote)
 int fc_game_convert_move_to_coords (fc_game_t *game, int *x1, int *y1,
 		int *x2, int *y2, fc_move_t *move)
 {
-	uint64_t m = FC_BITBOARD((*board), move->player, move->piece) &
+	uint64_t m = FC_BITBOARD((*(game->board)), move->player, move->piece) &
 			move->move;
 	if (!m) {
 		return 0;
@@ -123,7 +139,7 @@ int fc_game_convert_coords_to_move (fc_game_t *game, fc_move_t *move,
 {
 	move->promote = FC_NONE;
 	/* FIXME Notice how I have to flip the x and y.  That's confusing. */
-	if (!fc_board_get_piece(board, &(move->player), &(move->piece),
+	if (!fc_board_get_piece(game->board, &(move->player), &(move->piece),
 				y1, x1)) {
 		return 0;
 	}

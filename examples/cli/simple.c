@@ -4,43 +4,28 @@
 
 #include "forchess/ai.h"
 #include "forchess/board.h"
-#include "forchess/moves.h"
+#include "forchess/game.h"
 
-/* TODO should be an API call */
-int num_players (fc_board_t *board)
+void move2str (fc_game_t *game, char *str, fc_move_t *move)
 {
-	int ret = 0;
-	if (FC_BITBOARD((*board), FC_FIRST, FC_KING)) {
-		ret += 1;
-	}
-	if (FC_BITBOARD((*board), FC_SECOND, FC_KING)) {
-		ret += 1;
-	}
-	if (FC_BITBOARD((*board), FC_THIRD, FC_KING)) {
-		ret += 1;
-	}
-	if (FC_BITBOARD((*board), FC_FOURTH, FC_KING)) {
-		ret += 1;
-	}
-	return ret;
+	int x1, y1, x2, y2;
+	fc_game_convert_move_to_coords(game, &x1, &y1, &x2, &y2, move);
+	sprintf(str, "%c%c-%c%c", (char)x1 + 'a', (char)y1 + '1',
+			(char)x2 + 'a', (char)y2 + '1');
 }
 
-/* TODO should be an API call */
-int validate_move (fc_board_t *board, fc_move_t *move, fc_player_t player)
+void str2move (fc_game_t *game, fc_move_t *move, char *str)
 {
-	if (move->player != player) {
-		return 0;
+	char x1, y1, x2, y2;
+	int ret = sscanf(str, "%c%c-%c%c", &x1, &y1, &x2, &y2);
+	x1 -= 'a';
+	y1 -= '1';
+	if (ret > 2) {
+		x2 -= 'a';
+		y2 -= '1';
 	}
-	fc_mlist_t list;
-	fc_mlist_init(&list, 0);
-	fc_board_get_moves(board, &list, player);
-	for (int i = 0; i < fc_mlist_length(&list); i++) {
-		fc_move_t *other = fc_mlist_get(&list, i);
-		if (move->piece == other->piece && move->move == other->move) {
-			return fc_ai_is_move_valid(board, move);
-		}
-	}
-	return 0;
+	fc_game_convert_coords_to_move(game, move, (int)x1, (int)y1,
+			(int)x2, (int)y2);
 }
 
 int main (int argc, char **argv)
@@ -76,10 +61,11 @@ int main (int argc, char **argv)
 		}
 	}
 
-	fc_board_t board;
-	/* TODO need some sort of fc_board_init() call */
-	bzero(&board, sizeof(board));
-	if (!fc_board_setup(&board, "examples/cli/simple.fc")) {
+	fc_game_t game;
+	fc_game_init(&game);
+	/* FIXME the two lines below should be combined into fc_game_load() */
+	game.player = FC_FIRST;
+	if (!fc_board_setup(game.board, "examples/cli/simple.fc")) {
 		fprintf(stderr, "error: cannot read start file\n");
 		exit(1);
 	}
@@ -87,24 +73,22 @@ int main (int argc, char **argv)
 	char piece;
 	fc_move_t move;
 	char move_buf[10]; /* FIXME: can overflow */
-	/* TODO see what we can do to ease the cycling through players; perhaps
-	 * by using a macro FOREACH call or just creating some API calls for
-	 * fc_get_next_player() and fc_game_is_over() */
-	for (fc_player_t player = FC_FIRST;; player = FC_NEXT_PLAYER(player)) {
+	for (fc_player_t player = fc_game_current_player(&game);
+	     !fc_game_is_over(&game);
+	     player = fc_game_next_player(&game)) {
 		if (player_is_human[player]) {
 			do {
 				printf("%d: ", player + 1);
 				fflush(stdout);
 				gets(move_buf);
-				/* TODO clean up this API call */
-				fc_str2move(&board, &move, move_buf);
-				if (!validate_move(&board, &move, player)) {
+				str2move(&game, &move, move_buf);
+				if (!fc_game_is_move_valid(&game, &move)) {
 					fprintf(stderr, "error: invalid move\n");
 				} else {
 					break;
 				}
 			} while (1);
-			if (!fc_board_make_move(&board, &move)) {
+			if (!fc_game_make_move(&game, &move)) {
 				/* pawn promotion */
 retry:
 				printf("new piece: ");
@@ -124,15 +108,14 @@ retry:
 					fprintf(stderr, "error: invalid promotion\n");
 					goto retry;
 				}
-				/* TODO find a way to combine make_move() and
-				 * make_pawn_move() */
-				if (!fc_board_make_pawn_move(&board, &move, type)) {
+				fc_game_set_promote_pawn(&move, type);
+				if (!fc_game_make_move(&game, &move)) {
 					fprintf(stderr, "error: unknown; quitting\n");
 				}
 			}
 		} else { /* computer plays */
-			int depth = num_players(&board) * 2;
-			int ret = fc_ai_next_move(&board, &move, player, depth);
+			int depth = fc_game_number_of_players(&game) * 2;
+			int ret = fc_ai_next_move(game.board, &move, player, depth);
 			if (!ret) {
 				fprintf(stderr, "error: invalid AI move 1\n");
 				exit(1);
@@ -154,29 +137,21 @@ retry:
 				fprintf(stderr, "error: invalid AI move 2\n");
 				exit(1);
 			}
-			/* TODO clean up this API call */
-			fc_move2str(&board, move_buf, &move);
+			move2str(&game, move_buf, &move);
 			/* TODO create an API call which will determine whether
 			 * or not a move will put a king in check(mate) */
-			int check_flag_before = fc_is_king_in_check(&board,
-					FC_NEXT_PLAYER(player)) |
-				fc_is_king_in_check(&board,
-					FC_PARTNER(FC_NEXT_PLAYER(player)));
-			ret = fc_board_make_move(&board, &move);
+			int check_flag_before =
+				fc_game_opponent_kings_check_status(&game,
+						player);
+			ret = fc_game_make_move(&game, &move);
 			if (!ret) {
-				/* FIXME: until we improve the API, just assume
-				 * that we want a queen */
-				ret = fc_board_make_pawn_move(&board, &move, FC_QUEEN);
-				if (!ret) {
-					fprintf(stderr, "error: invalid AI move 3\n");
-					exit(1);
-				}
+				fprintf(stderr, "error: invalid AI move 3\n");
+				exit(1);
 			}
 
-			int check_flag_after = fc_is_king_in_check(&board,
-					FC_NEXT_PLAYER(player)) |
-				fc_is_king_in_check(&board,
-					FC_PARTNER(FC_NEXT_PLAYER(player)));
+			int check_flag_after =
+				fc_game_opponent_kings_check_status(&game,
+						player);
 			if (check_flag_after == 1 && check_flag_after != check_flag_before) {
 				strcat(move_buf, "+");
 			} else if (check_flag_after > 1 && check_flag_after != check_flag_before) {
