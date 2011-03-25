@@ -95,7 +95,10 @@ evaluate_moves:
 			}
 		} else { /* pawn promotion */
 			for (fc_piece_t p = FC_KNIGHT;; p = FC_QUEEN) {
-				fc_board_make_pawn_move(&copy, move, p);
+				fc_move_set_promotion(move, p);
+				fc_board_make_move(&copy, move);
+				fc_move_set_promotion(move, FC_NONE);
+				//fc_board_make_pawn_move(&copy, move, p);
 				score = alphabeta(&copy, FC_NEXT_PLAYER(player),
 						depth - 1, alpha, beta, !max);
 
@@ -175,13 +178,16 @@ evaluate_moves:
 			}
 		} else { /* pawn promotion */
 			for (fc_piece_t p = FC_KNIGHT;; p = FC_QUEEN) {
-				fc_board_make_pawn_move(&copy, move, p);
+				fc_move_set_promotion(move, p);
+				fc_board_make_move(&copy, move);
+				//fc_board_make_pawn_move(&copy, move, p);
 				score = alphabeta(&copy, FC_NEXT_PLAYER(player),
 						depth - 1, alpha, BETA_MAX, 0);
 				if (score > alpha) {
 					alpha = score;
 					fc_move_copy(ret, move);
 				}
+				fc_move_set_promotion(move, FC_NONE);
 				if (p == FC_QUEEN) {
 					break;
 				}

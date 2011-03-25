@@ -610,6 +610,8 @@ static inline int must_promote (fc_player_t player, uint64_t pawn)
 		return !!(pawn & FC_THIRD_BACK_WALL);
 	case FC_FOURTH:
 		return !!(pawn & FC_FOURTH_BACK_WALL);
+	default:
+		assert(0);
 	}
 }
 
@@ -626,7 +628,12 @@ int fc_board_make_move (fc_board_t *board, fc_move_t *move)
 				move->move;
 		side = fc_get_pawn_orientation(board, pawn ^ move->move);
 		if (must_promote(side, pawn)) {
-			return 0;
+			if (move->promote == FC_NONE) {
+				return 0;
+			} else {
+				return fc_board_make_pawn_move(board, move,
+						move->promote);
+			}
 		}
 	}
 
@@ -779,6 +786,7 @@ void fc_str2move (fc_board_t *board, fc_move_t *move, char *str)
 		y1 -= '1';
 		y2 -= '1';
 	}
+	move->promote = FC_NONE;
 	fc_board_get_piece(board, &(move->player), &(move->piece), y1, x1);
 	move->move = ((UINT64_C(1)) << (y1 * 8) + x1) |
 		       ((UINT64_C(1)) << (y2 * 8) + x2);

@@ -74,3 +74,62 @@ int fc_game_is_over (fc_game_t *game)
 		(!FC_BITBOARD((*(game->board)), FC_SECOND, FC_KING) &&
 		 	!FC_BITBOARD((*(game->board)), FC_FOURTH, FC_KING)));
 }
+
+int fc_game_make_move (fc_game_t *game, fc_move_t *move)
+{
+	return fc_board_make_move(game->board, move);
+}
+
+void fc_game_set_promote_pawn (fc_move_t *move, fc_piece_t promote)
+{
+	move->promote = promote;
+}
+
+int fc_game_convert_move_to_coords (fc_game_t *game, int *x1, int *y1,
+		int *x2, int *y2, fc_move_t *move)
+{
+	uint64_t m = FC_BITBOARD((*board), move->player, move->piece) &
+			move->move;
+	if (!m) {
+		return 0;
+	}
+	int i = 0;
+	uint64_t bit = m;
+	while (bit) {
+		bit >>= 1;
+		i++;
+	}
+	*y1 = ((i - 1) / 8);
+	*x1 = ((i - 1) % 8);
+
+	m ^= move->move;
+	i = 0;
+	bit = m;
+	while (bit) {
+		bit >>= 1;
+		i++;
+	}
+	if (i) {
+		*y2 = ((i - 1) / 8);
+		*x2 = ((i - 1) % 8);
+	} else {
+		*x2 = *y2 = -1;
+	}
+	return 1;
+}
+
+int fc_game_convert_coords_to_move (fc_game_t *game, fc_move_t *move,
+		int x1, int y1, int x2, int y2)
+{
+	move->promote = FC_NONE;
+	/* FIXME Notice how I have to flip the x and y.  That's confusing. */
+	if (!fc_board_get_piece(board, &(move->player), &(move->piece),
+				y1, x1)) {
+		return 0;
+	}
+	move->move = UINT64_C(1) << ((y1 * 8) + x1);
+	if (x2 != -1 && y2 != -1) {
+		move->move |= UINT64_C(1) << ((y2 * 8) + x2);
+	}
+	return 1;
+}

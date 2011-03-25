@@ -10,10 +10,12 @@ START_TEST (test_move_copy)
 	fc_move_t dst, src;
 	src.player = FC_QUEEN;
 	src.piece = FC_THIRD;
+	src.promote = FC_KNIGHT;
 	src.move = 129;
 	fc_move_copy(&dst, &src);
 	fail_unless(dst.player == src.player &&
 		    dst.piece == src.piece &&
+		    dst.promote == src.promote &&
 		    dst.move == src.move);
 }
 END_TEST

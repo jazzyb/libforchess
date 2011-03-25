@@ -404,6 +404,7 @@ START_TEST (test_forchess_make_move)
 	fc_move_t move;
 	move.player = FC_FOURTH;
 	move.piece = FC_KNIGHT;
+	move.promote = FC_NONE;
 	fc_board_set_piece(&board, move.player, move.piece, 2, 2);
 	move.move = fc_uint64("c3-e2");
 	fc_board_make_move(&board, &move);
@@ -415,6 +416,7 @@ START_TEST (test_forchess_make_move)
 	/* (2) check captures */
 	move.player = FC_FIRST;
 	move.piece = FC_ROOK;
+	move.promote = FC_NONE;
 	fc_board_set_piece(&board, move.player, move.piece, 4, 4);
 	move.move = fc_uint64("e5-e2");
 	fc_board_make_move(&board, &move);
@@ -431,6 +433,7 @@ START_TEST (test_forchess_make_move)
 	fc_board_setup(&board, "test/boards/test_forchess_make_move.1");
 	move.player = FC_FIRST;
 	move.piece = FC_KNIGHT;
+	move.promote = FC_NONE;
 	move.move = fc_uint64("b6-a8");
 	fc_board_make_move(&board, &move);
 	fail_unless(board[FC_SECOND * 6 + FC_KING] == UINT64_C(0));
@@ -455,6 +458,7 @@ START_TEST (test_forchess_make_move)
 	/* (5a) ... even after changing sides multiple times */
 	move.player = FC_FOURTH;
 	move.piece = FC_BISHOP;
+	move.promote = FC_NONE;
 	move.move = fc_uint64("b3-c2");
 	fc_board_make_move(&board, &move);
 	fc_mlist_clear(&moves);
@@ -481,9 +485,12 @@ START_TEST (test_forchess_make_move)
 	fail_unless(fc_board_make_move(&board, fc_mlist_get(&moves, 2)));
 	move.player = FC_FOURTH;
 	move.piece = FC_PAWN;
+	move.promote = FC_NONE;
 	move.move = fc_uint64("d7-c8");
 	fail_unless(!fc_board_make_move(&board, &move));
-	fail_unless(fc_board_make_pawn_move(&board, &move, FC_QUEEN));
+	fc_move_set_promotion(&move, FC_QUEEN);
+	fail_unless(fc_board_make_move(&board, &move));
+	//fail_unless(fc_board_make_pawn_move(&board, &move, FC_QUEEN));
 	fc_mlist_clear(&moves);
 	fc_get_queen_moves(&board, &moves, FC_FOURTH);
 	fail_unless(fc_mlist_length(&moves) != 0);
@@ -493,18 +500,22 @@ START_TEST (test_forchess_make_move)
 	fc_board_setup(&board, "test/boards/test_forchess_make_move.2");
 	move.player = FC_FIRST;
 	move.piece = FC_PAWN;
+	move.promote = FC_NONE;
 	move.move = fc_uint64("a4-a5");
 	fc_board_make_move(&board, &move);
 	move.player = FC_SECOND;
 	move.piece = FC_PAWN;
+	move.promote = FC_NONE;
 	move.move = fc_uint64("d8-e8");
 	fc_board_make_move(&board, &move);
 	move.player = FC_THIRD;
 	move.piece = FC_PAWN;
+	move.promote = FC_NONE;
 	move.move = fc_uint64("h5-h4");
 	fc_board_make_move(&board, &move);
 	move.player = FC_FOURTH;
 	move.piece = FC_PAWN;
+	move.promote = FC_NONE;
 	move.move = fc_uint64("e1-d1");
 	fc_board_make_move(&board, &move);
 

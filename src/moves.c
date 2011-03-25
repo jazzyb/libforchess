@@ -21,7 +21,13 @@ void fc_move_copy (fc_move_t *dst, fc_move_t *src)
 {
 	dst->player = src->player;
 	dst->piece = src->piece;
+	dst->promote = src->promote;
 	dst->move = src->move;
+}
+
+void fc_move_set_promotion (fc_move_t *move, fc_piece_t promote)
+{
+	move->promote = promote;
 }
 
 #define FC_DEFAULT_MLIST_SIZE 130 /* totally arbitrary */
@@ -74,6 +80,7 @@ int fc_mlist_append (fc_mlist_t *list,
 
 	list->moves[list->index].player = player;
 	list->moves[list->index].piece = piece;
+	list->moves[list->index].promote = FC_NONE;
 	list->moves[list->index].move = move;
 	list->index += 1;
 	return 1;
