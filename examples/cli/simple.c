@@ -28,6 +28,118 @@ void str2move (fc_game_t *game, fc_move_t *move, char *str)
 			(int)x2, (int)y2);
 }
 
+void query_human_for_move (fc_game_t *game, fc_player_t player)
+{
+	fc_move_t move;
+	char piece;
+	char move_buf[100]; /* FIXME can overflow */
+	do {
+		printf("%d: ", player + 1);
+		fflush(stdout);
+		gets(move_buf);
+		str2move(game, &move, move_buf);
+		if (!fc_game_is_move_valid(game, &move)) {
+			fprintf(stderr, "error: invalid move\n");
+		} else {
+			break;
+		}
+	} while (1);
+	if (!fc_game_make_move(game, &move)) {
+		/* pawn promotion */
+retry:
+		printf("new piece: ");
+		fflush(stdout);
+		scanf("%c", &piece);
+		fc_piece_t type;
+		switch (piece) {
+		case 'B':
+			type = FC_BISHOP; break;
+		case 'N':
+			type = FC_KNIGHT; break;
+		case 'R':
+			type = FC_ROOK; break;
+		case 'Q':
+			type = FC_QUEEN; break;
+		default:
+			fprintf(stderr, "error: invalid promotion\n");
+			goto retry;
+		}
+		fc_game_set_promote_pawn(&move, type);
+		if (!fc_game_make_move(game, &move)) {
+			fprintf(stderr, "error: unknown; quitting\n");
+			exit(1);
+		}
+	}
+}
+
+void make_computer_move (fc_game_t *game, fc_player_t player)
+{
+	fc_move_t move;
+	char piece;
+	char move_buf[100];
+
+	int depth = fc_game_number_of_players(game) * 2;
+	int ret = fc_ai_next_move(game->board, &move, player, depth);
+	if (!ret) {
+		fprintf(stderr, "error: invalid AI move 1\n");
+		exit(1);
+	}
+	switch (move.piece) {
+	case FC_PAWN:
+		piece = ' '; break;
+	case FC_BISHOP:
+		piece = 'B'; break;
+	case FC_KNIGHT:
+		piece = 'N'; break;
+	case FC_ROOK:
+		piece = 'R'; break;
+	case FC_QUEEN:
+		piece = 'Q'; break;
+	case FC_KING:
+		piece = 'K'; break;
+	default:
+		fprintf(stderr, "error: invalid AI move 2\n");
+		exit(1);
+	}
+	move2str(game, move_buf, &move);
+	char promote = '\0';
+	switch (move.promote) {
+	case FC_BISHOP:
+		promote = 'B'; break;
+	case FC_KNIGHT:
+		promote = 'N'; break;
+	case FC_ROOK:
+		promote = 'R'; break;
+	case FC_QUEEN:
+		promote = 'Q'; break;
+	}
+	if (promote != '\0') {
+		char promotion[10];
+		sprintf(promotion, " (%c)", promote);
+		strcat(move_buf, promotion);
+	}
+	/* TODO create an API call which will determine whether
+	 * or not a move will put a king in check(mate) */
+	int check_flag_before = fc_game_opponent_kings_check_status(game,
+			player);
+	ret = fc_game_make_move(game, &move);
+	if (!ret) {
+		fprintf(stderr, "error: invalid AI move 3\n");
+		exit(1);
+	}
+
+	int check_flag_after = fc_game_opponent_kings_check_status(game,
+				player);
+	if (check_flag_after == 1 && check_flag_after != check_flag_before) {
+		strcat(move_buf, "+");
+	} else if (check_flag_after > 1 &&
+			check_flag_after != check_flag_before) {
+		strcat(move_buf, "++");
+	}
+	printf("%d: %c%s\n", player + 1, piece, move_buf);
+	fflush(stdout);
+}
+
 int main (int argc, char **argv)
 {
 	if (argc == 2 && (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help"))) {
@@ -70,95 +182,13 @@ int main (int argc, char **argv)
 		exit(1);
 	}
 
-	char piece;
-	fc_move_t move;
-	char move_buf[10]; /* FIXME: can overflow */
 	for (fc_player_t player = fc_game_current_player(&game);
 	     !fc_game_is_over(&game);
 	     player = fc_game_next_player(&game)) {
 		if (player_is_human[player]) {
-			do {
-				printf("%d: ", player + 1);
-				fflush(stdout);
-				gets(move_buf);
-				str2move(&game, &move, move_buf);
-				if (!fc_game_is_move_valid(&game, &move)) {
-					fprintf(stderr, "error: invalid move\n");
-				} else {
-					break;
-				}
-			} while (1);
-			if (!fc_game_make_move(&game, &move)) {
-				/* pawn promotion */
-retry:
-				printf("new piece: ");
-				fflush(stdout);
-				scanf("%c", &piece);
-				fc_piece_t type;
-				switch (piece) {
-				case 'B':
-					type = FC_BISHOP; break;
-				case 'N':
-					type = FC_KNIGHT; break;
-				case 'R':
-					type = FC_ROOK; break;
-				case 'Q':
-					type = FC_QUEEN; break;
-				default:
-					fprintf(stderr, "error: invalid promotion\n");
-					goto retry;
-				}
-				fc_game_set_promote_pawn(&move, type);
-				if (!fc_game_make_move(&game, &move)) {
-					fprintf(stderr, "error: unknown; quitting\n");
-				}
-			}
-		} else { /* computer plays */
-			int depth = fc_game_number_of_players(&game) * 2;
-			int ret = fc_ai_next_move(game.board, &move, player, depth);
-			if (!ret) {
-				fprintf(stderr, "error: invalid AI move 1\n");
-				exit(1);
-			}
-			switch (move.piece) {
-			case FC_PAWN:
-				piece = ' '; break;
-			case FC_BISHOP:
-				piece = 'B'; break;
-			case FC_KNIGHT:
-				piece = 'N'; break;
-			case FC_ROOK:
-				piece = 'R'; break;
-			case FC_QUEEN:
-				piece = 'Q'; break;
-			case FC_KING:
-				piece = 'K'; break;
-			default:
-				fprintf(stderr, "error: invalid AI move 2\n");
-				exit(1);
-			}
-			move2str(&game, move_buf, &move);
-			/* TODO create an API call which will determine whether
-			 * or not a move will put a king in check(mate) */
-			int check_flag_before =
-				fc_game_opponent_kings_check_status(&game,
-						player);
-			ret = fc_game_make_move(&game, &move);
-			if (!ret) {
-				fprintf(stderr, "error: invalid AI move 3\n");
-				exit(1);
-			}
-
-			int check_flag_after =
-				fc_game_opponent_kings_check_status(&game,
-						player);
-			if (check_flag_after == 1 && check_flag_after != check_flag_before) {
-				strcat(move_buf, "+");
-			} else if (check_flag_after > 1 && check_flag_after != check_flag_before) {
-				strcat(move_buf, "++");
-			}
-			printf("%d: %c%s\n", player + 1, piece, move_buf);
-			fflush(stdout);
+			query_human_for_move(&game, player);
+		} else {
+			make_computer_move(&game, player);
 		}
 	}
 
