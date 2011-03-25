@@ -57,11 +57,35 @@ int fc_game_king_check_status (fc_game_t *game, fc_player_t player)
 /*
  * Returns the highest check status of player's opponents.
  */
-int fc_game_opponent_kings_check_status (fc_game_t *game, fc_player_t player)
+int fc_game_opponent_kings_check_status (fc_game_t *game, fc_player_t player,
+		fc_move_t *move)
 {
-	return fc_is_king_in_check(game->board, FC_NEXT_PLAYER(player)) |
-		fc_is_king_in_check(game->board,
-				FC_PARTNER(FC_NEXT_PLAYER(player)));
+	fc_board_t copy;
+	fc_board_copy(&copy, game->board);
+	fc_board_make_move(&copy, move);
+	int check_status_before = fc_is_king_in_check(game->board,
+			FC_NEXT_PLAYER(player));
+	int check_status_after = fc_is_king_in_check(&copy,
+			FC_NEXT_PLAYER(player));
+	if (!check_status_before && check_status_after == FC_CHECK) {
+		return FC_CHECK;
+	} else if (check_status_before != FC_CHECKMATE &&
+			check_status_after == FC_CHECKMATE) {
+		return FC_CHECKMATE;
+	}
+
+	check_status_before = fc_is_king_in_check(game->board,
+			FC_PARTNER(FC_NEXT_PLAYER(player)));
+	check_status_after = fc_is_king_in_check(&copy,
+			FC_PARTNER(FC_NEXT_PLAYER(player)));
+	if (!check_status_before && check_status_after == FC_CHECK) {
+		return FC_CHECK;
+	} else if (check_status_before != FC_CHECKMATE &&
+			check_status_after == FC_CHECKMATE) {
+		return FC_CHECKMATE;
+	}
+
+	return 0;
 }
 
 int fc_game_is_move_valid (fc_game_t *game, fc_move_t *move)
