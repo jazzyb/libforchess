@@ -1,6 +1,6 @@
-#include "forchess/board.h"
+#include <assert.h>
 
-/* FIXME Find a clean way of determining if the king is in check(mate). */
+#include "forchess/board.h"
 
 static int is_threatened_by_king (fc_board_t *board, fc_player_t player,
 		uint64_t king)
@@ -417,6 +417,10 @@ static int king_in_check_by_knight (fc_board_t *board, fc_player_t player,
 static int is_check (fc_board_t *board, fc_player_t player)
 {
 	uint64_t king = FC_BITBOARD((*board), player, FC_KING);
+	if (!king) {
+		return 0;
+	}
+
 	return (king_in_check_laterally(board, player, king) ||
 		king_in_check_diagonally(board, player, king) ||
 		is_threatened_by_pawn(board, player, king) ||
@@ -430,6 +434,8 @@ static int is_check (fc_board_t *board, fc_player_t player)
  */
 int fc_board_check_status (fc_board_t *board, fc_player_t player)
 {
+	assert(board);
+
 	if (!is_check(board, player)) {
 		return 0;
 	}

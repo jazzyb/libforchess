@@ -153,6 +153,7 @@ static int get_material_score (fc_board_t *board, fc_player_t player)
 
 int fc_ai_score_position (fc_board_t *board, fc_player_t player)
 {
+	assert(board);
 	return (get_material_score(board, player) -
 		get_material_score(board, FC_NEXT_PLAYER(player)) +
 		get_material_score(board, FC_PARTNER(player)) -
@@ -172,6 +173,7 @@ int fc_ai_score_position (fc_board_t *board, fc_player_t player)
  */
 int fc_ai_is_move_valid (fc_board_t *board, fc_move_t *move)
 {
+	assert(board && move);
 	fc_board_t copy;
 	fc_board_copy(&copy, board);
 	fc_board_make_move(&copy, move);

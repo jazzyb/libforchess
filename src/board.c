@@ -11,6 +11,7 @@ int fc_board_set_piece (fc_board_t *board,
 			fc_piece_t piece,
 			int row, int col)
 {
+	assert(board);
 	/*
 	 * FIXME make sure there is not already a piece on this position.
 	 * FIXME also make sure we don't call it with bad row/col values.
@@ -32,6 +33,8 @@ int fc_board_get_piece (fc_board_t *board,
 			fc_piece_t *piece,
 			int row, int col)
 {
+	assert(board && player && piece);
+
 	uint64_t bb = ((uint64_t)1) << (row * 8 + col);
 	/* NOTE: I'm using 24 below instead of FC_TOTAL_BITBOARDS because I
 	 * only want to look at the bitboards that represent pieces */
@@ -51,6 +54,8 @@ int fc_board_get_piece (fc_board_t *board,
  */
 int fc_board_remove_piece (fc_board_t *board, int row, int col)
 {
+	assert(board);
+
 	fc_player_t player;
 	fc_piece_t piece;
 	fc_board_get_piece(board, &player, &piece, row, col);
@@ -79,6 +84,8 @@ int fc_board_remove_piece (fc_board_t *board, int row, int col)
  */
 int fc_board_setup (fc_board_t *board, const char *filename, fc_player_t *first)
 {
+	assert(board && filename && first);
+
 	FILE *fp = fopen(filename, "r");
 	if (!fp) {
 		return 0;
@@ -318,6 +325,8 @@ void fc_get_pawn_moves (fc_board_t *board,
 			pawn_move_if_valid(board, moves, player, pawn,
 					   pawn << 7, pawn << 8, pawn >> 1);
 			break;
+		default:
+			assert(0);
 		}
 	}
 }
@@ -554,6 +563,7 @@ void fc_board_get_moves (fc_board_t *board,
 			 fc_mlist_t *moves,
 			 fc_player_t player)
 {
+	assert(board && moves);
 	fc_get_pawn_moves(board, moves, player);
 	fc_get_knight_moves(board, moves, player);
 	fc_get_bishop_moves(board, moves, player);
@@ -570,6 +580,7 @@ void fc_board_get_removes (fc_board_t *board,
 			   fc_mlist_t *moves,
 			   fc_player_t player)
 {
+	assert(board && moves);
 	for (fc_piece_t type = FC_PAWN; type <= FC_KING; type++) {
 		uint64_t piece, bb = FC_BITBOARD((*board), player, type);
 		FC_FOREACH(piece, bb) {
@@ -653,6 +664,8 @@ static int update_enemy_bitboards (fc_board_t *board, fc_player_t player,
  */
 int fc_board_make_move (fc_board_t *board, fc_move_t *move)
 {
+	assert(board && move);
+
 	fc_player_t side;
 	if (move->piece == FC_PAWN) {
 		/* If necessary, handle pawn promotions. */
@@ -702,15 +715,17 @@ int fc_board_make_move (fc_board_t *board, fc_move_t *move)
 }
 
 /*
- * If a pawn is moved in such a way that it must be promoted, then
- * fc_board_make_move() will return 0.  In that case, the user must call the
- * below function with a third argument declaring what piece the pawn should be
- * promoted to.
+ * If a pawn is moved in such a way that it must be promoted and the move
+ * struct does not have a valid piece to promote to, then fc_board_make_move()
+ * will return 0.  In that case, the user must call the below function with a
+ * third argument declaring what piece the pawn should be promoted to.
  */
 int fc_board_make_pawn_move (fc_board_t *board,
 			     fc_move_t *move,
 			     fc_piece_t new_piece)
 {
+	assert(board && move);
+
 	if (move->piece != FC_PAWN) {
 		return 0;
 	}
@@ -739,6 +754,7 @@ int fc_board_make_pawn_move (fc_board_t *board,
 
 void fc_board_copy (fc_board_t *dst, fc_board_t *src)
 {
+	assert(dst && src);
 	for (int i = 0; i < FC_TOTAL_BITBOARDS; i++) {
 		(*dst)[i] = (*src)[i];
 	}
