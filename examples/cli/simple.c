@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "forchess/ai.h"
 #include "forchess/board.h"
@@ -12,6 +13,7 @@ void get_move (fc_game_t *game, fc_move_t *move, fc_player_t player);
 void str2move (fc_game_t *game, fc_move_t *move, char *str);
 fc_piece_t get_pawn_promotion (void);
 void make_computer_move (fc_game_t *game, fc_player_t player);
+void get_time (char *str, time_t t);
 void move2str (fc_game_t *game, char *str, fc_move_t *move);
 
 int main (int argc, char **argv)
@@ -138,9 +140,13 @@ void make_computer_move (fc_game_t *game, fc_player_t player)
 {
 	fc_move_t move;
 	int depth = fc_game_number_of_players(game) * 2;
+
+	time_t start = time(NULL);
 	if (!fc_ai_next_move(game->board, &move, player, depth)) {
 		assert(0);
 	}
+	char time_str[100];
+	get_time(time_str, time(NULL) - start);
 
 	char piece;
 	switch (move.piece) {
@@ -166,9 +172,11 @@ void make_computer_move (fc_game_t *game, fc_player_t player)
 	int check_status = fc_game_opponent_kings_check_status(game, player,
 			&move);
 	if (check_status == FC_CHECK) {
-		strcat(move_buf, "+");
+		strcat(move_buf, "+ ");
 	} else if (check_status == FC_CHECKMATE) {
 		strcat(move_buf, "++");
+	} else {
+		strcat(move_buf, "  ");
 	}
 
 	char promote = '\0';
@@ -191,8 +199,19 @@ void make_computer_move (fc_game_t *game, fc_player_t player)
 	if (!fc_game_make_move(game, &move)) {
 		assert(0);
 	}
-	printf("%d: %c%s\n", player + 1, piece, move_buf);
+	printf("%d: %c%s :: %s\n", player + 1, piece, move_buf, time_str);
 	fflush(stdout);
+}
+
+void get_time (char *str, time_t t)
+{
+	int mins = t / 60;
+	int secs = t - (mins * 60);
+	if (mins) {
+		sprintf(str, "%dm%02ds", mins, secs);
+	} else {
+		sprintf(str, "%ds", secs);
+	}
 }
 
 void move2str (fc_game_t *game, char *str, fc_move_t *move)
