@@ -77,12 +77,14 @@ int fc_board_remove_piece (fc_board_t *board, int row, int col)
  * two different pieces are allowed to occupy the same space; we should
  * probably fail if that is the case.  Also think about adding errno.
  */
-int fc_board_setup (fc_board_t *board, const char *filename)
+int fc_board_setup (fc_board_t *board, const char *filename, fc_player_t *first)
 {
 	FILE *fp = fopen(filename, "r");
 	if (!fp) {
 		return 0;
 	}
+
+	*first = FC_NONE;
 
 	int player;
 	char piece, col, row;
@@ -103,6 +105,9 @@ int fc_board_setup (fc_board_t *board, const char *filename)
 			return 0;
 		}
 		player -= 1;
+		if (*first == FC_NONE) {
+			*first = player;
+		}
 
 		fc_piece_t p;
 		switch (piece) {

@@ -40,26 +40,32 @@ START_TEST (test_forchess_board_setup)
 	bzero(&board, sizeof(board));
 
 	/* check bad boards */
+	fc_player_t dummy;
 	int ret = fc_board_setup(&board,
-			         "test/boards/test_forchess_board_setup.1");
+			         "test/boards/test_forchess_board_setup.1",
+				 &dummy);
 	fail_unless(ret == 0);
 	bzero(board, sizeof(board));
 	ret = fc_board_setup(&board,
-			     "test/boards/test_forchess_board_setup.2");
+			     "test/boards/test_forchess_board_setup.2",
+			     &dummy);
 	fail_unless(ret == 0);
 	bzero(board, sizeof(board));
 	ret = fc_board_setup(&board,
-			     "test/boards/test_forchess_board_setup.3");
+			     "test/boards/test_forchess_board_setup.3",
+			     &dummy);
 	fail_unless(ret == 0);
 	bzero(board, sizeof(board));
 	ret = fc_board_setup(&board,
-			     "test/boards/test_forchess_board_setup.4");
+			     "test/boards/test_forchess_board_setup.4",
+			     &dummy);
 	fail_unless(ret == 0);
 
 	/* now check that the pieces were placed in the appropriate spots */
 	bzero(board, sizeof(board));
 	ret = fc_board_setup(&board,
-			     "test/boards/test_forchess_board_setup.5");
+			     "test/boards/test_forchess_board_setup.5",
+			     &dummy);
 	fail_unless(ret == 1);
 	fc_player_t player;
 	fc_piece_t piece;
@@ -430,7 +436,8 @@ START_TEST (test_forchess_make_move)
 		fail_unless(board[i] == UINT64_C(0));
 	}
 	/* (4) check that pieces change sides on capture of king */
-	fc_board_setup(&board, "test/boards/test_forchess_make_move.1");
+	fc_player_t dummy;
+	fc_board_setup(&board, "test/boards/test_forchess_make_move.1", &dummy);
 	move.player = FC_FIRST;
 	move.piece = FC_KNIGHT;
 	move.promote = FC_NONE;
@@ -497,7 +504,7 @@ START_TEST (test_forchess_make_move)
 
 	/* check that pawn bitboards are updating properly */
 	bzero(&board, sizeof(board));
-	fc_board_setup(&board, "test/boards/test_forchess_make_move.2");
+	fc_board_setup(&board, "test/boards/test_forchess_make_move.2", &dummy);
 	move.player = FC_FIRST;
 	move.piece = FC_PAWN;
 	move.promote = FC_NONE;

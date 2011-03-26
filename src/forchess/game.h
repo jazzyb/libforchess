@@ -14,6 +14,8 @@ typedef struct {
 
 int fc_game_init (fc_game_t *game);
 void fc_game_free (fc_game_t *game);
+int fc_game_save (fc_game_t *game, const char *filename);
+int fc_game_load (fc_game_t *game, const char *filename);
 fc_player_t fc_game_current_player (fc_game_t *game);
 fc_player_t fc_game_next_player (fc_game_t *game);
 int fc_game_number_of_players (fc_game_t *game);

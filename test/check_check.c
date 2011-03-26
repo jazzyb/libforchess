@@ -179,7 +179,9 @@ START_TEST (test_forchess_checkmate)
 {
 	fc_board_t board;
 	bzero(&board, sizeof(board));
-	fc_board_setup(&board, "test/boards/test_forchess_pawn_checks.1");
+	fc_player_t dummy;
+	fc_board_setup(&board, "test/boards/test_forchess_pawn_checks.1",
+			&dummy);
 	fail_unless(fc_is_king_in_check(&board, FC_FIRST) == FC_CHECKMATE);
 	fail_unless(fc_is_king_in_check(&board, FC_SECOND) == FC_CHECK);
 	fc_board_set_piece(&board, FC_FIRST, FC_BISHOP, 3, 3);

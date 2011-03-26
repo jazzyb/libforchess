@@ -51,7 +51,8 @@ typedef uint64_t fc_board_t[FC_TOTAL_BITBOARDS];
 /*
  * Initializes the board based on a config file.
  */
-int fc_board_setup (fc_board_t *board, const char *filename);
+int fc_board_setup (fc_board_t *board, const char *filename,
+		fc_player_t *first);
 
 /*
  * Places the given piece on the board.

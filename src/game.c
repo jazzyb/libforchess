@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <strings.h>
 
@@ -24,6 +25,81 @@ int fc_game_init (fc_game_t *game)
 void fc_game_free (fc_game_t *game)
 {
 	free(game->board);
+}
+
+static void remove2position (char *str, uint64_t pos)
+{
+	int i = 0;
+	while (pos) {
+		pos >>= 1;
+		i++;
+	}
+	char x = ((i - 1) % 8) + 'a';
+	char y = ((i - 1) / 8) + '1';
+	sprintf(str, "%c%c", x, y);
+}
+
+static inline char piece2char (fc_piece_t piece)
+{
+	switch (piece) {
+	case FC_PAWN:
+		return 'P';
+	case FC_BISHOP:
+		return 'B';
+	case FC_KNIGHT:
+		return 'N';
+	case FC_ROOK:
+		return 'R';
+	case FC_QUEEN:
+		return 'Q';
+	case FC_KING:
+		return 'K';
+	}
+	/* should never get here */
+	assert(0);
+	return '\0';
+}
+
+int fc_game_save (fc_game_t *game, const char *filename)
+{
+	FILE *fp = fopen(filename, "w");
+	if (!fp) {
+		return 0;
+	}
+
+	fc_mlist_t list;
+	fc_mlist_init(&list, 0);
+	fc_board_get_removes(game->board, &list, game->player);
+	for (int i = 0; i < fc_mlist_length(&list); i++) {
+		fc_move_t *move = fc_mlist_get(&list, i);
+		char str[3];
+		remove2position(str, move->move);
+		fprintf(fp, "%d %c %s\n", game->player + 1,
+				piece2char(move->piece), str);
+	}
+
+	for (fc_player_t player = FC_NEXT_PLAYER(game->player);
+	     player != game->player;
+	     player = FC_NEXT_PLAYER(player)) {
+		fc_mlist_clear(&list);
+		fc_board_get_removes(game->board, &list, player);
+		for (int i = 0; i < fc_mlist_length(&list); i++) {
+			fc_move_t *move = fc_mlist_get(&list, i);
+			char str[3];
+			remove2position(str, move->move);
+			fprintf(fp, "%d %c %s\n", player + 1,
+					piece2char(move->piece), str);
+		}
+	}
+
+	fc_mlist_free(&list);
+	fclose(fp);
+	return 1;
+}
+
+int fc_game_load (fc_game_t *game, const char *filename)
+{
+	return fc_board_setup(game->board, filename, &(game->player));
 }
 
 fc_player_t fc_game_current_player (fc_game_t *game)
@@ -55,7 +131,8 @@ int fc_game_king_check_status (fc_game_t *game, fc_player_t player)
 }
 
 /*
- * Returns the highest check status of player's opponents.
+ * Returns FC_CHECK if the given move will put one of the opponent kings in
+ * check; FC_CHECKMATE if checkmate.  Returns 0 if neither is true.
  */
 int fc_game_opponent_kings_check_status (fc_game_t *game, fc_player_t player,
 		fc_move_t *move)

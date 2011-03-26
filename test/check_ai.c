@@ -11,7 +11,8 @@ START_TEST (test_ai_score_position)
 {
 	fc_board_t board;
 	bzero(&board, sizeof(board));
-	fc_board_setup(&board, "test/boards/test_ai_score_position.1");
+	fc_player_t dummy;
+	fc_board_setup(&board, "test/boards/test_ai_score_position.1", &dummy);
 	fail_unless(fc_ai_score_position(&board, FC_FIRST) == -100);
 }
 END_TEST
@@ -20,7 +21,8 @@ START_TEST (test_ai_is_move_valid)
 {
 	fc_board_t board;
 	bzero(&board, sizeof(board));
-	fc_board_setup(&board, "test/boards/test_ai_is_move_valid.1");
+	fc_player_t dummy;
+	fc_board_setup(&board, "test/boards/test_ai_is_move_valid.1", &dummy);
 	fc_move_t move;
 	/* test moving king into check */
 	move.player = FC_FIRST;
@@ -71,7 +73,8 @@ START_TEST (test_ai_next_move1)
 {
 	fc_board_t board;
 	bzero(&board, sizeof(board));
-	fc_board_setup(&board, "test/boards/test_ai_next_move.1");
+	fc_player_t dummy;
+	fc_board_setup(&board, "test/boards/test_ai_next_move.1", &dummy);
 	fc_move_t move;
 	fc_ai_next_move(&board, &move, FC_FIRST, 4);
 	fail_unless(move.move == fc_uint64("c8-c1"));
