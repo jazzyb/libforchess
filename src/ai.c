@@ -176,7 +176,7 @@ int fc_ai_is_move_valid (fc_board_t *board, fc_move_t *move)
 	fc_board_copy(&copy, board);
 	fc_board_make_move(&copy, move);
 
-	int check_status_before = fc_is_king_in_check(board, move->player);
+	int check_status_before = fc_board_check_status(board, move->player);
 	if (check_status_before == FC_CHECKMATE) {
 		uint64_t king = FC_BITBOARD((*board), move->player, FC_KING);
 		if (move->piece == FC_KING && move->move != king) {
@@ -185,7 +185,7 @@ int fc_ai_is_move_valid (fc_board_t *board, fc_move_t *move)
 			return 1;
 		}
 	}
-	int check_status_after = fc_is_king_in_check(&copy, move->player);
+	int check_status_after = fc_board_check_status(&copy, move->player);
 	if (!check_status_before && check_status_after) {
 		return 0;
 	}
@@ -193,9 +193,9 @@ int fc_ai_is_move_valid (fc_board_t *board, fc_move_t *move)
 		return 0;
 	}
 
-	int partner_status_before = fc_is_king_in_check(board,
+	int partner_status_before = fc_board_check_status(board,
 			FC_PARTNER(move->player));
-	int partner_status_after = fc_is_king_in_check(&copy,
+	int partner_status_after = fc_board_check_status(&copy,
 			FC_PARTNER(move->player));
 	if (!partner_status_before && partner_status_after) {
 		return 0;

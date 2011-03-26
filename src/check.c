@@ -428,11 +428,7 @@ static int is_check (fc_board_t *board, fc_player_t player)
  * Returns FC_CHECK if player's king is in check, FC_CHECKMATE if checkmate,
  * and 0 otherwise.
  */
-/* FIXME TODO
- * 1. rename this function to something more in line with the rest of the API
- *    so far, e.g. fc_board_check_status().
- */
-int fc_is_king_in_check (fc_board_t *board, fc_player_t player)
+int fc_board_check_status (fc_board_t *board, fc_player_t player)
 {
 	if (!is_check(board, player)) {
 		return 0;
