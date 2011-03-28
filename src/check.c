@@ -198,7 +198,7 @@ static int king_in_check_upward (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (i & FC_ALL_ALLIES((*board), player)) {
+		if (!is_empty(board, i)) {
 			break;
 		}
 	}
@@ -212,7 +212,7 @@ static int king_in_check_downward (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (i & FC_ALL_ALLIES((*board), player)) {
+		if (!is_empty(board, i)) {
 			break;
 		}
 	}
@@ -230,7 +230,7 @@ static int king_in_check_leftward (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (i & FC_ALL_ALLIES((*board), player)) {
+		if (!is_empty(board, i)) {
 			break;
 		}
 
@@ -252,7 +252,7 @@ static int king_in_check_rightward (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (i & FC_ALL_ALLIES((*board), player)) {
+		if (!is_empty(board, i)) {
 			break;
 		}
 
@@ -291,7 +291,7 @@ static int king_in_check_northwest (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (i & FC_ALL_ALLIES((*board), player)) {
+		if (!is_empty(board, i)) {
 			break;
 		}
 		if (i & FC_LEFT_COL) {
@@ -312,7 +312,7 @@ static int king_in_check_southwest (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (i & FC_ALL_ALLIES((*board), player)) {
+		if (!is_empty(board, i)) {
 			break;
 		}
 		if (i & FC_LEFT_COL) {
@@ -333,7 +333,7 @@ static int king_in_check_northeast (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (i & FC_ALL_ALLIES((*board), player)) {
+		if (!is_empty(board, i)) {
 			break;
 		}
 		if (i & FC_RIGHT_COL) {
@@ -354,7 +354,7 @@ static int king_in_check_southeast (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (i & FC_ALL_ALLIES((*board), player)) {
+		if (!is_empty(board, i)) {
 			break;
 		}
 		if (i & FC_RIGHT_COL) {

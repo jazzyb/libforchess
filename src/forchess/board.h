@@ -48,6 +48,8 @@ typedef uint64_t fc_board_t[FC_TOTAL_BITBOARDS];
 #define FC_ALL_ALLIES(b, p) \
 	(FC_ALL_PIECES(b, p) | FC_ALL_PIECES(b, ((p + 2) % 4)))
 
+int is_empty (fc_board_t *board, uint64_t bit);
+
 /*
  * Initializes the board based on a config file.
  */

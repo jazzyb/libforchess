@@ -244,7 +244,7 @@ static inline int is_occupied_by_enemy (fc_board_t *b,
 	return !!(m & FC_ALL_ALLIES((*b), ((p + 1) % 4)));
 }
 
-static inline int is_empty (fc_board_t *b, uint64_t m)
+inline int is_empty (fc_board_t *b, uint64_t m)
 {
 	return !!(m & ~(FC_ALL_PIECES((*b), 0) | FC_ALL_PIECES((*b), 1) |
 			FC_ALL_PIECES((*b), 2) | FC_ALL_PIECES((*b), 3)));

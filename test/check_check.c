@@ -190,6 +190,17 @@ START_TEST (test_forchess_checkmate)
 }
 END_TEST
 
+START_TEST (test_forchess_check_bug1)
+{
+	fc_board_t board;
+	bzero(&board, sizeof(board));
+	fc_player_t dummy;
+	fc_board_setup(&board, "test/boards/test_forchess_check_bug.1",
+			&dummy);
+	fail_unless(!fc_board_check_status(&board, FC_SECOND));
+}
+END_TEST
+
 Suite *check_suite (void)
 {
 	Suite *s = suite_create("Check");
@@ -200,6 +211,7 @@ Suite *check_suite (void)
 	tcase_add_test(tc_check, test_forchess_king_checks);
 	tcase_add_test(tc_check, test_forchess_pawn_checks);
 	tcase_add_test(tc_check, test_forchess_checkmate);
+	tcase_add_test(tc_check, test_forchess_check_bug1);
 	suite_add_tcase(s, tc_check);
 	return s;
 }
