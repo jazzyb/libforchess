@@ -42,7 +42,9 @@ static inline void append_pawn_promotions_to_moves(fc_mlist_t *list,
 	fc_mlist_append(list, move->player, move->piece, FC_QUEEN, move->move);
 }
 
-#define BAD_MOVES 0xdeadbeef /* an unlikely score */
+static int alphabeta_handle_removes(fc_board_t *board, fc_move_t *ret,
+		fc_player_t player, int depth, int alpha, int beta, int max);
+
 /*
  * Returns the value of the subtree.  If the variable max is set to 1, then the
  * function will try to maximize the value.  If max is set to 0, then it will
@@ -53,7 +55,7 @@ static inline void append_pawn_promotions_to_moves(fc_mlist_t *list,
 static int alphabeta (fc_board_t *board, fc_move_t *ret, fc_player_t player,
 		int depth, int alpha, int beta, int max)
 {
-	int score = BAD_MOVES;
+	int score;
 	if (game_over(board) || depth == 0) {
 		score = fc_ai_score_position(board, player);
 		/*
@@ -71,10 +73,8 @@ static int alphabeta (fc_board_t *board, fc_move_t *ret, fc_player_t player,
 	fc_mlist_t list;
 	fc_mlist_init(&list, 0);
 	fc_board_get_moves(board, &list, player);
-	/* TODO add logic for those weird times when we won't be able to move,
-	 * but we will have to remove a piece that will put us in check(mate).
-	 */
-evaluate_moves:
+
+	int all_moves_are_invalid = 1;
 	for (int i = 0; i < fc_mlist_length(&list); i++) {
 
 		fc_move_t *move = fc_mlist_get(&list, i);
@@ -91,6 +91,7 @@ evaluate_moves:
 			append_pawn_promotions_to_moves(&list, move);
 			continue;
 		}
+		all_moves_are_invalid = 0;
 
 		if (max && score > alpha) {
 			alpha = score;
@@ -109,15 +110,107 @@ evaluate_moves:
 		}
 	}
 
-	if (score == BAD_MOVES) {
-		fc_mlist_clear(&list);
-		fc_board_get_removes(board, &list, player);
-		assert(BAD_MOVES + 1 != score++);
-		goto evaluate_moves;
+	if (all_moves_are_invalid) {
+		return alphabeta_handle_removes(board, ret, player, depth,
+				alpha, beta, max);
 	}
 
 	fc_mlist_free(&list);
 
+	return (max) ? alpha : beta;
+}
+
+/*
+ * Used in alphabeta_handle_removes() below; could likely be adapted for
+ * alphabeta() above.
+ */
+static inline void remove_and_adjust_scores (fc_move_t *rm, fc_board_t *board,
+		fc_move_t *ret, fc_player_t player, int depth, int *alpha,
+		int *beta, int max)
+{
+	fc_board_t copy;
+	fc_board_copy(&copy, board);
+	fc_board_make_move(&copy, rm);
+	int score = alphabeta(&copy, NULL, FC_NEXT_PLAYER(player), depth - 1,
+			*alpha, *beta, !max);
+
+	if (max && score > *alpha) {
+		*alpha = score;
+		if (ret) {
+			fc_move_copy(ret, rm);
+		}
+	} else if (!max && score < *beta) {
+		*beta = score;
+		if (ret) {
+			fc_move_copy(ret, rm);
+		}
+	}
+}
+
+/*
+ * Same as alphabeta above, but evaluates the removes for a position instead of
+ * the moves.  This function is only called from the end of alphabeta(), so we
+ * can assume that all the checks for game_over(), etc. have already been done.
+ */
+static int alphabeta_handle_removes(fc_board_t *board, fc_move_t *ret,
+		fc_player_t player, int depth, int alpha, int beta, int max)
+{
+	int found_valid_move = 0;
+	fc_mlist_t list;
+	fc_mlist_init(&list, 0);
+	fc_board_get_removes(board, &list, player);
+	/*
+	 * Go through the list the first time.  If we can remove a piece other
+	 * than the king that won't put us in check, great.
+	 */
+	for (int i = 0; i < fc_mlist_length(&list); i++) {
+		fc_move_t *rm = fc_mlist_get(&list, i);
+		if (rm->piece == FC_KING || !fc_ai_is_move_valid(board, rm)) {
+			continue;
+		}
+		found_valid_move = 1;
+
+		remove_and_adjust_scores(rm, board, ret, player, depth, &alpha,
+				&beta, max);
+
+		if (beta <= alpha) {
+			break;
+		}
+	}
+	if (found_valid_move) {
+		goto clean_up_and_return;
+	}
+
+	/*
+	 * If we only have the king to remove, then remove it.
+	 */
+	if (fc_mlist_length(&list) == 1) {
+		remove_and_adjust_scores(fc_mlist_get(&list, 0), board, ret,
+				player, depth, &alpha, &beta, max);
+
+		goto clean_up_and_return;
+	}
+
+	/*
+	 * Otherwise, go through the whole list again (this time allowing
+	 * putting kings into check(mate)). And return the best move.
+	 */
+	for (int i = 0; i < fc_mlist_length(&list); i++) {
+		fc_move_t *rm = fc_mlist_get(&list, i);
+		if (rm->piece == FC_KING) {
+			continue;
+		}
+
+		remove_and_adjust_scores(rm, board, ret, player, depth, &alpha,
+				&beta, max);
+
+		if (beta <= alpha) {
+			break;
+		}
+	}
+
+clean_up_and_return:
+	fc_mlist_free(&list);
 	return (max) ? alpha : beta;
 }
 
