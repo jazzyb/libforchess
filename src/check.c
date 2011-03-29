@@ -1,6 +1,6 @@
-#include "forchess/board.h"
+#include <assert.h>
 
-/* FIXME Find a clean way of determining if the king is in check(mate). */
+#include "forchess/board.h"
 
 static int is_threatened_by_king (fc_board_t *board, fc_player_t player,
 		uint64_t king)
@@ -198,7 +198,7 @@ static int king_in_check_upward (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (i & FC_ALL_ALLIES((*board), player)) {
+		if (!is_empty(board, i)) {
 			break;
 		}
 	}
@@ -212,7 +212,7 @@ static int king_in_check_downward (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (i & FC_ALL_ALLIES((*board), player)) {
+		if (!is_empty(board, i)) {
 			break;
 		}
 	}
@@ -230,7 +230,7 @@ static int king_in_check_leftward (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (i & FC_ALL_ALLIES((*board), player)) {
+		if (!is_empty(board, i)) {
 			break;
 		}
 
@@ -252,7 +252,7 @@ static int king_in_check_rightward (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (i & FC_ALL_ALLIES((*board), player)) {
+		if (!is_empty(board, i)) {
 			break;
 		}
 
@@ -291,7 +291,7 @@ static int king_in_check_northwest (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (i & FC_ALL_ALLIES((*board), player)) {
+		if (!is_empty(board, i)) {
 			break;
 		}
 		if (i & FC_LEFT_COL) {
@@ -312,7 +312,7 @@ static int king_in_check_southwest (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (i & FC_ALL_ALLIES((*board), player)) {
+		if (!is_empty(board, i)) {
 			break;
 		}
 		if (i & FC_LEFT_COL) {
@@ -333,7 +333,7 @@ static int king_in_check_northeast (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (i & FC_ALL_ALLIES((*board), player)) {
+		if (!is_empty(board, i)) {
 			break;
 		}
 		if (i & FC_RIGHT_COL) {
@@ -354,7 +354,7 @@ static int king_in_check_southeast (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (i & FC_ALL_ALLIES((*board), player)) {
+		if (!is_empty(board, i)) {
 			break;
 		}
 		if (i & FC_RIGHT_COL) {
@@ -417,6 +417,10 @@ static int king_in_check_by_knight (fc_board_t *board, fc_player_t player,
 static int is_check (fc_board_t *board, fc_player_t player)
 {
 	uint64_t king = FC_BITBOARD((*board), player, FC_KING);
+	if (!king) {
+		return 0;
+	}
+
 	return (king_in_check_laterally(board, player, king) ||
 		king_in_check_diagonally(board, player, king) ||
 		is_threatened_by_pawn(board, player, king) ||
@@ -428,14 +432,10 @@ static int is_check (fc_board_t *board, fc_player_t player)
  * Returns FC_CHECK if player's king is in check, FC_CHECKMATE if checkmate,
  * and 0 otherwise.
  */
-/* FIXME TODO
- * 1. rename this function to something more in line with the rest of the API
- *    so far, e.g. fc_board_check_status().
- * 2. Move all the check code to it's own source file, but keep the board.h
- *    header the same.
- */
-int fc_is_king_in_check (fc_board_t *board, fc_player_t player)
+int fc_board_check_status (fc_board_t *board, fc_player_t player)
 {
+	assert(board);
+
 	if (!is_check(board, player)) {
 		return 0;
 	}
@@ -444,15 +444,13 @@ int fc_is_king_in_check (fc_board_t *board, fc_player_t player)
 	fc_mlist_init(&moves, 0);
 	fc_board_get_moves(board, &moves, player);
 	for (int i = 0; i < fc_mlist_length(&moves); i++) {
-		/*
-		fc_move_t *mv = fc_mlist_get(&moves, i);
-		printf("%d %d 0x%llx\n", mv->player, mv->piece, mv->move);
-		fflush(stdout);
-		*/
 		fc_board_t copy;
 		fc_board_copy(&copy, board);
 		fc_board_make_move(&copy, fc_mlist_get(&moves, i));
 		if (!is_check(&copy, player)) {
+			/* FIXME Is this the right place for this code?  This
+			 * API call should be concerned with the check status
+			 * of a particular king, not the partner. */
 			/* We must never move such that our opponent is put in
 			 * check because of us. Even if it would get us out of
 			 * checkmate.  However, I am interpreting this rule to

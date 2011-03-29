@@ -1,7 +1,5 @@
+#include <assert.h>
 #include <limits.h>
-
-/* FIXME add logic to handle pawn promotions
- */
 
 #include "forchess/ai.h"
 #include "forchess/board.h"
@@ -10,8 +8,7 @@
 int _fc_ai_piece_values[] = {
 	100,	/* pawns */
 	300,	/* bishops */
-	350,	/* knights -- because of the closeness of the pieces, I value
-		   them slightly more than bishops */
+	350,	/* knights */
 	500,	/* rooks */
 	900,	/* queens */
 	100000	/* kings */
@@ -36,13 +33,27 @@ static inline int game_over (fc_board_t *board)
 		is_player_out(board, FC_FOURTH)));
 }
 
+static inline void append_pawn_promotions_to_moves(fc_mlist_t *list,
+		fc_move_t *move)
+{
+	fc_mlist_append(list, move->player, move->piece, FC_BISHOP, move->move);
+	fc_mlist_append(list, move->player, move->piece, FC_KNIGHT, move->move);
+	fc_mlist_append(list, move->player, move->piece, FC_ROOK, move->move);
+	fc_mlist_append(list, move->player, move->piece, FC_QUEEN, move->move);
+}
+
+static int alphabeta_handle_removes(fc_board_t *board, fc_move_t *ret,
+		fc_player_t player, int depth, int alpha, int beta, int max);
+
 /*
  * Returns the value of the subtree.  If the variable max is set to 1, then the
  * function will try to maximize the value.  If max is set to 0, then it will
  * try to minimize the value.
+ *
+ * If ret is !NULL, then ret will be set to the move with the best score.
  */
-static int alphabeta (fc_board_t *board, fc_player_t player, int depth,
-		int alpha, int beta, int max)
+static int alphabeta (fc_board_t *board, fc_move_t *ret, fc_player_t player,
+		int depth, int alpha, int beta, int max)
 {
 	int score;
 	if (game_over(board) || depth == 0) {
@@ -55,81 +66,151 @@ static int alphabeta (fc_board_t *board, fc_player_t player, int depth,
 		return (max) ? score - depth : (-1 * score) + depth;
 	}
 	if (is_player_out(board, player)) {
-		return alphabeta(board, FC_NEXT_PLAYER(player), depth, alpha,
-				beta, !max);
+		return alphabeta(board, NULL, FC_NEXT_PLAYER(player), depth,
+				alpha, beta, !max);
 	}
 
-	int invalid_mlist_flag = 1;
-	int count = 0;
 	fc_mlist_t list;
 	fc_mlist_init(&list, 0);
 	fc_board_get_moves(board, &list, player);
-	/* TODO add logic for those weird times when we won't be able to move,
-	 * but we will have to remove a piece that will put us in check(mate).
-	 */
-evaluate_moves:
+
+	int all_moves_are_invalid = 1;
 	for (int i = 0; i < fc_mlist_length(&list); i++) {
 
 		fc_move_t *move = fc_mlist_get(&list, i);
 		if (!fc_ai_is_move_valid(board, move)) {
 			continue;
 		}
-		invalid_mlist_flag = 0;
 
 		fc_board_t copy;
 		fc_board_copy(&copy, board);
 		if (fc_board_make_move(&copy, move)) {
-			score = alphabeta(&copy, FC_NEXT_PLAYER(player),
+			score = alphabeta(&copy, NULL, FC_NEXT_PLAYER(player),
 					depth - 1, alpha, beta, !max);
+		} else { /* move requires pawn promotion */
+			append_pawn_promotions_to_moves(&list, move);
+			continue;
+		}
+		all_moves_are_invalid = 0;
 
-			if (max) {
-				if (score > alpha) {
-					alpha = score;
-				}
-			} else {
-				if (score < beta) {
-					beta = score;
-				}
+		if (max && score > alpha) {
+			alpha = score;
+			if (ret) {
+				fc_move_copy(ret, move);
 			}
-			if (beta <= alpha) {
-				break;
+		} else if (!max && score < beta) {
+			beta = score;
+			if (ret) {
+				fc_move_copy(ret, move);
 			}
-		} else { /* pawn promotion */
-			for (fc_piece_t p = FC_KNIGHT;; p = FC_QUEEN) {
-				fc_board_make_pawn_move(&copy, move, p);
-				score = alphabeta(&copy, FC_NEXT_PLAYER(player),
-						depth - 1, alpha, beta, !max);
+		}
 
-				if (max) {
-					if (score > alpha) {
-						alpha = score;
-					}
-				} else {
-					if (score < beta) {
-						beta = score;
-					}
-				}
-				if (beta <= alpha) {
-					break;
-				}
-				if (p == FC_QUEEN) {
-					break;
-				}
-			}
+		if (beta <= alpha) {
+			break;
 		}
 	}
-	if (invalid_mlist_flag) {
-		fc_mlist_clear(&list);
-		fc_board_get_removes(board, &list, player);
-		count += 1;
-		if (count > 1) {
-			printf("here\n");
-		}
-		goto evaluate_moves;
+
+	if (all_moves_are_invalid) {
+		return alphabeta_handle_removes(board, ret, player, depth,
+				alpha, beta, max);
 	}
 
 	fc_mlist_free(&list);
 
+	return (max) ? alpha : beta;
+}
+
+/*
+ * Used in alphabeta_handle_removes() below; could likely be adapted for
+ * alphabeta() above.
+ */
+static inline void remove_and_adjust_scores (fc_move_t *rm, fc_board_t *board,
+		fc_move_t *ret, fc_player_t player, int depth, int *alpha,
+		int *beta, int max)
+{
+	fc_board_t copy;
+	fc_board_copy(&copy, board);
+	fc_board_make_move(&copy, rm);
+	int score = alphabeta(&copy, NULL, FC_NEXT_PLAYER(player), depth - 1,
+			*alpha, *beta, !max);
+
+	if (max && score > *alpha) {
+		*alpha = score;
+		if (ret) {
+			fc_move_copy(ret, rm);
+		}
+	} else if (!max && score < *beta) {
+		*beta = score;
+		if (ret) {
+			fc_move_copy(ret, rm);
+		}
+	}
+}
+
+/*
+ * Same as alphabeta above, but evaluates the removes for a position instead of
+ * the moves.  This function is only called from the end of alphabeta(), so we
+ * can assume that all the checks for game_over(), etc. have already been done.
+ */
+static int alphabeta_handle_removes(fc_board_t *board, fc_move_t *ret,
+		fc_player_t player, int depth, int alpha, int beta, int max)
+{
+	int found_valid_move = 0;
+	fc_mlist_t list;
+	fc_mlist_init(&list, 0);
+	fc_board_get_removes(board, &list, player);
+	/*
+	 * Go through the list the first time.  If we can remove a piece other
+	 * than the king that won't put us in check, great.
+	 */
+	for (int i = 0; i < fc_mlist_length(&list); i++) {
+		fc_move_t *rm = fc_mlist_get(&list, i);
+		if (rm->piece == FC_KING || !fc_ai_is_move_valid(board, rm)) {
+			continue;
+		}
+		found_valid_move = 1;
+
+		remove_and_adjust_scores(rm, board, ret, player, depth, &alpha,
+				&beta, max);
+
+		if (beta <= alpha) {
+			break;
+		}
+	}
+	if (found_valid_move) {
+		goto clean_up_and_return;
+	}
+
+	/*
+	 * If we only have the king to remove, then remove it.
+	 */
+	if (fc_mlist_length(&list) == 1) {
+		remove_and_adjust_scores(fc_mlist_get(&list, 0), board, ret,
+				player, depth, &alpha, &beta, max);
+
+		goto clean_up_and_return;
+	}
+
+	/*
+	 * Otherwise, go through the whole list again (this time allowing
+	 * putting kings into check(mate)). And return the best move.
+	 */
+	for (int i = 0; i < fc_mlist_length(&list); i++) {
+		fc_move_t *rm = fc_mlist_get(&list, i);
+		if (rm->piece == FC_KING) {
+			continue;
+		}
+
+		remove_and_adjust_scores(rm, board, ret, player, depth, &alpha,
+				&beta, max);
+
+		if (beta <= alpha) {
+			break;
+		}
+	}
+
+clean_up_and_return:
+	fc_mlist_free(&list);
 	return (max) ? alpha : beta;
 }
 
@@ -142,61 +223,12 @@ evaluate_moves:
 int fc_ai_next_move (fc_board_t *board, fc_move_t *ret, fc_player_t player,
 		int depth)
 {
-	/* TODO check that this request is valid */
-	if (is_player_out(board, player)) {
+	assert(board && ret);
+	if (is_player_out(board, player) || depth < 1) {
 		ret->move = 0;
 		return 0;
 	}
-	int alpha = ALPHA_MIN;
-	int invalid_mlist_flag = 1;
-	int count = 0;
-	fc_mlist_t list;
-	fc_mlist_init(&list, 0);
-	fc_board_get_moves(board, &list, player);
-evaluate_moves:
-	for (int i = 0; i < fc_mlist_length(&list); i++) {
-
-		fc_move_t *move = fc_mlist_get(&list, i);
-		if (!fc_ai_is_move_valid(board, move)) {
-			continue;
-		}
-		invalid_mlist_flag = 0;
-
-		fc_board_t copy;
-		fc_board_copy(&copy, board);
-		int score;
-		if (fc_board_make_move(&copy, move)) {
-			score = alphabeta(&copy, FC_NEXT_PLAYER(player),
-					depth - 1, alpha, BETA_MAX, 0);
-			if (score > alpha) {
-				alpha = score;
-				fc_move_copy(ret, move);
-			}
-		} else { /* pawn promotion */
-			for (fc_piece_t p = FC_KNIGHT;; p = FC_QUEEN) {
-				fc_board_make_pawn_move(&copy, move, p);
-				score = alphabeta(&copy, FC_NEXT_PLAYER(player),
-						depth - 1, alpha, BETA_MAX, 0);
-				if (score > alpha) {
-					alpha = score;
-					fc_move_copy(ret, move);
-				}
-				if (p == FC_QUEEN) {
-					break;
-				}
-			}
-		}
-	}
-	if (invalid_mlist_flag) {
-		fc_mlist_clear(&list);
-		fc_board_get_removes(board, &list, player);
-		count += 1;
-		if (count > 1) {
-			printf("here\n");
-		}
-		goto evaluate_moves;
-	}
-	fc_mlist_free(&list);
+	(void)alphabeta(board, ret, player, depth, ALPHA_MIN, BETA_MAX, 1);
 	return 1;
 }
 
@@ -214,6 +246,7 @@ static int get_material_score (fc_board_t *board, fc_player_t player)
 
 int fc_ai_score_position (fc_board_t *board, fc_player_t player)
 {
+	assert(board);
 	return (get_material_score(board, player) -
 		get_material_score(board, FC_NEXT_PLAYER(player)) +
 		get_material_score(board, FC_PARTNER(player)) -
@@ -233,11 +266,12 @@ int fc_ai_score_position (fc_board_t *board, fc_player_t player)
  */
 int fc_ai_is_move_valid (fc_board_t *board, fc_move_t *move)
 {
+	assert(board && move);
 	fc_board_t copy;
 	fc_board_copy(&copy, board);
 	fc_board_make_move(&copy, move);
 
-	int check_status_before = fc_is_king_in_check(board, move->player);
+	int check_status_before = fc_board_check_status(board, move->player);
 	if (check_status_before == FC_CHECKMATE) {
 		uint64_t king = FC_BITBOARD((*board), move->player, FC_KING);
 		if (move->piece == FC_KING && move->move != king) {
@@ -246,7 +280,7 @@ int fc_ai_is_move_valid (fc_board_t *board, fc_move_t *move)
 			return 1;
 		}
 	}
-	int check_status_after = fc_is_king_in_check(&copy, move->player);
+	int check_status_after = fc_board_check_status(&copy, move->player);
 	if (!check_status_before && check_status_after) {
 		return 0;
 	}
@@ -254,9 +288,9 @@ int fc_ai_is_move_valid (fc_board_t *board, fc_move_t *move)
 		return 0;
 	}
 
-	int partner_status_before = fc_is_king_in_check(board,
+	int partner_status_before = fc_board_check_status(board,
 			FC_PARTNER(move->player));
-	int partner_status_after = fc_is_king_in_check(&copy,
+	int partner_status_after = fc_board_check_status(&copy,
 			FC_PARTNER(move->player));
 	if (!partner_status_before && partner_status_after) {
 		return 0;

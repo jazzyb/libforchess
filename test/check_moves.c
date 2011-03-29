@@ -10,10 +10,12 @@ START_TEST (test_move_copy)
 	fc_move_t dst, src;
 	src.player = FC_QUEEN;
 	src.piece = FC_THIRD;
+	src.promote = FC_KNIGHT;
 	src.move = 129;
 	fc_move_copy(&dst, &src);
 	fail_unless(dst.player == src.player &&
 		    dst.piece == src.piece &&
+		    dst.promote == src.promote &&
 		    dst.move == src.move);
 }
 END_TEST
@@ -34,7 +36,7 @@ START_TEST (test_mlist_append)
 	fc_mlist_t list;
 	int ret = fc_mlist_init(&list, 0);
 	fail_unless(ret == 1);
-	ret = fc_mlist_append(&list, FC_SECOND, FC_ROOK, 129);
+	ret = fc_mlist_append(&list, FC_SECOND, FC_ROOK, FC_NONE, 129);
 	fail_unless(ret == 1 &&
 		    list.moves[0].player == FC_SECOND &&
 		    list.moves[0].piece == FC_ROOK &&
@@ -53,11 +55,11 @@ START_TEST (test_mlist_resize)
 	fc_mlist_t small;
 	ret = fc_mlist_init(&small, 2);
 	fail_unless(ret == 1 && small.size == 2);
-	ret = fc_mlist_append(&small, FC_SECOND, FC_ROOK, 129);
+	ret = fc_mlist_append(&small, FC_SECOND, FC_ROOK, FC_NONE, 129);
 	fail_unless(ret == 1);
-	ret = fc_mlist_append(&small, FC_THIRD, FC_QUEEN, 33);
+	ret = fc_mlist_append(&small, FC_THIRD, FC_QUEEN, FC_NONE, 33);
 	fail_unless(ret == 1);
-	ret = fc_mlist_append(&small, FC_FOURTH, FC_PAWN, 17);
+	ret = fc_mlist_append(&small, FC_FOURTH, FC_PAWN, FC_NONE, 17);
 	fail_unless(ret == 1 && small.size > 2);
 }
 END_TEST
@@ -67,11 +69,11 @@ START_TEST (test_mlist_copy)
 	fc_mlist_t small, big;
 	int ret = fc_mlist_init(&small, 2);
 	ret = fc_mlist_init(&big, 10);
-	ret = fc_mlist_append(&big, FC_SECOND, FC_ROOK, 129);
-	ret = fc_mlist_append(&big, FC_THIRD, FC_QUEEN, 33);
-	ret = fc_mlist_append(&big, FC_FOURTH, FC_PAWN, 17);
-	ret = fc_mlist_append(&big, FC_THIRD, FC_KING, 33);
-	ret = fc_mlist_append(&big, FC_FOURTH, FC_BISHOP, 17);
+	ret = fc_mlist_append(&big, FC_SECOND, FC_ROOK, FC_NONE, 129);
+	ret = fc_mlist_append(&big, FC_THIRD, FC_QUEEN, FC_NONE, 33);
+	ret = fc_mlist_append(&big, FC_FOURTH, FC_PAWN, FC_NONE, 17);
+	ret = fc_mlist_append(&big, FC_THIRD, FC_KING, FC_NONE, 33);
+	ret = fc_mlist_append(&big, FC_FOURTH, FC_BISHOP, FC_NONE, 17);
 	ret = fc_mlist_copy(&small, &big);
 	fail_unless(ret == 1 &&
 		    small.size == big.size &&
@@ -84,14 +86,14 @@ START_TEST (test_mlist_cat)
 {
 	fc_mlist_t small, big;
 	int ret = fc_mlist_init(&small, 2);
-	ret = fc_mlist_append(&small, FC_FIRST, FC_KNIGHT, 3);
-	ret = fc_mlist_append(&small, FC_FIRST, FC_ROOK, 129);
+	ret = fc_mlist_append(&small, FC_FIRST, FC_KNIGHT, FC_NONE, 3);
+	ret = fc_mlist_append(&small, FC_FIRST, FC_ROOK, FC_NONE, 129);
 	ret = fc_mlist_init(&big, 10);
-	ret = fc_mlist_append(&big, FC_SECOND, FC_ROOK, 129);
-	ret = fc_mlist_append(&big, FC_THIRD, FC_QUEEN, 33);
-	ret = fc_mlist_append(&big, FC_FOURTH, FC_PAWN, 17);
-	ret = fc_mlist_append(&big, FC_THIRD, FC_KING, 33);
-	ret = fc_mlist_append(&big, FC_FOURTH, FC_BISHOP, 17);
+	ret = fc_mlist_append(&big, FC_SECOND, FC_ROOK, FC_NONE, 129);
+	ret = fc_mlist_append(&big, FC_THIRD, FC_QUEEN, FC_NONE, 33);
+	ret = fc_mlist_append(&big, FC_FOURTH, FC_PAWN, FC_NONE, 17);
+	ret = fc_mlist_append(&big, FC_THIRD, FC_KING, FC_NONE, 33);
+	ret = fc_mlist_append(&big, FC_FOURTH, FC_BISHOP, FC_NONE, 17);
 	ret = fc_mlist_cat(&small, &big);
 	fail_unless(ret == 1 &&
 		    small.index == 7 &&

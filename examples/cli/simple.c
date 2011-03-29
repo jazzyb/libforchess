@@ -1,45 +1,20 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "forchess/ai.h"
 #include "forchess/board.h"
-#include "forchess/moves.h"
+#include "forchess/game.h"
 
-int num_players (fc_board_t *board)
-{
-	int ret = 0;
-	if (FC_BITBOARD((*board), FC_FIRST, FC_KING)) {
-		ret += 1;
-	}
-	if (FC_BITBOARD((*board), FC_SECOND, FC_KING)) {
-		ret += 1;
-	}
-	if (FC_BITBOARD((*board), FC_THIRD, FC_KING)) {
-		ret += 1;
-	}
-	if (FC_BITBOARD((*board), FC_FOURTH, FC_KING)) {
-		ret += 1;
-	}
-	return ret;
-}
-
-int validate_move (fc_board_t *board, fc_move_t *move, fc_player_t player)
-{
-	if (move->player != player) {
-		return 0;
-	}
-	fc_mlist_t list;
-	fc_mlist_init(&list, 0);
-	fc_board_get_moves(board, &list, player);
-	for (int i = 0; i < fc_mlist_length(&list); i++) {
-		fc_move_t *other = fc_mlist_get(&list, i);
-		if (move->piece == other->piece && move->move == other->move) {
-			return fc_ai_is_move_valid(board, move);
-		}
-	}
-	return 0;
-}
+void query_human_for_move (fc_game_t *game, fc_player_t player);
+void get_move (fc_game_t *game, fc_move_t *move, fc_player_t player);
+void str2move (fc_game_t *game, fc_move_t *move, char *str);
+fc_piece_t get_pawn_promotion (void);
+void make_computer_move (fc_game_t *game, fc_player_t player);
+void get_time (char *str, time_t t);
+void move2str (fc_game_t *game, char *str, fc_move_t *move);
 
 int main (int argc, char **argv)
 {
@@ -74,106 +49,175 @@ int main (int argc, char **argv)
 		}
 	}
 
-	fc_board_t board;
-	bzero(&board, sizeof(board));
-	if (!fc_board_setup(&board, "examples/cli/simple.fc")) {
+	fc_game_t game;
+	fc_game_init(&game);
+	if (!fc_game_load(&game, "examples/cli/simple.fc")) {
 		fprintf(stderr, "error: cannot read start file\n");
 		exit(1);
 	}
 
-	char piece;
-	fc_move_t move;
-	char move_buf[10]; /* FIXME: can overflow */
-	for (fc_player_t player = FC_FIRST;; player = FC_NEXT_PLAYER(player)) {
+	for (fc_player_t player = fc_game_current_player(&game);
+	     !fc_game_is_over(&game);
+	     player = fc_game_next_player(&game)) {
 		if (player_is_human[player]) {
-			do {
-				printf("%d: ", player + 1);
-				fflush(stdout);
-				gets(move_buf);
-				fc_str2move(&board, &move, move_buf);
-				if (!validate_move(&board, &move, player)) {
-					fprintf(stderr, "error: invalid move\n");
-				} else {
-					break;
-				}
-			} while (1);
-			if (!fc_board_make_move(&board, &move)) {
-				/* pawn promotion */
-retry:
-				printf("new piece: ");
-				fflush(stdout);
-				scanf("%c", &piece);
-				fc_piece_t type;
-				switch (piece) {
-				case 'B':
-					type = FC_BISHOP; break;
-				case 'N':
-					type = FC_KNIGHT; break;
-				case 'R':
-					type = FC_ROOK; break;
-				case 'Q':
-					type = FC_QUEEN; break;
-				default:
-					fprintf(stderr, "error: invalid promotion\n");
-					goto retry;
-				}
-				if (!fc_board_make_pawn_move(&board, &move, type)) {
-					fprintf(stderr, "error: unknown; quitting\n");
-				}
-			}
-		} else { /* computer plays */
-			int depth = num_players(&board) * 2;
-			int ret = fc_ai_next_move(&board, &move, player, depth);
-			if (!ret) {
-				fprintf(stderr, "error: invalid AI move 1\n");
-				exit(1);
-			}
-			switch (move.piece) {
-			case FC_PAWN:
-				piece = ' '; break;
-			case FC_BISHOP:
-				piece = 'B'; break;
-			case FC_KNIGHT:
-				piece = 'N'; break;
-			case FC_ROOK:
-				piece = 'R'; break;
-			case FC_QUEEN:
-				piece = 'Q'; break;
-			case FC_KING:
-				piece = 'K'; break;
-			default:
-				fprintf(stderr, "error: invalid AI move 2\n");
-				exit(1);
-			}
-			fc_move2str(&board, move_buf, &move);
-			int check_flag_before = fc_is_king_in_check(&board,
-					FC_NEXT_PLAYER(player)) |
-				fc_is_king_in_check(&board,
-					FC_PARTNER(FC_NEXT_PLAYER(player)));
-			ret = fc_board_make_move(&board, &move);
-			if (!ret) {
-				/* FIXME: until we improve the API, just assume
-				 * that we want a queen */
-				ret = fc_board_make_pawn_move(&board, &move, FC_QUEEN);
-				if (!ret) {
-					fprintf(stderr, "error: invalid AI move 3\n");
-					exit(1);
-				}
-			}
-
-			int check_flag_after = fc_is_king_in_check(&board,
-					FC_NEXT_PLAYER(player)) |
-				fc_is_king_in_check(&board,
-					FC_PARTNER(FC_NEXT_PLAYER(player)));
-			if (check_flag_after == 1 && check_flag_after != check_flag_before) {
-				strcat(move_buf, "+");
-			} else if (check_flag_after > 1 && check_flag_after != check_flag_before) {
-				strcat(move_buf, "++");
-			}
-			printf("%d: %c%s\n", player + 1, piece, move_buf);
-			fflush(stdout);
+			query_human_for_move(&game, player);
+		} else {
+			make_computer_move(&game, player);
 		}
 	}
 
 	return 0;
+}
+
+void query_human_for_move (fc_game_t *game, fc_player_t player)
+{
+	fc_move_t move;
+	get_move(game, &move, player);
+	if (!fc_game_make_move(game, &move)) {
+		/* pawn promotion */
+		fc_game_set_promote_pawn(&move, get_pawn_promotion());
+		if (!fc_game_make_move(game, &move)) {
+			assert(0);
+		}
+	}
+}
+
+void get_move (fc_game_t *game, fc_move_t *move, fc_player_t player)
+{
+	char move_buf[100]; /* FIXME can overflow */
+	do {
+		printf("%d: ", player + 1);
+		fflush(stdout);
+		(void)gets(move_buf);
+		str2move(game, move, move_buf);
+		if (!fc_game_is_move_valid(game, move)) {
+			fprintf(stderr, "error: invalid move\n");
+		} else {
+			return;
+		}
+	} while (1);
+}
+
+void str2move (fc_game_t *game, fc_move_t *move, char *str)
+{
+	char x1, y1, x2, y2;
+	int ret = sscanf(str, "%c%c-%c%c", &x1, &y1, &x2, &y2);
+	x1 -= 'a';
+	y1 -= '1';
+	if (ret > 2) {
+		x2 -= 'a';
+		y2 -= '1';
+	}
+	fc_game_convert_coords_to_move(game, move, (int)x1, (int)y1,
+			(int)x2, (int)y2);
+}
+
+fc_piece_t get_pawn_promotion (void)
+{
+	char piece;
+	fc_piece_t type = FC_NONE;
+	do {
+		printf("new piece: ");
+		fflush(stdout);
+		(void)scanf("%c", &piece);
+		switch (piece) {
+		case 'B':
+			type = FC_BISHOP; break;
+		case 'N':
+			type = FC_KNIGHT; break;
+		case 'R':
+			type = FC_ROOK; break;
+		case 'Q':
+			type = FC_QUEEN; break;
+		default:
+			fprintf(stderr, "error: invalid promotion\n");
+			continue;
+		}
+	} while (0);
+}
+
+void make_computer_move (fc_game_t *game, fc_player_t player)
+{
+	fc_move_t move;
+	int depth = fc_game_number_of_players(game) * 2;
+
+	time_t start = time(NULL);
+	if (!fc_ai_next_move(game->board, &move, player, depth)) {
+		assert(0);
+	}
+	char time_str[100];
+	get_time(time_str, time(NULL) - start);
+
+	char piece;
+	switch (move.piece) {
+	case FC_PAWN:
+		piece = ' '; break;
+	case FC_BISHOP:
+		piece = 'B'; break;
+	case FC_KNIGHT:
+		piece = 'N'; break;
+	case FC_ROOK:
+		piece = 'R'; break;
+	case FC_QUEEN:
+		piece = 'Q'; break;
+	case FC_KING:
+		piece = 'K'; break;
+	default:
+		assert(0);
+	}
+
+	char move_buf[100];
+	move2str(game, move_buf, &move);
+
+	int check_status = fc_game_opponent_kings_check_status(game, player,
+			&move);
+	if (check_status == FC_CHECK) {
+		strcat(move_buf, "+ ");
+	} else if (check_status == FC_CHECKMATE) {
+		strcat(move_buf, "++");
+	} else {
+		strcat(move_buf, "  ");
+	}
+
+	char promote = '\0';
+	switch (move.promote) {
+	case FC_BISHOP:
+		promote = 'B'; break;
+	case FC_KNIGHT:
+		promote = 'N'; break;
+	case FC_ROOK:
+		promote = 'R'; break;
+	case FC_QUEEN:
+		promote = 'Q'; break;
+	}
+	if (promote != '\0') {
+		char promotion[10];
+		sprintf(promotion, " (%c)", promote);
+		strcat(move_buf, promotion);
+	}
+
+	if (!fc_game_make_move(game, &move)) {
+		assert(0);
+	}
+	printf("%d: %c%s :: %s\n", player + 1, piece, move_buf, time_str);
+	fflush(stdout);
+}
+
+void get_time (char *str, time_t t)
+{
+	int mins = t / 60;
+	int secs = t - (mins * 60);
+	if (mins) {
+		sprintf(str, "%dm%02ds", mins, secs);
+	} else {
+		sprintf(str, "%ds", secs);
+	}
+}
+
+void move2str (fc_game_t *game, char *str, fc_move_t *move)
+{
+	int x1, y1, x2, y2;
+	fc_game_convert_move_to_coords(game, &x1, &y1, &x2, &y2, move);
+	sprintf(str, "%c%c-%c%c", (char)x1 + 'a', (char)y1 + '1',
+			(char)x2 + 'a', (char)y2 + '1');
 }

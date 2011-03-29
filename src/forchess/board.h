@@ -48,10 +48,13 @@ typedef uint64_t fc_board_t[FC_TOTAL_BITBOARDS];
 #define FC_ALL_ALLIES(b, p) \
 	(FC_ALL_PIECES(b, p) | FC_ALL_PIECES(b, ((p + 2) % 4)))
 
+int is_empty (fc_board_t *board, uint64_t bit);
+
 /*
  * Initializes the board based on a config file.
  */
-int fc_board_setup (fc_board_t *board, const char *filename);
+int fc_board_setup (fc_board_t *board, const char *filename,
+		fc_player_t *first);
 
 /*
  * Places the given piece on the board.
@@ -85,9 +88,6 @@ int fc_board_make_pawn_move (fc_board_t *board,
 void fc_board_copy (fc_board_t *dst, fc_board_t *src);
 #define FC_CHECK 1
 #define FC_CHECKMATE 2
-int fc_is_king_in_check (fc_board_t *board, fc_player_t player);
-
-void fc_move2str (fc_board_t *board, char *str, fc_move_t *move);
-void fc_str2move (fc_board_t *board, fc_move_t *move, char *str);
+int fc_board_check_status (fc_board_t *board, fc_player_t player);
 
 #endif
