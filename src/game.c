@@ -170,6 +170,8 @@ int fc_game_is_move_valid (fc_game_t *game, fc_move_t *move)
 	if (move->player != game->player) {
 		return 0;
 	}
+
+	int valid_move_exists = 0;
 	fc_mlist_t list;
 	fc_mlist_init(&list, 0);
 	fc_board_get_moves(game->board, &list, move->player);
@@ -179,7 +181,45 @@ int fc_game_is_move_valid (fc_game_t *game, fc_move_t *move)
 			fc_mlist_free(&list);
 			return fc_ai_is_move_valid(game->board, move);
 		}
+		valid_move_exists += fc_ai_is_move_valid(game->board, other);
 	}
+	if (valid_move_exists) {
+		fc_mlist_free(&list);
+		return 0;
+	}
+
+	fc_mlist_clear(&list);
+	fc_board_get_removes(game->board, &list, move->player);
+
+	/* Check to see if it is okay to remove the king. */
+	if (fc_mlist_length(&list) == 1 && move->piece == FC_KING &&
+			move->move == fc_mlist_get(&list, 0)->move) {
+		fc_mlist_free(&list);
+		return 1;
+	}
+
+	int found_match = 0;
+	int valid_remove_exists = 0;
+	for (int i = 0; i < fc_mlist_length(&list); i++) {
+		fc_move_t *other = fc_mlist_get(&list, i);
+		if (other->piece == FC_KING) {
+			continue;
+		}
+		if (move->piece == other->piece && move->move == other->move) {
+			if (fc_ai_is_move_valid(game->board, move)) {
+				fc_mlist_free(&list);
+				return 1;
+			}
+			found_match = 1;
+		}
+		valid_remove_exists += fc_ai_is_move_valid(game->board, other);
+	}
+
+	if (found_match && !valid_remove_exists) {
+		fc_mlist_free(&list);
+		return 1;
+	}
+
 	fc_mlist_free(&list);
 	return 0;
 }

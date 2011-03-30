@@ -1,10 +1,7 @@
 #ifndef _FC_GAME_H_
 #define _FC_GAME_H_
-/*
- * TODO
- * fc_game_save(fc_game_t *, const char *);
- * fc_game_load(fc_game_t *, const char *);
- */
+
+#include "forchess/board.h"
 #include "forchess/moves.h"
 
 typedef struct {
