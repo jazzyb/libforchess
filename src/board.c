@@ -6,9 +6,7 @@
 
 /* FIXME switch the row/col values to x/y ones; the current way seems backwards
  * */
-int fc_board_set_piece (fc_board_t *board,
-			fc_player_t player,
-			fc_piece_t piece,
+int fc_board_set_piece (fc_board_t *board, fc_player_t player, fc_piece_t piece,
 			int row, int col)
 {
 	assert(board);
@@ -28,10 +26,8 @@ int fc_board_set_piece (fc_board_t *board,
  * Returns 1 and sets the values of player and piece if it found a piece at the
  * given row and col.  Returns 0 if the space was empty.
  */
-int fc_board_get_piece (fc_board_t *board,
-			fc_player_t *player,
-			fc_piece_t *piece,
-			int row, int col)
+int fc_board_get_piece (fc_board_t *board, fc_player_t *player,
+			fc_piece_t *piece, int row, int col)
 {
 	assert(board && player && piece);
 
@@ -159,12 +155,9 @@ static inline int may_move_to (fc_board_t *b, fc_player_t p, uint64_t m)
  * function for pawns is called pawn_move_if_valid() and move_and_continue()
  * for bishop, rook, and queen.
  */
-static inline void move_if_valid (fc_board_t *board,
-				  fc_mlist_t *moves,
-				  fc_player_t player,
-				  fc_piece_t type,
-				  uint64_t piece,
-				  uint64_t space)
+static inline void move_if_valid (fc_board_t *board, fc_mlist_t *moves,
+				  fc_player_t player, fc_piece_t type,
+				  uint64_t piece, uint64_t space)
 {
 	if (space && may_move_to(board, player, space)) {
 		fc_mlist_append(moves, player, type, FC_NONE, piece | space);
@@ -195,8 +188,7 @@ void fc_get_king_moves (fc_board_t *board, fc_mlist_t *moves, fc_player_t player
 	}
 }
 
-void fc_get_knight_moves (fc_board_t *board,
-			 fc_mlist_t *moves,
+void fc_get_knight_moves (fc_board_t *board, fc_mlist_t *moves,
 			 fc_player_t player)
 {
 	uint64_t knight, bb = FC_BITBOARD((*board), player, FC_KNIGHT);
@@ -237,8 +229,7 @@ void fc_get_knight_moves (fc_board_t *board,
  * value, then the int will truncate the uint64_t resulting in false negatives.
  * The double-! forces the value to be 0 or 1.
  */
-static inline int is_occupied_by_enemy (fc_board_t *b,
-					fc_player_t p,
+static inline int is_occupied_by_enemy (fc_board_t *b, fc_player_t p,
 					uint64_t m)
 {
 	return !!(m & FC_ALL_ALLIES((*b), ((p + 1) % 4)));
@@ -255,13 +246,9 @@ inline int is_empty (fc_board_t *b, uint64_t m)
  * 	m1 represents the single available pawn diagonal movement
  * 	m2 and m3 are the lateral capture moves
  */
-static inline void pawn_move_if_valid (fc_board_t *board,
-				       fc_mlist_t *moves,
-				       fc_player_t player,
-				       uint64_t pawn,
-				       uint64_t m1,
-				       uint64_t m2,
-				       uint64_t m3)
+static inline void pawn_move_if_valid (fc_board_t *board, fc_mlist_t *moves,
+				       fc_player_t player, uint64_t pawn,
+				       uint64_t m1, uint64_t m2, uint64_t m3)
 {
 	if (is_empty(board, m1)) {
 		fc_mlist_append(moves, player, FC_PAWN, FC_NONE, pawn | m1);
@@ -298,8 +285,7 @@ static inline fc_player_t fc_get_pawn_orientation (fc_board_t *board,
  * that would return invalid moves for pawns or potentially crash this API.
  * Don't do that.
  */
-void fc_get_pawn_moves (fc_board_t *board,
-			fc_mlist_t *moves,
+void fc_get_pawn_moves (fc_board_t *board, fc_mlist_t *moves,
 			fc_player_t player)
 {
 	uint64_t pawn, bb = FC_BITBOARD((*board), player, FC_PAWN);
@@ -336,12 +322,9 @@ void fc_get_pawn_moves (fc_board_t *board,
  * space.  Returns 1 if the calling function may continue evaluating moves
  * (i.e. the space is empty); 0 otherwise.
  */
-static inline int move_and_continue (fc_board_t *board,
-					  fc_mlist_t *moves,
-					  fc_player_t player,
-					  fc_piece_t type,
-					  uint64_t piece,
-					  uint64_t space)
+static inline int move_and_continue (fc_board_t *board, fc_mlist_t *moves,
+					  fc_player_t player, fc_piece_t type,
+					  uint64_t piece, uint64_t space)
 {
 	if (is_empty(board, space)) {
 		fc_mlist_append(moves, player, type, FC_NONE, piece | space);
@@ -352,10 +335,8 @@ static inline int move_and_continue (fc_board_t *board,
 	return 0;
 }
 
-static void fc_get_northwest_moves (fc_board_t *board,
-				    fc_mlist_t *moves,
-				    fc_player_t player,
-				    fc_piece_t type,
+static void fc_get_northwest_moves (fc_board_t *board, fc_mlist_t *moves,
+				    fc_player_t player, fc_piece_t type,
 				    uint64_t piece)
 {
 	if (piece & FC_LEFT_COL) {
@@ -373,10 +354,8 @@ static void fc_get_northwest_moves (fc_board_t *board,
 	}
 }
 
-static void fc_get_southwest_moves (fc_board_t *board,
-				    fc_mlist_t *moves,
-				    fc_player_t player,
-				    fc_piece_t type,
+static void fc_get_southwest_moves (fc_board_t *board, fc_mlist_t *moves,
+				    fc_player_t player, fc_piece_t type,
 				    uint64_t piece)
 {
 	if (piece & FC_LEFT_COL) {
@@ -394,10 +373,8 @@ static void fc_get_southwest_moves (fc_board_t *board,
 	}
 }
 
-static void fc_get_northeast_moves (fc_board_t *board,
-				    fc_mlist_t *moves,
-				    fc_player_t player,
-				    fc_piece_t type,
+static void fc_get_northeast_moves (fc_board_t *board, fc_mlist_t *moves,
+				    fc_player_t player, fc_piece_t type,
 				    uint64_t piece)
 {
 	if (piece & FC_RIGHT_COL) {
@@ -415,10 +392,8 @@ static void fc_get_northeast_moves (fc_board_t *board,
 	}
 }
 
-static void fc_get_southeast_moves (fc_board_t *board,
-				    fc_mlist_t *moves,
-				    fc_player_t player,
-				    fc_piece_t type,
+static void fc_get_southeast_moves (fc_board_t *board, fc_mlist_t *moves,
+				    fc_player_t player, fc_piece_t type,
 				    uint64_t piece)
 {
 	if (piece & FC_RIGHT_COL) {
@@ -436,8 +411,7 @@ static void fc_get_southeast_moves (fc_board_t *board,
 	}
 }
 
-void fc_get_bishop_moves (fc_board_t *board,
-			  fc_mlist_t *moves,
+void fc_get_bishop_moves (fc_board_t *board, fc_mlist_t *moves,
 			  fc_player_t player)
 {
 	uint64_t bishop, bb = FC_BITBOARD((*board), player, FC_BISHOP);
@@ -453,10 +427,8 @@ void fc_get_bishop_moves (fc_board_t *board,
 	}
 }
 
-static void fc_get_upward_moves (fc_board_t *board,
-				 fc_mlist_t *moves,
-				 fc_player_t player,
-				 fc_piece_t type,
+static void fc_get_upward_moves (fc_board_t *board, fc_mlist_t *moves,
+				 fc_player_t player, fc_piece_t type,
 				 uint64_t piece)
 {
 	for (uint64_t i = piece << 8; i; i <<= 8) {
@@ -466,10 +438,8 @@ static void fc_get_upward_moves (fc_board_t *board,
 	}
 }
 
-static void fc_get_downward_moves (fc_board_t *board,
-				   fc_mlist_t *moves,
-				   fc_player_t player,
-				   fc_piece_t type,
+static void fc_get_downward_moves (fc_board_t *board, fc_mlist_t *moves,
+				   fc_player_t player, fc_piece_t type,
 				   uint64_t piece)
 {
 	for (uint64_t i = piece >> 8; i; i >>= 8) {
@@ -479,10 +449,8 @@ static void fc_get_downward_moves (fc_board_t *board,
 	}
 }
 
-static void fc_get_leftward_moves (fc_board_t *board,
-				   fc_mlist_t *moves,
-				   fc_player_t player,
-				   fc_piece_t type,
+static void fc_get_leftward_moves (fc_board_t *board, fc_mlist_t *moves,
+				   fc_player_t player, fc_piece_t type,
 				   uint64_t piece)
 {
 	if (piece & FC_LEFT_COL) {
@@ -500,10 +468,8 @@ static void fc_get_leftward_moves (fc_board_t *board,
 	}
 }
 
-static void fc_get_rightward_moves (fc_board_t *board,
-				    fc_mlist_t *moves,
-				    fc_player_t player,
-				    fc_piece_t type,
+static void fc_get_rightward_moves (fc_board_t *board, fc_mlist_t *moves,
+				    fc_player_t player, fc_piece_t type,
 				    uint64_t piece)
 {
 	if (piece & FC_RIGHT_COL) {
@@ -521,8 +487,7 @@ static void fc_get_rightward_moves (fc_board_t *board,
 	}
 }
 
-void fc_get_rook_moves (fc_board_t *board,
-			fc_mlist_t *moves,
+void fc_get_rook_moves (fc_board_t *board, fc_mlist_t *moves,
 			fc_player_t player)
 {
 	uint64_t rook, bb = FC_BITBOARD((*board), player, FC_ROOK);
@@ -538,8 +503,7 @@ void fc_get_rook_moves (fc_board_t *board,
 	}
 }
 
-void fc_get_queen_moves (fc_board_t *board,
-			 fc_mlist_t *moves,
+void fc_get_queen_moves (fc_board_t *board, fc_mlist_t *moves,
 			 fc_player_t player)
 {
 	uint64_t queen, bb = FC_BITBOARD((*board), player, FC_QUEEN);
@@ -559,8 +523,7 @@ void fc_get_queen_moves (fc_board_t *board,
 	}
 }
 
-void fc_board_get_moves (fc_board_t *board,
-			 fc_mlist_t *moves,
+void fc_board_get_moves (fc_board_t *board, fc_mlist_t *moves,
 			 fc_player_t player)
 {
 	assert(board && moves);
@@ -576,8 +539,7 @@ void fc_board_get_moves (fc_board_t *board,
  * Return the pieces that the player is allowed to remove (i.e. all the pieces
  * the player has).
  */
-void fc_board_get_removes (fc_board_t *board,
-			   fc_mlist_t *moves,
+void fc_board_get_removes (fc_board_t *board, fc_mlist_t *moves,
 			   fc_player_t player)
 {
 	assert(board && moves);
@@ -592,8 +554,7 @@ void fc_board_get_removes (fc_board_t *board,
 /*
  * Give all player 'from's pieces to player 'to'.
  */
-static void fc_convert_pieces (fc_board_t *board,
-			       fc_player_t from,
+static void fc_convert_pieces (fc_board_t *board, fc_player_t from,
 			       fc_player_t to)
 {
 	uint64_t pawns = FC_BITBOARD((*board), from, FC_PAWN);
@@ -720,8 +681,7 @@ int fc_board_make_move (fc_board_t *board, fc_move_t *move)
  * will return 0.  In that case, the user must call the below function with a
  * third argument declaring what piece the pawn should be promoted to.
  */
-int fc_board_make_pawn_move (fc_board_t *board,
-			     fc_move_t *move,
+int fc_board_make_pawn_move (fc_board_t *board, fc_move_t *move,
 			     fc_piece_t new_piece)
 {
 	assert(board && move);

@@ -448,9 +448,6 @@ int fc_board_check_status (fc_board_t *board, fc_player_t player)
 		fc_board_copy(&copy, board);
 		fc_board_make_move(&copy, fc_mlist_get(&moves, i));
 		if (!is_check(&copy, player)) {
-			/* FIXME Is this the right place for this code?  This
-			 * API call should be concerned with the check status
-			 * of a particular king, not the partner. */
 			/* We must never move such that our opponent is put in
 			 * check because of us. Even if it would get us out of
 			 * checkmate.  However, I am interpreting this rule to

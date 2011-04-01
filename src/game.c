@@ -17,7 +17,6 @@ int fc_game_init (fc_game_t *game)
 	if (!game->board) {
 		return 0;
 	}
-	bzero(game->board, sizeof(fc_board_t));
 	game->player = FC_NONE;
 	return 1;
 }
@@ -99,7 +98,13 @@ int fc_game_save (fc_game_t *game, const char *filename)
 
 int fc_game_load (fc_game_t *game, const char *filename)
 {
+	bzero(game->board, sizeof(fc_board_t));
 	return fc_board_setup(game->board, filename, &(game->player));
+}
+
+fc_board_t *fc_game_get_board (fc_game_t *game)
+{
+	return game->board;
 }
 
 fc_player_t fc_game_current_player (fc_game_t *game)
@@ -165,7 +170,7 @@ int fc_game_opponent_kings_check_status (fc_game_t *game, fc_player_t player,
 	return 0;
 }
 
-int fc_game_is_move_valid (fc_game_t *game, fc_move_t *move)
+int fc_game_is_move_legal (fc_game_t *game, fc_move_t *move)
 {
 	if (move->player != game->player) {
 		return 0;

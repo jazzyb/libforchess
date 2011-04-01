@@ -67,11 +67,8 @@ int fc_mlist_resize (fc_mlist_t *list, int new_size)
 	return 1;
 }
 
-int fc_mlist_append (fc_mlist_t *list,
-		     fc_player_t player,
-		     fc_piece_t piece,
-		     fc_piece_t promote,
-		     uint64_t move)
+int fc_mlist_append (fc_mlist_t *list, fc_player_t player, fc_piece_t piece,
+		     fc_piece_t promote, uint64_t move)
 {
 	if (list->index >= list->size) {
 		if (!fc_mlist_resize(list, list->size * 2)) {

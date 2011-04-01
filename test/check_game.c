@@ -105,18 +105,18 @@ START_TEST (test_forchess_game_is_move_valid)
 	move.move = fc_uint64("g2-h2");
 	game.player = FC_FOURTH;
 	/* test that legal moves are valid */
-	fail_unless(fc_game_is_move_valid(&game, &move));
+	fail_unless(fc_game_is_move_legal(&game, &move));
 
 	move.move = fc_uint64("g2-h3");
 	/* test that illegal moves are invalid */
-	fail_unless(!fc_game_is_move_valid(&game, &move));
+	fail_unless(!fc_game_is_move_legal(&game, &move));
 
 	move.player = FC_THIRD;
 	move.piece = FC_PAWN;
 	move.move = FC_BITBOARD((*game.board), FC_THIRD, FC_PAWN);
 	game.player = FC_THIRD;
 	/* test that we can't remove a piece if we have valid moves available */
-	fail_unless(!fc_game_is_move_valid(&game, &move));
+	fail_unless(!fc_game_is_move_legal(&game, &move));
 
 	move.player = FC_FIRST;
 	move.piece = FC_KING;
@@ -124,22 +124,22 @@ START_TEST (test_forchess_game_is_move_valid)
 	game.player = FC_FIRST;
 	/* test that we can't remove the king until we have exhausted all other
 	 * options */
-	fail_unless(!fc_game_is_move_valid(&game, &move));
+	fail_unless(!fc_game_is_move_legal(&game, &move));
 
 	move.piece = FC_PAWN;
 	move.move = FC_BITBOARD((*game.board), FC_FIRST, FC_PAWN);
 	/* test that legal removes are valid */
-	fail_unless(fc_game_is_move_valid(&game, &move));
+	fail_unless(fc_game_is_move_legal(&game, &move));
 
 	fc_game_free(&game);
 	fc_game_init(&game);
 	fc_game_load(&game, "test/boards/test_forchess_game_is_move_valid.2");
 	move.move = FC_BITBOARD((*game.board), FC_FIRST, FC_PAWN);
 	/* test that we can't remove a piece if it will put us in check */
-	fail_unless(!fc_game_is_move_valid(&game, &move));
+	fail_unless(!fc_game_is_move_legal(&game, &move));
 	move.piece = FC_KNIGHT;
 	move.move = FC_BITBOARD((*game.board), FC_FIRST, FC_KNIGHT);
-	fail_unless(fc_game_is_move_valid(&game, &move));
+	fail_unless(fc_game_is_move_legal(&game, &move));
 
 	fc_game_free(&game);
 	fc_game_init(&game);
@@ -148,14 +148,14 @@ START_TEST (test_forchess_game_is_move_valid)
 	move.move = FC_BITBOARD((*game.board), FC_FIRST, FC_PAWN);
 	/* test that we can remove a piece if it will put us in check if it is
 	 * our only option */
-	fail_unless(fc_game_is_move_valid(&game, &move));
+	fail_unless(fc_game_is_move_legal(&game, &move));
 
 	fc_board_remove_piece(game.board, 0, 1);
 	move.piece = FC_KING;
 	move.move = FC_BITBOARD((*game.board), FC_FIRST, FC_KING);
 	/* test that we can remove the king if he is our only piece and we have
 	 * no valid moves */
-	fail_unless(fc_game_is_move_valid(&game, &move));
+	fail_unless(fc_game_is_move_legal(&game, &move));
 	fc_game_free(&game);
 }
 END_TEST

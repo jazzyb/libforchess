@@ -90,7 +90,7 @@ void get_move (fc_game_t *game, fc_move_t *move, fc_player_t player)
 		fflush(stdout);
 		(void)gets(move_buf);
 		str2move(game, move, move_buf);
-		if (!fc_game_is_move_valid(game, move)) {
+		if (!fc_game_is_move_legal(game, move)) {
 			fprintf(stderr, "error: invalid move\n");
 		} else {
 			return;
@@ -142,7 +142,7 @@ void make_computer_move (fc_game_t *game, fc_player_t player)
 	int depth = fc_game_number_of_players(game) * 2;
 
 	time_t start = time(NULL);
-	if (!fc_ai_next_move(game->board, &move, player, depth)) {
+	if (!fc_ai_next_move(fc_game_get_board(game), &move, player, depth)) {
 		assert(0);
 	}
 	char time_str[100];

@@ -34,8 +34,6 @@ OBJ_FILES=src/ai.o \
 EXAMPLE_FILES=examples/cli/simple.c
 
 
-all: libforchess check examples
-
 %.o: %.c $(INC_FILES)
 	$(CC) -c -o $@ $(CFLAGS) $(INCLUDES) $<
 
@@ -50,5 +48,15 @@ check: $(TEST_FILES) libforchess
 examples: $(EXAMPLE_FILES) $(INC_FILES) libforchess
 	$(CC) $(CFLAGS) $(INCLUDES) $(LIBS) $(EXAMPLE_FILES) -lforchess
 
+# Even though the header files are the dependencies of generating the
+# documentation, sometimes make thinks they are up to date when they aren't.
+# In that case we always want to force doxygen to run.
+docs: $(INC_FILES) force
+	doxygen docs/Doxyfile
+
+all: libforchess check examples docs
+
 clean:
-	rm -rf test_all a.out src/*.o lib/
+	rm -rf test_all a.out src/*.o lib/ docs/man/
+
+force: ;
