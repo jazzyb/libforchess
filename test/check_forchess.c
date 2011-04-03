@@ -7,6 +7,7 @@ extern Suite *move_suite (void);
 extern Suite *board_suite (void);
 extern Suite *check_suite (void);
 extern Suite *ai_suite (void);
+extern Suite *game_suite (void);
 
 int main (int argc, char **argv)
 {
@@ -15,6 +16,7 @@ int main (int argc, char **argv)
 	srunner_add_suite(sr, board_suite());
 	srunner_add_suite(sr, check_suite());
 	srunner_add_suite(sr, ai_suite());
+	srunner_add_suite(sr, game_suite());
 	/* uncomment the below if we need to run gdb */
 	//srunner_set_fork_status(sr, CK_NOFORK);
 	srunner_run_all(sr, CK_NORMAL);
