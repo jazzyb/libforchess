@@ -4,6 +4,16 @@
 
 #include "forchess/board.h"
 
+/*
+ * Mark all positions on the board that are empty.
+ */
+static void update_empty_positions (fc_board_t *b)
+{
+	(*b)[FC_EMPTY_SPACES] = ~(FC_ALL_PIECES((*b), 0) |
+			FC_ALL_PIECES((*b), 1) | FC_ALL_PIECES((*b), 2) |
+			FC_ALL_PIECES((*b), 3));
+}
+
 /* FIXME switch the row/col values to x/y ones; the current way seems backwards
  * */
 int fc_board_set_piece (fc_board_t *board, fc_player_t player, fc_piece_t piece,
@@ -19,6 +29,7 @@ int fc_board_set_piece (fc_board_t *board, fc_player_t player, fc_piece_t piece,
 	if (piece == FC_PAWN) {
 		FC_PAWN_BB((*board), player) |= bb;
 	}
+	update_empty_positions(board);
 	return 1;
 }
 
@@ -62,6 +73,7 @@ int fc_board_remove_piece (fc_board_t *board, int row, int col)
 				FC_PAWN_BB((*board), player) ^= bit;
 			}
 			(*board)[i] ^= bit;
+			update_empty_positions(board);
 			return 1;
 		}
 	}
@@ -237,8 +249,7 @@ static inline int is_occupied_by_enemy (fc_board_t *b, fc_player_t p,
 
 inline int is_empty (fc_board_t *b, uint64_t m)
 {
-	return !!(m & ~(FC_ALL_PIECES((*b), 0) | FC_ALL_PIECES((*b), 1) |
-			FC_ALL_PIECES((*b), 2) | FC_ALL_PIECES((*b), 3)));
+	return !!(m & (*b)[FC_EMPTY_SPACES]);
 }
 
 /*
@@ -657,6 +668,8 @@ int fc_board_make_move (fc_board_t *board, fc_move_t *move)
 		side = fc_get_pawn_orientation(board, b ^ move->move);
 		FC_PAWN_BB((*board), side) ^= move->move;
 	}
+
+	update_empty_positions(board);
 
 	/*
 	 * If there is no second bit, then this was only a remove, and we can

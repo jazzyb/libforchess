@@ -24,6 +24,9 @@ typedef enum {
 	FC_THIRD_PAWNS,
 	FC_FOURTH_PAWNS,
 
+	/* Keep track of empty positions on the board. */
+	FC_EMPTY_SPACES,
+
 	/* This must always be last. */
 	FC_TOTAL_BITBOARDS
 } fc_bitboards_t;
