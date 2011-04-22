@@ -2,6 +2,7 @@ CC=gcc
 
 CFLAGS=-DNDEBUG -O3 -std=c99
 DBG_FLAGS=-g -O0 -std=c99 # Use this instead of CFLAGS if you need to debug.
+PROF_FLAGS=-pg
 
 INCLUDES=-I./src
 
@@ -48,6 +49,21 @@ check: $(TEST_FILES) libforchess
 examples: $(EXAMPLE_FILES) $(INC_FILES) libforchess
 	$(CC) $(CFLAGS) $(INCLUDES) $(LIBS) $(EXAMPLE_FILES) -lforchess
 
+# Run the gprof profiler.
+libforchess_gprof: $(SRC_FILES) $(INC_FILES)
+	$(CC) -c -o src/ai.o $(CFLAGS) $(PROF_FLAGS) $(INCLUDES) src/ai.c
+	$(CC) -c -o src/board.o $(CFLAGS) $(PROF_FLAGS) $(INCLUDES) src/board.c
+	$(CC) -c -o src/check.o $(CFLAGS) $(PROF_FLAGS) $(INCLUDES) src/check.c
+	$(CC) -c -o src/moves.o $(CFLAGS) $(PROF_FLAGS) $(INCLUDES) src/moves.c
+	$(CC) -c -o src/game.o $(CFLAGS) $(PROF_FLAGS) $(INCLUDES) src/game.c
+	mkdir -p lib
+	ar cr lib/libforchess.a src/*.o
+
+profiler: $(EXAMPLE_FILES) $(INC_FILES) libforchess_gprof
+	$(CC) $(CFLAGS) $(PROF_FLAGS) $(INCLUDES) $(LIBS) $(EXAMPLE_FILES) -lforchess
+	./a.out
+	gprof ./a.out > gprof.output
+
 # Even though the header files are the dependencies of generating the
 # documentation, sometimes make thinks they are up to date when they aren't.
 # In that case we always want to force doxygen to run.
@@ -57,6 +73,6 @@ docs: $(INC_FILES) force
 all: libforchess check examples docs
 
 clean:
-	rm -rf test_all a.out src/*.o lib/ docs/man/
+	rm -rf test_all a.out src/*.o lib/ docs/man/ gmon.out gprof.output
 
 force: ;
