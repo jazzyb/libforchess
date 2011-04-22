@@ -49,6 +49,18 @@ check: $(TEST_FILES) libforchess
 examples: $(EXAMPLE_FILES) $(INC_FILES) libforchess
 	$(CC) $(CFLAGS) $(INCLUDES) $(LIBS) $(EXAMPLE_FILES) -lforchess
 
+cscope:
+	find src -type f | egrep '.*\.h|.*\.c$$' > cscope.files
+	cscope -b -i cscope.files
+
+# Even though the header files are the dependencies of generating the
+# documentation, sometimes make thinks they are up to date when they aren't.
+# In that case we always want to force doxygen to run.
+docs: $(INC_FILES) force
+	doxygen docs/Doxyfile
+
+all: libforchess check examples cscope docs
+
 # Run the gprof profiler.
 libforchess_gprof: $(SRC_FILES) $(INC_FILES)
 	$(CC) -c -o src/ai.o $(CFLAGS) $(PROF_FLAGS) $(INCLUDES) src/ai.c
@@ -64,15 +76,7 @@ profiler: $(EXAMPLE_FILES) $(INC_FILES) libforchess_gprof
 	./a.out
 	gprof ./a.out > gprof.output
 
-# Even though the header files are the dependencies of generating the
-# documentation, sometimes make thinks they are up to date when they aren't.
-# In that case we always want to force doxygen to run.
-docs: $(INC_FILES) force
-	doxygen docs/Doxyfile
-
-all: libforchess check examples docs
-
 clean:
-	rm -rf test_all a.out src/*.o lib/ docs/man/ gmon.out gprof.output
+	rm -rf test_all a.out src/*.o lib/ docs/man/ gmon.out gprof.output cscope.files cscope.out
 
 force: ;
