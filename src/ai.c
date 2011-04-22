@@ -42,6 +42,10 @@ static inline void append_pawn_promotions_to_moves(fc_mlist_t *list,
 	fc_mlist_append(list, move->player, move->piece, FC_QUEEN, move->move);
 }
 
+static inline void move_and_adjust_scores (fc_move_t *mv, fc_board_t *board,
+		fc_move_t *ret, fc_player_t player, int depth, int *alpha,
+		int *beta, int max);
+
 static int alphabeta_handle_removes(fc_board_t *board, fc_move_t *ret,
 		fc_player_t player, int depth, int alpha, int beta, int max);
 
@@ -82,28 +86,16 @@ static int alphabeta (fc_board_t *board, fc_move_t *ret, fc_player_t player,
 			continue;
 		}
 
-		fc_board_t copy;
-		fc_board_copy(&copy, board);
-		if (fc_board_make_move(&copy, move)) {
-			score = alphabeta(&copy, NULL, FC_NEXT_PLAYER(player),
-					depth - 1, alpha, beta, !max);
-		} else { /* move requires pawn promotion */
+		fc_player_t dummy;
+		if (fc_board_move_requires_promotion(board, move, &dummy) &&
+				move->promote == FC_NONE) {
 			append_pawn_promotions_to_moves(&list, move);
 			continue;
 		}
 		all_moves_are_invalid = 0;
 
-		if (max && score > alpha) {
-			alpha = score;
-			if (ret) {
-				fc_move_copy(ret, move);
-			}
-		} else if (!max && score < beta) {
-			beta = score;
-			if (ret) {
-				fc_move_copy(ret, move);
-			}
-		}
+		move_and_adjust_scores(move, board, ret, player, depth, &alpha,
+				&beta, max);
 
 		if (beta <= alpha) {
 			break;
@@ -124,25 +116,25 @@ static int alphabeta (fc_board_t *board, fc_move_t *ret, fc_player_t player,
  * Used in alphabeta_handle_removes() below; could likely be adapted for
  * alphabeta() above.
  */
-static inline void remove_and_adjust_scores (fc_move_t *rm, fc_board_t *board,
+static inline void move_and_adjust_scores (fc_move_t *mv, fc_board_t *board,
 		fc_move_t *ret, fc_player_t player, int depth, int *alpha,
 		int *beta, int max)
 {
 	fc_board_t copy;
 	fc_board_copy(&copy, board);
-	fc_board_make_move(&copy, rm);
+	fc_board_make_move(&copy, mv);
 	int score = alphabeta(&copy, NULL, FC_NEXT_PLAYER(player), depth - 1,
 			*alpha, *beta, !max);
 
 	if (max && score > *alpha) {
 		*alpha = score;
 		if (ret) {
-			fc_move_copy(ret, rm);
+			fc_move_copy(ret, mv);
 		}
 	} else if (!max && score < *beta) {
 		*beta = score;
 		if (ret) {
-			fc_move_copy(ret, rm);
+			fc_move_copy(ret, mv);
 		}
 	}
 }
@@ -170,7 +162,7 @@ static int alphabeta_handle_removes(fc_board_t *board, fc_move_t *ret,
 		}
 		found_valid_move = 1;
 
-		remove_and_adjust_scores(rm, board, ret, player, depth, &alpha,
+		move_and_adjust_scores(rm, board, ret, player, depth, &alpha,
 				&beta, max);
 
 		if (beta <= alpha) {
@@ -185,7 +177,7 @@ static int alphabeta_handle_removes(fc_board_t *board, fc_move_t *ret,
 	 * If we only have the king to remove, then remove it.
 	 */
 	if (fc_mlist_length(&list) == 1) {
-		remove_and_adjust_scores(fc_mlist_get(&list, 0), board, ret,
+		move_and_adjust_scores(fc_mlist_get(&list, 0), board, ret,
 				player, depth, &alpha, &beta, max);
 
 		goto clean_up_and_return;
@@ -201,7 +193,7 @@ static int alphabeta_handle_removes(fc_board_t *board, fc_move_t *ret,
 			continue;
 		}
 
-		remove_and_adjust_scores(rm, board, ret, player, depth, &alpha,
+		move_and_adjust_scores(rm, board, ret, player, depth, &alpha,
 				&beta, max);
 
 		if (beta <= alpha) {

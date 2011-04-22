@@ -182,6 +182,19 @@ void fc_board_get_removes (fc_board_t *board, fc_mlist_t *moves,
 			  fc_player_t player);
 
 /**
+ * @brief Determines whether or not the given move requires a pawn to be
+ * promoted.
+ *
+ * @param[in] board A pointer to the game board.
+ * @param[in] move The move in question.
+ * @param[out] side The orientation of the pawn.
+ *
+ * @return 1 if the move requires a pawn to be promoted; 0 otherwise
+ */
+int fc_board_move_requires_promotion (fc_board_t *board, fc_move_t *move,
+		fc_player_t *side);
+
+/**
  * @brief Updates the game board with move.
  *
  * @param[in,out] board A pointer to the game board.
