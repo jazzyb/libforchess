@@ -140,9 +140,11 @@ void make_computer_move (fc_game_t *game, fc_player_t player)
 {
 	fc_move_t move;
 	int depth = fc_game_number_of_players(game) * 2;
+	fc_ai_t ai;
+	fc_ai_init(&ai, fc_game_get_board(game));
 
 	time_t start = time(NULL);
-	if (!fc_ai_next_move(fc_game_get_board(game), &move, player, depth)) {
+	if (!fc_ai_next_move(&ai, &move, player, depth)) {
 		assert(0);
 	}
 	char time_str[100];

@@ -631,6 +631,21 @@ static int update_enemy_bitboards (fc_board_t *board, fc_player_t player,
 }
 
 /*
+ * Returns 1 if the move requires a pawn to be promoted; 0 otherwise.
+ */
+int fc_board_move_requires_promotion (fc_board_t *board, fc_move_t *move,
+		fc_player_t *side)
+{
+	if (move->piece != FC_PAWN) {
+		return 0;
+	}
+	uint64_t pawn = (FC_BITBOARD((*board), move->player, FC_PAWN) ^
+			move->move) & move->move;
+	*side = fc_get_pawn_orientation(board, pawn ^ move->move);
+	return must_promote(*side, pawn);
+}
+
+/*
  * Update the board with the given move.  Returns 0 iff there is no piece
  * specified in the case of a pawn promotion; returns 1 otherwise.
  */
@@ -638,19 +653,14 @@ int fc_board_make_move (fc_board_t *board, fc_move_t *move)
 {
 	assert(board && move);
 
+	/* side is the orientation of the pawn (if the move is a pawn) */
 	fc_player_t side;
-	if (move->piece == FC_PAWN) {
-		/* If necessary, handle pawn promotions. */
-		uint64_t pawn = (FC_BITBOARD((*board), move->player, FC_PAWN) ^
-				move->move) & move->move;
-		side = fc_get_pawn_orientation(board, pawn ^ move->move);
-		if (must_promote(side, pawn)) {
-			if (move->promote == FC_NONE) {
-				return 0;
-			} else {
-				return fc_board_make_pawn_move(board, move,
-						move->promote);
-			}
+	if (fc_board_move_requires_promotion(board, move, &side)) {
+		if (move->promote == FC_NONE) {
+			return 0;
+		} else {
+			return fc_board_make_pawn_move(board, move,
+					move->promote);
 		}
 	}
 
