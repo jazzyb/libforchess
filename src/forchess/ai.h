@@ -9,7 +9,47 @@
 
 #ifndef DOXYGEN_IGNORE
 #include "forchess/board.h"
+
+typedef struct {
+	fc_board_t *board;
+	int piece_value[6];
+} fc_ai_t;
+
 #endif /* DOXYGEN_IGNORE */
+
+/**
+ * @brief Initializes the AI structure.
+ *
+ * Sets the given board for the AI and initializes the default piece material
+ * values.
+ *
+ * @param[in,out] ai A pointer to the AI structure.
+ * @param[in,out] ai A pointer to the game board.
+ *
+ * @return void
+ */
+void fc_ai_init (fc_ai_t *ai, fc_board_t *board);
+
+/**
+ * @brief Assign a new value for the given piece.
+ *
+ * @param[in,out] ai A pointer to the AI structure.
+ * @param[in] piece A piece.
+ * @param[in] value The new material value for the piece.
+ *
+ * @return void
+ */
+void fc_ai_set_material_value (fc_ai_t *ai, fc_piece_t piece, int value);
+
+/**
+ * @brief Return the material value of a piece.
+ *
+ * @param[in] ai A pointer to the AI structure.
+ * @param[in] piece The piece.
+ *
+ * @return The value of the given piece.
+ */
+int fc_ai_get_material_value (fc_ai_t *ai, fc_piece_t piece);
 
 /**
  * @brief Returns the best move as determined by the AI.
@@ -27,7 +67,7 @@
  *
  * @return 1 on success; 0 otherwise
  */
-int fc_ai_next_move (fc_board_t *board, fc_move_t *move, fc_player_t player,
+int fc_ai_next_move (fc_ai_t *ai, fc_move_t *move, fc_player_t player,
 		int depth);
 
 /**
@@ -43,7 +83,7 @@ int fc_ai_next_move (fc_board_t *board, fc_move_t *move, fc_player_t player,
  *
  * @return The relative material score as defined above.
  */
-int fc_ai_score_position (fc_board_t *board, fc_player_t player);
+int fc_ai_score_position (fc_ai_t *ai, fc_player_t player);
 
 /**
  * @brief Determines whether or not the given move will put the player's or

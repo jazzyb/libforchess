@@ -5,14 +5,35 @@
 #include "forchess/board.h"
 #include "forchess/moves.h"
 
-int _fc_ai_piece_values[] = {
-	100,	/* pawns */
-	300,	/* bishops */
-	350,	/* knights */
-	500,	/* rooks */
-	900,	/* queens */
-	100000	/* kings */
-};
+void fc_ai_init (fc_ai_t *ai, fc_board_t *board)
+{
+	assert(ai && board);
+	ai->board = board;
+
+	int _default_piece_value[6] = {
+		100,	/* pawns */
+		300,	/* bishops */
+		350,	/* knights */
+		500,	/* rooks */
+		900,	/* queens */
+		100000	/* kings */
+	};
+	for (int i = 0; i < 6; i++) {
+		ai->piece_value[i] = _default_piece_value[i];
+	}
+}
+
+void fc_ai_set_material_value (fc_ai_t *ai, fc_piece_t piece, int value)
+{
+	assert(ai);
+	ai->piece_value[piece] = value;
+}
+
+int fc_ai_get_material_value (fc_ai_t *ai, fc_piece_t piece)
+{
+	assert(ai);
+	return ai->piece_value[piece];
+}
 
 /*
  * Return 1 if player is no longer present in the game; 0 otherwise.
@@ -42,11 +63,11 @@ static inline void append_pawn_promotions_to_moves(fc_mlist_t *list,
 	fc_mlist_append(list, move->player, move->piece, FC_QUEEN, move->move);
 }
 
-static inline void move_and_adjust_scores (fc_move_t *mv, fc_board_t *board,
+static inline void move_and_adjust_scores (fc_move_t *mv, fc_ai_t *ai,
 		fc_move_t *ret, fc_player_t player, int depth, int *alpha,
 		int *beta, int max);
 
-static int alphabeta_handle_removes(fc_board_t *board, fc_move_t *ret,
+static int alphabeta_handle_removes(fc_ai_t *ai, fc_move_t *ret,
 		fc_player_t player, int depth, int alpha, int beta, int max);
 
 /*
@@ -56,12 +77,13 @@ static int alphabeta_handle_removes(fc_board_t *board, fc_move_t *ret,
  *
  * If ret is !NULL, then ret will be set to the move with the best score.
  */
-static int alphabeta (fc_board_t *board, fc_move_t *ret, fc_player_t player,
+static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 		int depth, int alpha, int beta, int max)
 {
 	int score;
+	fc_board_t *board = ai->board;
 	if (game_over(board) || depth == 0) {
-		score = fc_ai_score_position(board, player);
+		score = fc_ai_score_position(ai, player);
 		/*
 		 * Adjusting the scores with the current depth expedites the
 		 * end of the game.  Otherwise the AI will just move from one
@@ -70,7 +92,7 @@ static int alphabeta (fc_board_t *board, fc_move_t *ret, fc_player_t player,
 		return (max) ? score - depth : (-1 * score) + depth;
 	}
 	if (is_player_out(board, player)) {
-		return alphabeta(board, NULL, FC_NEXT_PLAYER(player), depth,
+		return alphabeta(ai, NULL, FC_NEXT_PLAYER(player), depth,
 				alpha, beta, !max);
 	}
 
@@ -94,7 +116,7 @@ static int alphabeta (fc_board_t *board, fc_move_t *ret, fc_player_t player,
 		}
 		all_moves_are_invalid = 0;
 
-		move_and_adjust_scores(move, board, ret, player, depth, &alpha,
+		move_and_adjust_scores(move, ai, ret, player, depth, &alpha,
 				&beta, max);
 
 		if (beta <= alpha) {
@@ -103,8 +125,8 @@ static int alphabeta (fc_board_t *board, fc_move_t *ret, fc_player_t player,
 	}
 
 	if (all_moves_are_invalid) {
-		return alphabeta_handle_removes(board, ret, player, depth,
-				alpha, beta, max);
+		return alphabeta_handle_removes(ai, ret, player, depth, alpha,
+				beta, max);
 	}
 
 	fc_mlist_free(&list);
@@ -113,18 +135,23 @@ static int alphabeta (fc_board_t *board, fc_move_t *ret, fc_player_t player,
 }
 
 /*
- * Used in alphabeta_handle_removes() below; could likely be adapted for
- * alphabeta() above.
+ * Used in alphabeta() and alphabeta_handle_removes().  Makes the given move on
+ * the board and gets the material score of the board.  Adjusts alpha and beta
+ * if necessary and sets the ret move pointer to the best move if ret != NULL.
  */
-static inline void move_and_adjust_scores (fc_move_t *mv, fc_board_t *board,
+static inline void move_and_adjust_scores (fc_move_t *mv, fc_ai_t *ai,
 		fc_move_t *ret, fc_player_t player, int depth, int *alpha,
 		int *beta, int max)
 {
+	fc_board_t *board = ai->board;
 	fc_board_t copy;
+
 	fc_board_copy(&copy, board);
 	fc_board_make_move(&copy, mv);
-	int score = alphabeta(&copy, NULL, FC_NEXT_PLAYER(player), depth - 1,
+	ai->board = &copy;
+	int score = alphabeta(ai, NULL, FC_NEXT_PLAYER(player), depth - 1,
 			*alpha, *beta, !max);
+	ai->board = board; /* remember to reset our AI to the "real" board */
 
 	if (max && score > *alpha) {
 		*alpha = score;
@@ -144,9 +171,10 @@ static inline void move_and_adjust_scores (fc_move_t *mv, fc_board_t *board,
  * the moves.  This function is only called from the end of alphabeta(), so we
  * can assume that all the checks for game_over(), etc. have already been done.
  */
-static int alphabeta_handle_removes(fc_board_t *board, fc_move_t *ret,
+static int alphabeta_handle_removes(fc_ai_t *ai, fc_move_t *ret,
 		fc_player_t player, int depth, int alpha, int beta, int max)
 {
+	fc_board_t *board = ai->board;
 	int found_valid_move = 0;
 	fc_mlist_t list;
 	fc_mlist_init(&list, 0);
@@ -162,7 +190,7 @@ static int alphabeta_handle_removes(fc_board_t *board, fc_move_t *ret,
 		}
 		found_valid_move = 1;
 
-		move_and_adjust_scores(rm, board, ret, player, depth, &alpha,
+		move_and_adjust_scores(rm, ai, ret, player, depth, &alpha,
 				&beta, max);
 
 		if (beta <= alpha) {
@@ -177,8 +205,8 @@ static int alphabeta_handle_removes(fc_board_t *board, fc_move_t *ret,
 	 * If we only have the king to remove, then remove it.
 	 */
 	if (fc_mlist_length(&list) == 1) {
-		move_and_adjust_scores(fc_mlist_get(&list, 0), board, ret,
-				player, depth, &alpha, &beta, max);
+		move_and_adjust_scores(fc_mlist_get(&list, 0), ai, ret, player,
+				depth, &alpha, &beta, max);
 
 		goto clean_up_and_return;
 	}
@@ -193,7 +221,7 @@ static int alphabeta_handle_removes(fc_board_t *board, fc_move_t *ret,
 			continue;
 		}
 
-		move_and_adjust_scores(rm, board, ret, player, depth, &alpha,
+		move_and_adjust_scores(rm, ai, ret, player, depth, &alpha,
 				&beta, max);
 
 		if (beta <= alpha) {
@@ -212,37 +240,36 @@ clean_up_and_return:
  * Sets the parameter ret to the best move based on alphabeta pruning of the
  * minmax game tree.
  */
-int fc_ai_next_move (fc_board_t *board, fc_move_t *ret, fc_player_t player,
-		int depth)
+int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player, int depth)
 {
-	assert(board && ret);
-	if (is_player_out(board, player) || depth < 1) {
+	assert(ai && ret);
+	if (is_player_out(ai->board, player) || depth < 1) {
 		ret->move = 0;
 		return 0;
 	}
-	(void)alphabeta(board, ret, player, depth, ALPHA_MIN, BETA_MAX, 1);
+	(void)alphabeta(ai, ret, player, depth, ALPHA_MIN, BETA_MAX, 1);
 	return 1;
 }
 
-static int get_material_score (fc_board_t *board, fc_player_t player)
+static int get_material_score (fc_ai_t *ai, fc_player_t player)
 {
 	int ret = 0;
 	for (fc_piece_t i = FC_PAWN; i <= FC_KING; i++) {
-		uint64_t piece, pieces = FC_BITBOARD((*board), player, i);
+		uint64_t piece, pieces = FC_BITBOARD((*(ai->board)), player, i);
 		FC_FOREACH(piece, pieces) {
-			ret += _fc_ai_piece_values[i];
+			ret += ai->piece_value[i];
 		}
 	}
 	return ret;
 }
 
-int fc_ai_score_position (fc_board_t *board, fc_player_t player)
+int fc_ai_score_position (fc_ai_t *ai, fc_player_t player)
 {
-	assert(board);
-	return (get_material_score(board, player) -
-		get_material_score(board, FC_NEXT_PLAYER(player)) +
-		get_material_score(board, FC_PARTNER(player)) -
-		get_material_score(board, FC_PARTNER(FC_NEXT_PLAYER(player))));
+	assert(ai);
+	return (get_material_score(ai, player) -
+		get_material_score(ai, FC_NEXT_PLAYER(player)) +
+		get_material_score(ai, FC_PARTNER(player)) -
+		get_material_score(ai, FC_PARTNER(FC_NEXT_PLAYER(player))));
 }
 
 /*
@@ -255,6 +282,11 @@ int fc_ai_score_position (fc_board_t *board, fc_player_t player)
  *
  * Returns 1 if all of the above are true (i.e. the move is allowed); 0
  * otherwise.
+ */
+/*
+ * FIXME Now that we have an AI structure, and this method does not use it,
+ * then would it be better if we moved this function to the board.c source
+ * file?
  */
 int fc_ai_is_move_valid (fc_board_t *board, fc_move_t *move)
 {
