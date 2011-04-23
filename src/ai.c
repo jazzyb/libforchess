@@ -10,6 +10,7 @@ void fc_ai_init (fc_ai_t *ai, fc_board_t *board)
 {
 	assert(ai && board);
 	ai->board = board;
+	ai->bv = NULL;
 	ai->mlv = NULL;
 
 	int _default_piece_value[6] = {
@@ -83,9 +84,12 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 		int depth, int alpha, int beta, int max)
 {
 	int score;
-	fc_board_t *board = ai->board;
+	fc_board_t *board = &(ai->bv[depth]);
 	if (game_over(board) || depth == 0) {
+		fc_board_t *orig = ai->board;
+		ai->board = board;
 		score = fc_ai_score_position(ai, player);
+		ai->board = orig;
 		/*
 		 * Adjusting the scores with the current depth expedites the
 		 * end of the game.  Otherwise the AI will just move from one
@@ -98,7 +102,7 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 				alpha, beta, !max);
 	}
 
-	fc_mlist_t *list = &(ai->mlv[depth-1]);
+	fc_mlist_t *list = &(ai->mlv[depth - 1]);
 	fc_mlist_clear(list);
 	fc_board_get_moves(board, list, player);
 
@@ -143,15 +147,13 @@ static inline void move_and_adjust_scores (fc_move_t *mv, fc_ai_t *ai,
 		fc_move_t *ret, fc_player_t player, int depth, int *alpha,
 		int *beta, int max)
 {
-	fc_board_t *board = ai->board;
-	fc_board_t copy;
+	fc_board_t *board = &(ai->bv[depth]);
+	fc_board_t *copy = &(ai->bv[depth - 1]);
 
-	fc_board_copy(&copy, board);
-	fc_board_make_move(&copy, mv);
-	ai->board = &copy;
+	fc_board_copy(copy, board);
+	fc_board_make_move(copy, mv);
 	int score = alphabeta(ai, NULL, FC_NEXT_PLAYER(player), depth - 1,
 			*alpha, *beta, !max);
-	ai->board = board; /* remember to reset our AI to the "real" board */
 
 	if (max && score > *alpha) {
 		*alpha = score;
@@ -174,7 +176,7 @@ static inline void move_and_adjust_scores (fc_move_t *mv, fc_ai_t *ai,
 static int alphabeta_handle_removes(fc_ai_t *ai, fc_move_t *ret,
 		fc_player_t player, int depth, int alpha, int beta, int max)
 {
-	fc_board_t *board = ai->board;
+	fc_board_t *board = &(ai->bv[depth]);
 	int found_valid_move = 0;
 	fc_mlist_t *list = &(ai->mlv[depth - 1]);
 	fc_mlist_clear(list);
@@ -252,6 +254,21 @@ static void initialize_ai_mlists (fc_ai_t *ai, int depth)
 	}
 }
 
+static void free_ai_boards (fc_ai_t *ai)
+{
+	free(ai->bv);
+	ai->bv = NULL;
+}
+
+static void initialize_ai_boards (fc_ai_t *ai, int depth)
+{
+	if (ai->bv != NULL) {
+		free_ai_boards(ai);
+	}
+	ai->bv = calloc(depth + 1, sizeof(fc_board_t));
+	fc_board_copy(&(ai->bv[depth]), ai->board);
+}
+
 #define ALPHA_MIN INT_MIN
 #define BETA_MAX INT_MAX
 /*
@@ -265,9 +282,15 @@ int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player, int depth)
 		ret->move = 0;
 		return 0;
 	}
+
 	initialize_ai_mlists(ai, depth);
+	initialize_ai_boards(ai, depth);
+
 	(void)alphabeta(ai, ret, player, depth, ALPHA_MIN, BETA_MAX, 1);
+
+	free_ai_boards(ai);
 	free_ai_mlists(ai, depth);
+
 	return 1;
 }
 
