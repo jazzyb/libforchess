@@ -12,7 +12,6 @@ void fc_ai_init (fc_ai_t *ai, fc_board_t *board)
 	ai->board = board;
 	ai->bv = NULL;
 	ai->mlv = NULL;
-	ai->jbv = NULL;
 
 	int _default_piece_value[6] = {
 		100,	/* pawns */
@@ -107,21 +106,10 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	fc_mlist_clear(list);
 	fc_board_get_moves(board, list, player);
 
-	jmp_buf *mark = &(ai->jbv[depth - 1]);
-	//int check_status = fc_board_check_status(board, player);
 	int all_moves_are_invalid = 1;
 	for (int i = 0; i < fc_mlist_length(list); i++) {
 
 		fc_move_t *move = fc_mlist_get(list, i);
-#if 0
-		if (setjmp(*mark) != 0) {
-			/*
-			 * longjmp() has been called which means that the move
-			 * above has gotten our king captured; skip it.
-			 */
-			continue;
-		}
-#endif
 		if (!fc_ai_is_move_valid(board, move)) {
 			continue;
 		}
@@ -246,11 +234,6 @@ static int alphabeta_handle_removes(fc_ai_t *ai, fc_move_t *ret,
 	return (max) ? alpha : beta;
 }
 
-/*
- * The following free_ai_* and initialize_ai_* methods manage the freeing and
- * mallocing of several internal AI datastructures.  See fc_ai_next_move()
- * below to see how they are used.
- */
 static void free_ai_mlists (fc_ai_t *ai, int depth)
 {
 	for (int i = 0; i < depth; i++) {
@@ -286,20 +269,6 @@ static void initialize_ai_boards (fc_ai_t *ai, int depth)
 	fc_board_copy(&(ai->bv[depth]), ai->board);
 }
 
-static void free_ai_jmpbufs (fc_ai_t *ai)
-{
-	free(ai->jbv);
-	ai->jbv = NULL;
-}
-
-static void initialize_ai_jmpbufs (fc_ai_t *ai, int depth)
-{
-	if (ai->jbv != NULL) {
-		free_ai_jmpbufs(ai);
-	}
-	ai->jbv = calloc(depth, sizeof(jmp_buf));
-}
-
 #define ALPHA_MIN INT_MIN
 #define BETA_MAX INT_MAX
 /*
@@ -316,11 +285,9 @@ int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player, int depth)
 
 	initialize_ai_mlists(ai, depth);
 	initialize_ai_boards(ai, depth);
-	initialize_ai_jmpbufs(ai, depth);
 
 	(void)alphabeta(ai, ret, player, depth, ALPHA_MIN, BETA_MAX, 1);
 
-	free_ai_jmpbufs(ai);
 	free_ai_boards(ai);
 	free_ai_mlists(ai, depth);
 
