@@ -12,6 +12,7 @@
 
 typedef struct {
 	fc_board_t *board;
+	fc_mlist_t *mlv; /* move list vector */
 	int piece_value[6];
 } fc_ai_t;
 

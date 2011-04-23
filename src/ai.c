@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <limits.h>
+#include <stdlib.h>
 
 #include "forchess/ai.h"
 #include "forchess/board.h"
@@ -9,6 +10,7 @@ void fc_ai_init (fc_ai_t *ai, fc_board_t *board)
 {
 	assert(ai && board);
 	ai->board = board;
+	ai->mlv = NULL;
 
 	int _default_piece_value[6] = {
 		100,	/* pawns */
@@ -96,14 +98,14 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 				alpha, beta, !max);
 	}
 
-	fc_mlist_t list;
-	fc_mlist_init(&list, 0);
-	fc_board_get_moves(board, &list, player);
+	fc_mlist_t *list = &(ai->mlv[depth-1]);
+	fc_mlist_clear(list);
+	fc_board_get_moves(board, list, player);
 
 	int all_moves_are_invalid = 1;
-	for (int i = 0; i < fc_mlist_length(&list); i++) {
+	for (int i = 0; i < fc_mlist_length(list); i++) {
 
-		fc_move_t *move = fc_mlist_get(&list, i);
+		fc_move_t *move = fc_mlist_get(list, i);
 		if (!fc_ai_is_move_valid(board, move)) {
 			continue;
 		}
@@ -111,7 +113,7 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 		fc_player_t dummy;
 		if (fc_board_move_requires_promotion(board, move, &dummy) &&
 				move->promote == FC_NONE) {
-			append_pawn_promotions_to_moves(&list, move);
+			append_pawn_promotions_to_moves(list, move);
 			continue;
 		}
 		all_moves_are_invalid = 0;
@@ -128,8 +130,6 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 		return alphabeta_handle_removes(ai, ret, player, depth, alpha,
 				beta, max);
 	}
-
-	fc_mlist_free(&list);
 
 	return (max) ? alpha : beta;
 }
@@ -176,15 +176,15 @@ static int alphabeta_handle_removes(fc_ai_t *ai, fc_move_t *ret,
 {
 	fc_board_t *board = ai->board;
 	int found_valid_move = 0;
-	fc_mlist_t list;
-	fc_mlist_init(&list, 0);
-	fc_board_get_removes(board, &list, player);
+	fc_mlist_t *list = &(ai->mlv[depth - 1]);
+	fc_mlist_clear(list);
+	fc_board_get_removes(board, list, player);
 	/*
 	 * Go through the list the first time.  If we can remove a piece other
 	 * than the king that won't put us in check, great.
 	 */
-	for (int i = 0; i < fc_mlist_length(&list); i++) {
-		fc_move_t *rm = fc_mlist_get(&list, i);
+	for (int i = 0; i < fc_mlist_length(list); i++) {
+		fc_move_t *rm = fc_mlist_get(list, i);
 		if (rm->piece == FC_KING || !fc_ai_is_move_valid(board, rm)) {
 			continue;
 		}
@@ -198,25 +198,25 @@ static int alphabeta_handle_removes(fc_ai_t *ai, fc_move_t *ret,
 		}
 	}
 	if (found_valid_move) {
-		goto clean_up_and_return;
+		return (max) ? alpha : beta;
 	}
 
 	/*
 	 * If we only have the king to remove, then remove it.
 	 */
-	if (fc_mlist_length(&list) == 1) {
-		move_and_adjust_scores(fc_mlist_get(&list, 0), ai, ret, player,
+	if (fc_mlist_length(list) == 1) {
+		move_and_adjust_scores(fc_mlist_get(list, 0), ai, ret, player,
 				depth, &alpha, &beta, max);
 
-		goto clean_up_and_return;
+		return (max) ? alpha : beta;
 	}
 
 	/*
 	 * Otherwise, go through the whole list again (this time allowing
 	 * putting kings into check(mate)). And return the best move.
 	 */
-	for (int i = 0; i < fc_mlist_length(&list); i++) {
-		fc_move_t *rm = fc_mlist_get(&list, i);
+	for (int i = 0; i < fc_mlist_length(list); i++) {
+		fc_move_t *rm = fc_mlist_get(list, i);
 		if (rm->piece == FC_KING) {
 			continue;
 		}
@@ -229,9 +229,27 @@ static int alphabeta_handle_removes(fc_ai_t *ai, fc_move_t *ret,
 		}
 	}
 
-clean_up_and_return:
-	fc_mlist_free(&list);
 	return (max) ? alpha : beta;
+}
+
+static void free_ai_mlists (fc_ai_t *ai, int depth)
+{
+	for (int i = 0; i < depth; i++) {
+		fc_mlist_free(&(ai->mlv[i]));
+	}
+	free(ai->mlv);
+	ai->mlv = NULL;
+}
+
+static void initialize_ai_mlists (fc_ai_t *ai, int depth)
+{
+	if (ai->mlv != NULL) {
+		free_ai_mlists(ai, depth);
+	}
+	ai->mlv = calloc(depth, sizeof(fc_mlist_t));
+	for (int i = 0; i < depth; i++) {
+		fc_mlist_init(&(ai->mlv[i]), 0);
+	}
 }
 
 #define ALPHA_MIN INT_MIN
@@ -242,12 +260,14 @@ clean_up_and_return:
  */
 int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player, int depth)
 {
-	assert(ai && ret);
+	assert(ai && ai->board && ret);
 	if (is_player_out(ai->board, player) || depth < 1) {
 		ret->move = 0;
 		return 0;
 	}
+	initialize_ai_mlists(ai, depth);
 	(void)alphabeta(ai, ret, player, depth, ALPHA_MIN, BETA_MAX, 1);
+	free_ai_mlists(ai, depth);
 	return 1;
 }
 
