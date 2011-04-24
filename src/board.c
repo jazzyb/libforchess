@@ -41,6 +41,7 @@ int fc_board_set_piece (fc_board_t *board, fc_player_t player, fc_piece_t piece,
 		FC_PAWN_BB((*board), player) |= bb;
 	}
 	update_empty_positions(board);
+	fc_update_all_threats(board);
 	return 1;
 }
 
@@ -105,6 +106,7 @@ int fc_board_remove_piece (fc_board_t *board, int row, int col)
 			}
 			(*board)[i] ^= bit;
 			update_empty_positions(board);
+			fc_update_all_threats(board);
 			return 1;
 		}
 	}
@@ -282,7 +284,7 @@ static inline int is_occupied_by_enemy (fc_board_t *b, fc_player_t p,
 	return !!(m & FC_ALL_ALLIES((*b), ((p + 1) % 4)));
 }
 
-inline int is_empty (fc_board_t *b, uint64_t m)
+inline int fc_is_empty (fc_board_t *b, uint64_t m)
 {
 	return !!(m & (*b)[FC_EMPTY_SPACES]);
 }
@@ -296,7 +298,7 @@ static inline void pawn_move_if_valid (fc_board_t *board, fc_mlist_t *moves,
 				       fc_player_t player, uint64_t pawn,
 				       uint64_t m1, uint64_t m2, uint64_t m3)
 {
-	if (is_empty(board, m1)) {
+	if (fc_is_empty(board, m1)) {
 		fc_mlist_append(moves, player, FC_PAWN, FC_NONE, FC_NONE,
 				FC_NONE, pawn | m1);
 	}
@@ -315,7 +317,7 @@ static inline void pawn_move_if_valid (fc_board_t *board, fc_mlist_t *moves,
 	}
 }
 
-static inline fc_player_t fc_get_pawn_orientation (fc_board_t *board,
+inline fc_player_t fc_get_pawn_orientation (fc_board_t *board,
 						   uint64_t pawn)
 {
 	if (pawn & (*board)[FC_FIRST_PAWNS]) {
@@ -732,6 +734,7 @@ int fc_board_make_move (fc_board_t *board, fc_move_t *move)
 
 	update_enemy_bitboards(board, move, enemy_side, b);
 	update_empty_positions(board);
+	//fc_update_threats_from_move(board, move);
 
 	return 1;
 }
