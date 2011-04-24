@@ -1,8 +1,10 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <strings.h>
 
 #include "forchess/board.h"
+
 
 /*
  * Mark all positions on the board that are empty.
@@ -12,6 +14,15 @@ static void update_empty_positions (fc_board_t *b)
 	(*b)[FC_EMPTY_SPACES] = ~(FC_ALL_PIECES((*b), 0) |
 			FC_ALL_PIECES((*b), 1) | FC_ALL_PIECES((*b), 2) |
 			FC_ALL_PIECES((*b), 3));
+}
+
+/*
+ * Initialize the bitboard values.
+ */
+void fc_board_init (fc_board_t *board)
+{
+	bzero(board, sizeof(fc_board_t));
+	update_empty_positions(board);
 }
 
 /* FIXME switch the row/col values to x/y ones; the current way seems backwards
@@ -24,13 +35,41 @@ int fc_board_set_piece (fc_board_t *board, fc_player_t player, fc_piece_t piece,
 	 * FIXME make sure there is not already a piece on this position.
 	 * FIXME also make sure we don't call it with bad row/col values.
 	 */
-	uint64_t bb = ((uint64_t)1) << (row * 8 + col);
+	uint64_t bb = UINT64_C(1) << (row * 8 + col);
 	FC_BITBOARD((*board), player, piece) |= bb;
 	if (piece == FC_PAWN) {
 		FC_PAWN_BB((*board), player) |= bb;
 	}
 	update_empty_positions(board);
 	return 1;
+}
+
+/*
+ * Search through the bit boards and find the player and piece associated with
+ * the given bit.  The function assumes that the value bit has only one bit
+ * turned on.
+ */
+static inline void find_player_piece (fc_board_t *board, fc_player_t *player,
+		fc_piece_t *piece, uint64_t bit)
+{
+	if ((*board)[FC_EMPTY_SPACES] & bit) {
+		*player = *piece = FC_NONE;
+		return;
+	}
+
+	/* NOTE: I'm using 24 below instead of FC_TOTAL_BITBOARDS because I
+	 * only want to look at the bitboards that represent pieces */
+	for (int i = 0; i < 24; i++) {
+		if ((*board)[i] & bit) {
+			*player = i / 6;
+			*piece = i % 6;
+			return;
+		}
+	}
+
+	/* We should never reach this point. */
+	*player = *piece = FC_NONE;
+	assert(0);
 }
 
 /*
@@ -42,17 +81,9 @@ int fc_board_get_piece (fc_board_t *board, fc_player_t *player,
 {
 	assert(board && player && piece);
 
-	uint64_t bb = ((uint64_t)1) << (row * 8 + col);
-	/* NOTE: I'm using 24 below instead of FC_TOTAL_BITBOARDS because I
-	 * only want to look at the bitboards that represent pieces */
-	for (int i = 0; i < 24; i++) {
-		if ((*board)[i] & bb) {
-			*player = i / 6;
-			*piece = i % 6;
-			return 1;
-		}
-	}
-	return 0;
+	uint64_t bit = UINT64_C(1) << (row * 8 + col);
+	find_player_piece(board, player, piece, bit);
+	return (*player != FC_NONE && *piece != FC_NONE);
 }
 
 /*
@@ -171,8 +202,12 @@ static inline void move_if_valid (fc_board_t *board, fc_mlist_t *moves,
 				  fc_player_t player, fc_piece_t type,
 				  uint64_t piece, uint64_t space)
 {
+	fc_player_t opp_player;
+	fc_piece_t opp_piece;
 	if (space && may_move_to(board, player, space)) {
-		fc_mlist_append(moves, player, type, FC_NONE, piece | space);
+		find_player_piece(board, &opp_player, &opp_piece, space);
+		fc_mlist_append(moves, player, type, opp_player, opp_piece,
+				FC_NONE, piece | space);
 	}
 }
 
@@ -262,14 +297,21 @@ static inline void pawn_move_if_valid (fc_board_t *board, fc_mlist_t *moves,
 				       uint64_t m1, uint64_t m2, uint64_t m3)
 {
 	if (is_empty(board, m1)) {
-		fc_mlist_append(moves, player, FC_PAWN, FC_NONE, pawn | m1);
+		fc_mlist_append(moves, player, FC_PAWN, FC_NONE, FC_NONE,
+				FC_NONE, pawn | m1);
 	}
 
+	fc_player_t opp_player;
+	fc_piece_t opp_piece;
 	if (is_occupied_by_enemy(board, player, m2)) {
-		fc_mlist_append(moves, player, FC_PAWN, FC_NONE, pawn | m2);
+		find_player_piece(board, &opp_player, &opp_piece, m2);
+		fc_mlist_append(moves, player, FC_PAWN, opp_player, opp_piece,
+				FC_NONE, pawn | m2);
 	}
 	if (is_occupied_by_enemy(board, player, m3)) {
-		fc_mlist_append(moves, player, FC_PAWN, FC_NONE, pawn | m3);
+		find_player_piece(board, &opp_player, &opp_piece, m3);
+		fc_mlist_append(moves, player, FC_PAWN, opp_player, opp_piece,
+				FC_NONE, pawn | m3);
 	}
 }
 
@@ -338,10 +380,15 @@ static inline int move_and_continue (fc_board_t *board, fc_mlist_t *moves,
 					  uint64_t piece, uint64_t space)
 {
 	if (is_empty(board, space)) {
-		fc_mlist_append(moves, player, type, FC_NONE, piece | space);
+		fc_mlist_append(moves, player, type, FC_NONE, FC_NONE, FC_NONE,
+				piece | space);
 		return 1;
 	} else if (is_occupied_by_enemy(board, player, space)) {
-		fc_mlist_append(moves, player, type, FC_NONE, piece | space);
+		fc_player_t opp_player;
+		fc_piece_t opp_piece;
+		find_player_piece(board, &opp_player, &opp_piece, space);
+		fc_mlist_append(moves, player, type, opp_player, opp_piece,
+				FC_NONE, piece | space);
 	}
 	return 0;
 }
@@ -557,7 +604,8 @@ void fc_board_get_removes (fc_board_t *board, fc_mlist_t *moves,
 	for (fc_piece_t type = FC_PAWN; type <= FC_KING; type++) {
 		uint64_t piece, bb = FC_BITBOARD((*board), player, type);
 		FC_FOREACH(piece, bb) {
-			fc_mlist_append(moves, player, type, FC_NONE, piece);
+			fc_mlist_append(moves, player, type, FC_NONE, FC_NONE,
+					FC_NONE, piece);
 		}
 	}
 }
@@ -607,27 +655,22 @@ static inline int must_promote (fc_player_t player, uint64_t pawn)
 
 /*
  * Find the piece bitboard that needs to be updated for the enemy of player.
- *
- * Cycle through the bitboards of all our enemies assuming that we
- * aren't trying to capture our own allies.
  */
-static int update_enemy_bitboards (fc_board_t *board, fc_player_t player,
-		fc_player_t enemy, fc_player_t enemy_side, uint64_t bit)
+static inline void update_enemy_bitboards (fc_board_t *board, fc_move_t *move,
+		fc_player_t side, uint64_t bit)
 {
-	for (fc_piece_t type = FC_PAWN; type <= FC_KING; type++) {
-		if (bit & FC_BITBOARD((*board), enemy, type)) {
-			FC_BITBOARD((*board), enemy, type) ^= bit;
-			if (type == FC_PAWN) {
-				assert(enemy_side != FC_NONE);
-				FC_PAWN_BB((*board), enemy_side) ^= bit;
-			}
-			if (type == FC_KING) {
-				fc_convert_pieces(board, enemy, player);
-			}
-			return 1;
-		}
+	if (move->opp_player == FC_NONE && move->opp_piece == FC_NONE) {
+		return;
 	}
-	return 0;
+	assert(bit);
+
+	FC_BITBOARD((*board), move->opp_player, move->opp_piece) ^= bit;
+	if (move->opp_piece == FC_PAWN) {
+		assert(side != FC_NONE);
+		FC_PAWN_BB((*board), side) ^= bit;
+	} else if (move->opp_piece == FC_KING) {
+		fc_convert_pieces(board, move->opp_player, move->player);
+	}
 }
 
 /*
@@ -672,28 +715,21 @@ int fc_board_make_move (fc_board_t *board, fc_move_t *move)
 	uint64_t b = FC_BITBOARD((*board), move->player, move->piece) &
 		     move->move;
 
-	/* update pawn orientation bitboards */
+	/*
+	 * NOTE: We are getting the orientation for the enemy pawn here because
+	 * if we wait until after we have updated the below pawn orientation
+	 * bitboard, then there will be two bitboards which share a bit, and we
+	 * won't know which one it belongs to.
+	 */
 	fc_player_t enemy_side = fc_get_pawn_orientation(board, b);
+
 	if (move->piece == FC_PAWN) {
 		side = fc_get_pawn_orientation(board, b ^ move->move);
 		FC_PAWN_BB((*board), side) ^= move->move;
 	}
 
+	update_enemy_bitboards(board, move, enemy_side, b);
 	update_empty_positions(board);
-
-	/*
-	 * If there is no second bit, then this was only a remove, and we can
-	 * return.
-	 */
-	if (!b) {
-		return 1;
-	}
-
-	if (!update_enemy_bitboards(board, move->player, (move->player + 1) % 4,
-				enemy_side, b)) {
-		(void)update_enemy_bitboards(board, move->player,
-				(move->player + 3) % 4, enemy_side, b);
-	}
 
 	return 1;
 }

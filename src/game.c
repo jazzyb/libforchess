@@ -17,6 +17,7 @@ int fc_game_init (fc_game_t *game)
 	if (!game->board) {
 		return 0;
 	}
+	fc_board_init(game->board);
 	game->player = FC_NONE;
 	return 1;
 }

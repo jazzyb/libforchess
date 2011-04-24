@@ -71,6 +71,18 @@ int is_empty (fc_board_t *board, uint64_t bit);
 #endif /* DOXYGEN_IGNORE */
 
 /**
+ * @brief Initializes the values for an empty board.
+ *
+ * Sets all the values on the bitboard to zero and sets the FC_EMPTY_SPACES
+ * board to all F.
+ *
+ * @param[in,out] board A pointer to the game board.
+ *
+ * @return void
+ */
+void fc_board_init (fc_board_t *board);
+
+/**
  * @brief Initializes the board based on a config file.
  *
  * The forchess configuration file is one where each line is of the form:

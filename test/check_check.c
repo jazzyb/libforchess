@@ -1,14 +1,13 @@
 #include <check.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
 
 #include "forchess/board.h"
 
 START_TEST (test_forchess_knight_checks)
 {
 	fc_board_t board;
-	bzero(&board, sizeof(board));
+	fc_board_init(&board);
 
 	fc_board_set_piece(&board, FC_FIRST, FC_KING, 0, 0);
 	fail_unless(!fc_board_check_status(&board, FC_FIRST));
@@ -47,7 +46,7 @@ END_TEST
 START_TEST (test_forchess_lateral_checks)
 {
 	fc_board_t board;
-	bzero(&board, sizeof(board));
+	fc_board_init(&board);
 
 	fc_board_set_piece(&board, FC_FIRST, FC_KING, 2, 2);
 	fc_board_set_piece(&board, FC_SECOND, FC_ROOK, 2, 7);
@@ -68,7 +67,7 @@ END_TEST
 START_TEST (test_forchess_diagonal_checks)
 {
 	fc_board_t board;
-	bzero(&board, sizeof(board));
+	fc_board_init(&board);
 
 	fc_board_set_piece(&board, FC_FIRST, FC_KING, 1, 3);
 	fc_board_set_piece(&board, FC_SECOND, FC_BISHOP, 3, 5);
@@ -89,7 +88,7 @@ END_TEST
 START_TEST (test_forchess_king_checks)
 {
 	fc_board_t board;
-	bzero(&board, sizeof(board));
+	fc_board_init(&board);
 	fc_board_set_piece(&board, FC_FIRST, FC_KING, 3, 3);
 	fc_board_set_piece(&board, FC_SECOND, FC_KING, 4, 4);
 	fail_unless(fc_board_check_status(&board, FC_FIRST) == FC_CHECK);
@@ -110,7 +109,7 @@ END_TEST
 START_TEST (test_forchess_pawn_checks)
 {
 	fc_board_t board;
-	bzero(&board, sizeof(board));
+	fc_board_init(&board);
 
 	fc_board_set_piece(&board, FC_FIRST, FC_KING, 1, 1);
 	fc_board_set_piece(&board, FC_SECOND, FC_PAWN, 1, 0);
@@ -131,7 +130,7 @@ START_TEST (test_forchess_pawn_checks)
 	fc_board_set_piece(&board, FC_FOURTH, FC_PAWN, 0, 1);
 	fail_unless(fc_board_check_status(&board, FC_FIRST) == FC_CHECK);
 
-	bzero(&board, sizeof(board));
+	fc_board_init(&board);
 	fc_board_set_piece(&board, FC_SECOND, FC_KING, 3, 3);
 	fc_board_set_piece(&board, FC_FIRST, FC_PAWN, 2, 3);
 	fail_unless(fc_board_check_status(&board, FC_SECOND) == FC_CHECK);
@@ -145,7 +144,7 @@ START_TEST (test_forchess_pawn_checks)
 	fc_board_set_piece(&board, FC_THIRD, FC_PAWN, 3, 4);
 	fail_unless(fc_board_check_status(&board, FC_SECOND) == FC_CHECK);
 
-	bzero(&board, sizeof(board));
+	fc_board_init(&board);
 	fc_board_set_piece(&board, FC_THIRD, FC_KING, 5, 5);
 	fc_board_set_piece(&board, FC_SECOND, FC_PAWN, 5, 4);
 	fail_unless(fc_board_check_status(&board, FC_THIRD) == FC_CHECK);
@@ -159,7 +158,7 @@ START_TEST (test_forchess_pawn_checks)
 	fc_board_set_piece(&board, FC_FOURTH, FC_PAWN, 4, 5);
 	fail_unless(fc_board_check_status(&board, FC_THIRD) == FC_CHECK);
 
-	bzero(&board, sizeof(board));
+	fc_board_init(&board);
 	fc_board_set_piece(&board, FC_FOURTH, FC_KING, 3, 3);
 	fc_board_set_piece(&board, FC_FIRST, FC_PAWN, 2, 3);
 	fail_unless(fc_board_check_status(&board, FC_FOURTH) == FC_CHECK);
@@ -178,7 +177,7 @@ END_TEST
 START_TEST (test_forchess_checkmate)
 {
 	fc_board_t board;
-	bzero(&board, sizeof(board));
+	fc_board_init(&board);
 	fc_player_t dummy;
 	fc_board_setup(&board, "test/boards/test_forchess_pawn_checks.1",
 			&dummy);
@@ -193,7 +192,7 @@ END_TEST
 START_TEST (test_forchess_check_bug1)
 {
 	fc_board_t board;
-	bzero(&board, sizeof(board));
+	fc_board_init(&board);
 	fc_player_t dummy;
 	fc_board_setup(&board, "test/boards/test_forchess_check_bug.1",
 			&dummy);

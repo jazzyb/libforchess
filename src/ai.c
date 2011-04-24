@@ -60,10 +60,14 @@ static inline int game_over (fc_board_t *board)
 static inline void append_pawn_promotions_to_moves(fc_mlist_t *list,
 		fc_move_t *move)
 {
-	fc_mlist_append(list, move->player, move->piece, FC_BISHOP, move->move);
-	fc_mlist_append(list, move->player, move->piece, FC_KNIGHT, move->move);
-	fc_mlist_append(list, move->player, move->piece, FC_ROOK, move->move);
-	fc_mlist_append(list, move->player, move->piece, FC_QUEEN, move->move);
+	fc_mlist_append(list, move->player, move->piece, move->opp_player,
+			move->opp_piece, FC_BISHOP, move->move);
+	fc_mlist_append(list, move->player, move->piece, move->opp_player,
+			move->opp_piece, FC_KNIGHT, move->move);
+	fc_mlist_append(list, move->player, move->piece, move->opp_player,
+			move->opp_piece, FC_ROOK, move->move);
+	fc_mlist_append(list, move->player, move->piece, move->opp_player,
+			move->opp_piece, FC_QUEEN, move->move);
 }
 
 static inline void move_and_adjust_scores (fc_move_t *mv, fc_ai_t *ai,

@@ -35,6 +35,8 @@ typedef enum {
 typedef struct {
 	fc_player_t player;
 	fc_piece_t piece;
+	fc_player_t opp_player;
+	fc_piece_t opp_piece;
 	fc_piece_t promote;
 	uint64_t move;
 } fc_move_t;
@@ -114,7 +116,8 @@ int fc_mlist_resize (fc_mlist_t *list, int new_size);
  * @return 1 on success; 0 otherwise
  */
 int fc_mlist_append (fc_mlist_t *list, fc_player_t player, fc_piece_t piece,
-		     fc_piece_t promote, uint64_t move);
+		fc_player_t opp_player, fc_piece_t opp_piece,
+		fc_piece_t promote, uint64_t move);
 
 /**
  * @brief Copies the list dst to src.
