@@ -60,10 +60,52 @@ static inline int game_over (fc_board_t *board)
 static inline void append_pawn_promotions_to_moves(fc_mlist_t *list,
 		fc_move_t *move)
 {
-	fc_mlist_append(list, move->player, move->piece, FC_BISHOP, move->move);
-	fc_mlist_append(list, move->player, move->piece, FC_KNIGHT, move->move);
-	fc_mlist_append(list, move->player, move->piece, FC_ROOK, move->move);
-	fc_mlist_append(list, move->player, move->piece, FC_QUEEN, move->move);
+	fc_mlist_append(list, move->player, move->piece, move->opp_player,
+			move->opp_piece, FC_BISHOP, move->move);
+	fc_mlist_append(list, move->player, move->piece, move->opp_player,
+			move->opp_piece, FC_KNIGHT, move->move);
+	fc_mlist_append(list, move->player, move->piece, move->opp_player,
+			move->opp_piece, FC_ROOK, move->move);
+	fc_mlist_append(list, move->player, move->piece, move->opp_player,
+			move->opp_piece, FC_QUEEN, move->move);
+}
+
+/*
+ * All of the code below was once a part of fc_ai_is_move_valid() but was
+ * pulled out to increase the speed of the alphabeta function.  See the comment
+ * above fc_ai_is_move_valid() for an explanation of what this function is
+ * looking for.
+ */
+static int is_move_valid_given_check_status (fc_board_t *board, fc_move_t *move,
+		int check_status_before, int partner_status_before)
+{
+	fc_board_t copy;
+	fc_board_copy(&copy, board);
+	fc_board_make_move(&copy, move);
+
+	if (check_status_before == FC_CHECKMATE) {
+		uint64_t king = FC_BITBOARD((*board), move->player, FC_KING);
+		if (move->piece == FC_KING && move->move != king) {
+			return 0;
+		} else {
+			return 1;
+		}
+	}
+	int check_status_after = fc_board_check_status(&copy, move->player);
+	if (!check_status_before && check_status_after) {
+		return 0;
+	}
+	if (check_status_before == FC_CHECK && check_status_after) {
+		return 0;
+	}
+
+	int partner_status_after = fc_board_check_status(&copy,
+			FC_PARTNER(move->player));
+	if (!partner_status_before && partner_status_after) {
+		return 0;
+	}
+
+	return 1;
 }
 
 static inline void move_and_adjust_scores (fc_move_t *mv, fc_ai_t *ai,
@@ -107,10 +149,15 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	fc_board_get_moves(board, list, player);
 
 	int all_moves_are_invalid = 1;
+	int current_check_status = fc_board_check_status(board, player);
+	int partner_check_status = fc_board_check_status(board,
+			FC_PARTNER(player));
 	for (int i = 0; i < fc_mlist_length(list); i++) {
 
 		fc_move_t *move = fc_mlist_get(list, i);
-		if (!fc_ai_is_move_valid(board, move)) {
+		if (!is_move_valid_given_check_status(board, move,
+					current_check_status,
+					partner_check_status)) {
 			continue;
 		}
 
@@ -325,43 +372,15 @@ int fc_ai_score_position (fc_ai_t *ai, fc_player_t player)
  *
  * Returns 1 if all of the above are true (i.e. the move is allowed); 0
  * otherwise.
- */
-/*
- * FIXME Now that we have an AI structure, and this method does not use it,
- * then would it be better if we moved this function to the board.c source
- * file?
+ *
+ * See is_move_valid_given_check_status() above.
  */
 int fc_ai_is_move_valid (fc_board_t *board, fc_move_t *move)
 {
 	assert(board && move);
-	fc_board_t copy;
-	fc_board_copy(&copy, board);
-	fc_board_make_move(&copy, move);
-
 	int check_status_before = fc_board_check_status(board, move->player);
-	if (check_status_before == FC_CHECKMATE) {
-		uint64_t king = FC_BITBOARD((*board), move->player, FC_KING);
-		if (move->piece == FC_KING && move->move != king) {
-			return 0;
-		} else {
-			return 1;
-		}
-	}
-	int check_status_after = fc_board_check_status(&copy, move->player);
-	if (!check_status_before && check_status_after) {
-		return 0;
-	}
-	if (check_status_before == FC_CHECK && check_status_after) {
-		return 0;
-	}
-
 	int partner_status_before = fc_board_check_status(board,
 			FC_PARTNER(move->player));
-	int partner_status_after = fc_board_check_status(&copy,
-			FC_PARTNER(move->player));
-	if (!partner_status_before && partner_status_after) {
-		return 0;
-	}
-
-	return 1;
+	return is_move_valid_given_check_status(board, move,
+			check_status_before, partner_status_before);
 }

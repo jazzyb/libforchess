@@ -24,13 +24,15 @@ SRC_FILES=src/ai.c \
 	  src/board.c \
 	  src/check.c \
 	  src/moves.c \
-	  src/game.c
+	  src/game.c \
+	  src/threats.c
 
 OBJ_FILES=src/ai.o \
 	  src/board.o \
 	  src/check.o \
 	  src/moves.o \
-	  src/game.o
+	  src/game.o \
+	  src/threats.o
 
 EXAMPLE_FILES=examples/cli/simple.c
 

@@ -198,7 +198,7 @@ static int king_in_check_upward (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (!is_empty(board, i)) {
+		if (!fc_is_empty(board, i)) {
 			break;
 		}
 	}
@@ -212,7 +212,7 @@ static int king_in_check_downward (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (!is_empty(board, i)) {
+		if (!fc_is_empty(board, i)) {
 			break;
 		}
 	}
@@ -230,7 +230,7 @@ static int king_in_check_leftward (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (!is_empty(board, i)) {
+		if (!fc_is_empty(board, i)) {
 			break;
 		}
 
@@ -252,7 +252,7 @@ static int king_in_check_rightward (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (!is_empty(board, i)) {
+		if (!fc_is_empty(board, i)) {
 			break;
 		}
 
@@ -291,7 +291,7 @@ static int king_in_check_northwest (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (!is_empty(board, i)) {
+		if (!fc_is_empty(board, i)) {
 			break;
 		}
 		if (i & FC_LEFT_COL) {
@@ -312,7 +312,7 @@ static int king_in_check_southwest (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (!is_empty(board, i)) {
+		if (!fc_is_empty(board, i)) {
 			break;
 		}
 		if (i & FC_LEFT_COL) {
@@ -333,7 +333,7 @@ static int king_in_check_northeast (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (!is_empty(board, i)) {
+		if (!fc_is_empty(board, i)) {
 			break;
 		}
 		if (i & FC_RIGHT_COL) {
@@ -354,7 +354,7 @@ static int king_in_check_southeast (fc_board_t *board, fc_player_t player,
 		if (i & threats) {
 			return 1;
 		}
-		if (!is_empty(board, i)) {
+		if (!fc_is_empty(board, i)) {
 			break;
 		}
 		if (i & FC_RIGHT_COL) {
@@ -429,6 +429,15 @@ static int is_check (fc_board_t *board, fc_player_t player)
 }
 
 /*
+ * The threat bitboards must be updated before the call to this function.
+ */
+static int is_check_fast (fc_board_t *board, fc_player_t player)
+{
+	uint64_t king = FC_BITBOARD((*board), player, FC_KING);
+	return !!(king & (*board)[FC_TEAM1_THREATS + ((player + 1) % 2)]);
+}
+
+/*
  * Returns FC_CHECK if player's king is in check, FC_CHECKMATE if checkmate,
  * and 0 otherwise.
  */
@@ -440,13 +449,16 @@ int fc_board_check_status (fc_board_t *board, fc_player_t player)
 		return 0;
 	}
 
+	//fc_update_all_threats(board);
 	fc_mlist_t moves;
 	fc_mlist_init(&moves, 0);
 	fc_board_get_moves(board, &moves, player);
 	for (int i = 0; i < fc_mlist_length(&moves); i++) {
 		fc_board_t copy;
 		fc_board_copy(&copy, board);
-		fc_board_make_move(&copy, fc_mlist_get(&moves, i));
+		fc_move_t *move = fc_mlist_get(&moves, i);
+		fc_board_make_move(&copy, move);
+		//fc_update_threats_from_move(&copy, move);
 		if (!is_check(&copy, player)) {
 			/* We must never move such that our opponent is put in
 			 * check because of us. Even if it would get us out of

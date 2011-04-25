@@ -27,6 +27,17 @@ typedef enum {
 	/* Keep track of empty positions on the board. */
 	FC_EMPTY_SPACES,
 
+	/*
+	 * Keep track of what spaces are being threatened by each set of
+	 * pieces.
+	 */
+	FC_START_THREATS,
+	FC_END_THREATS = FC_START_THREATS + 23,
+
+	/* ...and keep track of the threats on a per team basis, too */
+	FC_TEAM1_THREATS,
+	FC_TEAM2_THREATS,
+
 	/* This must always be last. */
 	FC_TOTAL_BITBOARDS
 } fc_bitboards_t;
@@ -66,9 +77,25 @@ typedef uint64_t fc_board_t[FC_TOTAL_BITBOARDS];
  * *really* a part of the API, but it's used by functions in both board.c and
  * check.c.
  */
-int is_empty (fc_board_t *board, uint64_t bit);
+int fc_is_empty (fc_board_t *board, uint64_t bit);
+fc_player_t fc_get_pawn_orientation (fc_board_t *board, uint64_t pawn);
+
+void fc_update_threats_from_move (fc_board_t *board, fc_move_t *move);
+void fc_update_all_threats (fc_board_t *board);
 
 #endif /* DOXYGEN_IGNORE */
+
+/**
+ * @brief Initializes the values for an empty board.
+ *
+ * Sets all the values on the bitboard to zero and sets the FC_EMPTY_SPACES
+ * board to all F.
+ *
+ * @param[in,out] board A pointer to the game board.
+ *
+ * @return void
+ */
+void fc_board_init (fc_board_t *board);
 
 /**
  * @brief Initializes the board based on a config file.
