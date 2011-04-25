@@ -206,8 +206,8 @@ static inline void move_if_valid (fc_board_t *board, fc_mlist_t *moves,
 {
 	fc_player_t opp_player;
 	fc_piece_t opp_piece;
-	find_player_piece(board, &opp_player, &opp_piece, space);
-	if (space && opp_player != player && opp_player != FC_PARTNER(player)) {
+	if (space && may_move_to(board, player, space)) {
+		find_player_piece(board, &opp_player, &opp_piece, space);
 		fc_mlist_append(moves, player, type, opp_player, opp_piece,
 				FC_NONE, piece | space);
 	}
@@ -381,16 +381,14 @@ static inline int move_and_continue (fc_board_t *board, fc_mlist_t *moves,
 					  fc_player_t player, fc_piece_t type,
 					  uint64_t piece, uint64_t space)
 {
-	fc_player_t opp_player;
-	fc_piece_t opp_piece;
-	find_player_piece(board, &opp_player, &opp_piece, space);
-	if (opp_player == FC_NONE) {
-		assert(opp_piece == FC_NONE);
+	if (fc_is_empty(board, space)) {
 		fc_mlist_append(moves, player, type, FC_NONE, FC_NONE, FC_NONE,
 				piece | space);
 		return 1;
-	} else if (opp_player == FC_NEXT_PLAYER(player) ||
-			opp_player == FC_PARTNER(FC_NEXT_PLAYER(player))) {
+	} else if (is_occupied_by_enemy(board, player, space)) {
+		fc_player_t opp_player;
+		fc_piece_t opp_piece;
+		find_player_piece(board, &opp_player, &opp_piece, space);
 		fc_mlist_append(moves, player, type, opp_player, opp_piece,
 				FC_NONE, piece | space);
 	}
