@@ -61,13 +61,13 @@ static inline void append_pawn_promotions_to_moves(fc_mlist_t *list,
 		fc_move_t *move)
 {
 	fc_mlist_append(list, move->player, move->piece, move->opp_player,
-			move->opp_piece, FC_BISHOP, move->move);
+			move->opp_piece, FC_QUEEN, move->move);
 	fc_mlist_append(list, move->player, move->piece, move->opp_player,
 			move->opp_piece, FC_KNIGHT, move->move);
 	fc_mlist_append(list, move->player, move->piece, move->opp_player,
 			move->opp_piece, FC_ROOK, move->move);
 	fc_mlist_append(list, move->player, move->piece, move->opp_player,
-			move->opp_piece, FC_QUEEN, move->move);
+			move->opp_piece, FC_BISHOP, move->move);
 }
 
 /*
