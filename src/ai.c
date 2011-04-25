@@ -70,8 +70,14 @@ static inline void append_pawn_promotions_to_moves(fc_mlist_t *list,
 			move->opp_piece, FC_QUEEN, move->move);
 }
 
+/*
+ * All of the code below was once a part of fc_ai_is_move_valid() but was
+ * pulled out to increase the speed of the alphabeta function.  See the comment
+ * above fc_ai_is_move_valid() for an explanation of what this function is
+ * looking for.
+ */
 static int is_move_valid_given_check_status (fc_board_t *board, fc_move_t *move,
-		int check_status_before, int partner_check_status)
+		int check_status_before, int partner_status_before)
 {
 	fc_board_t copy;
 	fc_board_copy(&copy, board);
@@ -95,7 +101,7 @@ static int is_move_valid_given_check_status (fc_board_t *board, fc_move_t *move,
 
 	int partner_status_after = fc_board_check_status(&copy,
 			FC_PARTNER(move->player));
-	if (!partner_check_status && partner_status_after) {
+	if (!partner_status_before && partner_status_after) {
 		return 0;
 	}
 
