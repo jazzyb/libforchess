@@ -8,6 +8,13 @@ INCLUDES=-I./src
 
 LIBS=-Llib
 
+# Include MacPorts directories for the check library.
+ifeq (darwin, $(findstring darwin,$(OSTYPE)))
+CHECK_INC=-I/opt/local/include
+CHECK_LIB=-L/opt/local/lib
+endif
+CHECK_FLAGS=$(CHECK_INC) $(CHECK_LIB)
+
 TEST_FILES=test/check_forchess.c \
 	   test/check_moves.c \
 	   test/check_board.c \
@@ -43,9 +50,10 @@ EXAMPLE_FILES=examples/cli/simple.c
 libforchess: $(OBJ_FILES)
 	mkdir -p lib
 	ar cr lib/libforchess.a $^
+	ranlib lib/libforchess.a
 
 check: $(TEST_FILES) libforchess
-	$(CC) -o test_all $(CFLAGS) $(INCLUDES) $(LIBS) $(TEST_FILES) -lcheck -lforchess
+	$(CC) -o test_all $(CFLAGS) $(INCLUDES) $(CHECK_FLAGS) $(LIBS) $(TEST_FILES) -lcheck -lforchess
 	./test_all
 
 examples: $(EXAMPLE_FILES) $(INC_FILES) libforchess
@@ -72,6 +80,7 @@ libforchess_gprof: $(SRC_FILES) $(INC_FILES)
 	$(CC) -c -o src/game.o $(CFLAGS) $(PROF_FLAGS) $(INCLUDES) src/game.c
 	mkdir -p lib
 	ar cr lib/libforchess.a src/*.o
+	ranlib lib/libforchess.a
 
 profiler: $(EXAMPLE_FILES) $(INC_FILES) libforchess_gprof
 	$(CC) $(CFLAGS) $(PROF_FLAGS) $(INCLUDES) $(LIBS) $(EXAMPLE_FILES) -lforchess

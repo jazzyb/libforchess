@@ -25,7 +25,7 @@ REQUIREMENTS
 INSTALLATION
     To build the LibForchess AI library run "make libforchess".  This will
     create the archive file "lib/libforchess.a".  To test the library run
-    "make check".
+    "export OSTYPE" followed by "make check".
 
 
 USAGE
@@ -38,5 +38,5 @@ USAGE
     directory.  See "./a.out --help" for instructions.
 
 
-https://github.com/jazzyb/forchess/
+https://github.com/jazzyb/libforchess/
 Copyright (c) 2011, Jason M Barnes
