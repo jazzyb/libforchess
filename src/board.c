@@ -41,7 +41,6 @@ int fc_board_set_piece (fc_board_t *board, fc_player_t player, fc_piece_t piece,
 		FC_PAWN_BB((*board), player) |= bb;
 	}
 	update_empty_positions(board);
-	fc_update_all_threats(board);
 	return 1;
 }
 
@@ -106,7 +105,6 @@ int fc_board_remove_piece (fc_board_t *board, int row, int col)
 			}
 			(*board)[i] ^= bit;
 			update_empty_positions(board);
-			fc_update_all_threats(board);
 			return 1;
 		}
 	}
@@ -732,7 +730,6 @@ int fc_board_make_move (fc_board_t *board, fc_move_t *move)
 
 	update_enemy_bitboards(board, move, enemy_side, b);
 	update_empty_positions(board);
-	//fc_update_threats_from_move(board, move);
 
 	return 1;
 }

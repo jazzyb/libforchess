@@ -30,16 +30,14 @@ INC_FILES=src/forchess/moves.h \
 SRC_FILES=src/ai.c \
 	  src/board.c \
 	  src/check.c \
-	  src/moves.c \
 	  src/game.c \
-	  src/threats.c
+	  src/moves.c
 
 OBJ_FILES=src/ai.o \
 	  src/board.o \
 	  src/check.o \
-	  src/moves.o \
 	  src/game.o \
-	  src/threats.o
+	  src/moves.o
 
 EXAMPLE_FILES=examples/cli/simple.c
 

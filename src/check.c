@@ -429,15 +429,6 @@ static int is_check (fc_board_t *board, fc_player_t player)
 }
 
 /*
- * The threat bitboards must be updated before the call to this function.
- */
-static int is_check_fast (fc_board_t *board, fc_player_t player)
-{
-	uint64_t king = FC_BITBOARD((*board), player, FC_KING);
-	return !!(king & (*board)[FC_TEAM1_THREATS + ((player + 1) % 2)]);
-}
-
-/*
  * Returns FC_CHECK if player's king is in check, FC_CHECKMATE if checkmate,
  * and 0 otherwise.
  */
@@ -449,7 +440,6 @@ int fc_board_check_status (fc_board_t *board, fc_player_t player)
 		return 0;
 	}
 
-	//fc_update_all_threats(board);
 	fc_mlist_t moves;
 	fc_mlist_init(&moves, 0);
 	fc_board_get_moves(board, &moves, player);
@@ -458,7 +448,6 @@ int fc_board_check_status (fc_board_t *board, fc_player_t player)
 		fc_board_copy(&copy, board);
 		fc_move_t *move = fc_mlist_get(&moves, i);
 		fc_board_make_move(&copy, move);
-		//fc_update_threats_from_move(&copy, move);
 		if (!is_check(&copy, player)) {
 			/* We must never move such that our opponent is put in
 			 * check because of us. Even if it would get us out of
