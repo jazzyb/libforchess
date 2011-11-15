@@ -1,7 +1,8 @@
 CC=gcc
 
-CFLAGS=-DNDEBUG -O3 -std=c99
-DBG_FLAGS=-g -O0 -std=c99 # Use this instead of CFLAGS if you need to debug.
+STD_FLAGS=-Wall -std=c89 -pedantic
+CFLAGS=-DNDEBUG -O3 $(STD_FLAGS)
+DBG_FLAGS=-g -O0 $(STD_FLAGS) # Use this instead of CFLAGS if you need to debug.
 PROF_FLAGS=-pg
 
 INCLUDES=-I./src
