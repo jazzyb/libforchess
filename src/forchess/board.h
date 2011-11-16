@@ -47,6 +47,10 @@ typedef uint64_t fc_board_t[FC_TOTAL_BITBOARDS];
 /* macro to get a particular pawn orientation bitboard */
 #define FC_PAWN_BB(board, orientation) (board[FC_FIRST_PAWNS + orientation])
 
+/* Redefine UINT64_C to be something that plays nicer with the C89 standard */
+#undef UINT64_C
+#define UINT64_C(x) ((uint64_t)x)
+
 /* used to check a piece's position on the board */
 #define FC_LEFT_COL  (UINT64_C(0x0101010101010101))
 #define FC_RIGHT_COL (UINT64_C(0x8080808080808080))
