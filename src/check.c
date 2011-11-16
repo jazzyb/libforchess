@@ -6,6 +6,7 @@ static int is_threatened_by_king (fc_board_t *board, fc_player_t player,
 		uint64_t king)
 {
 	uint64_t enemy_kings;
+
 	enemy_kings = FC_BITBOARD((*board), FC_NEXT_PLAYER(player), FC_KING) |
 		FC_BITBOARD((*board), FC_PARTNER(FC_NEXT_PLAYER(player)),
 				FC_KING);
@@ -34,6 +35,7 @@ static int is_threatened_by_pawn (fc_board_t *board, fc_player_t player,
 		uint64_t king)
 {
 	uint64_t pawns1, pawns2, pawns3, pawns4;
+
 	switch (player) {
 	case FC_FIRST:
 		/* player 2 pawns that are originally player 2's pawns */
@@ -194,7 +196,9 @@ static int is_threatened_by_pawn (fc_board_t *board, fc_player_t player,
 static int king_in_check_upward (fc_board_t *board, fc_player_t player,
 		uint64_t king, uint64_t threats)
 {
-	for (uint64_t i = king << 8; i; i <<= 8) {
+	uint64_t i;
+
+	for (i = king << 8; i; i <<= 8) {
 		if (i & threats) {
 			return 1;
 		}
@@ -208,7 +212,9 @@ static int king_in_check_upward (fc_board_t *board, fc_player_t player,
 static int king_in_check_downward (fc_board_t *board, fc_player_t player,
 		uint64_t king, uint64_t threats)
 {
-	for (uint64_t i = king >> 8; i; i >>= 8) {
+	uint64_t i;
+
+	for (i = king >> 8; i; i >>= 8) {
 		if (i & threats) {
 			return 1;
 		}
@@ -222,11 +228,13 @@ static int king_in_check_downward (fc_board_t *board, fc_player_t player,
 static int king_in_check_leftward (fc_board_t *board, fc_player_t player,
 		uint64_t king, uint64_t threats)
 {
+	uint64_t i;
+
 	if (king & FC_LEFT_COL) {
 		return 0;
 	}
 
-	for (uint64_t i = king >> 1; i; i >>= 1) {
+	for (i = king >> 1; i; i >>= 1) {
 		if (i & threats) {
 			return 1;
 		}
@@ -244,11 +252,13 @@ static int king_in_check_leftward (fc_board_t *board, fc_player_t player,
 static int king_in_check_rightward (fc_board_t *board, fc_player_t player,
 		uint64_t king, uint64_t threats)
 {
+	uint64_t i;
+
 	if (king & FC_RIGHT_COL) {
 		return 0;
 	}
 
-	for (uint64_t i = king << 1; i; i <<= 1) {
+	for (i = king << 1; i; i <<= 1) {
 		if (i & threats) {
 			return 1;
 		}
@@ -266,8 +276,9 @@ static int king_in_check_rightward (fc_board_t *board, fc_player_t player,
 static int king_in_check_laterally (fc_board_t *board, fc_player_t player,
 		uint64_t king)
 {
-	uint64_t threats = FC_BITBOARD((*board), FC_NEXT_PLAYER(player),
-			FC_QUEEN);
+	uint64_t threats;
+
+	threats = FC_BITBOARD((*board), FC_NEXT_PLAYER(player), FC_QUEEN);
 	threats |= FC_BITBOARD((*board), FC_NEXT_PLAYER(player), FC_ROOK);
 	threats |= FC_BITBOARD((*board), FC_PARTNER(FC_NEXT_PLAYER(player)),
 			FC_QUEEN);
@@ -283,11 +294,13 @@ static int king_in_check_laterally (fc_board_t *board, fc_player_t player,
 static int king_in_check_northwest (fc_board_t *board, fc_player_t player,
 		uint64_t king, uint64_t threats)
 {
+	uint64_t i;
+
 	if (king & FC_LEFT_COL) {
 		return 0;
 	}
 
-	for (uint64_t i = king << 7; i; i <<= 7) {
+	for (i = king << 7; i; i <<= 7) {
 		if (i & threats) {
 			return 1;
 		}
@@ -304,11 +317,13 @@ static int king_in_check_northwest (fc_board_t *board, fc_player_t player,
 static int king_in_check_southwest (fc_board_t *board, fc_player_t player,
 		uint64_t king, uint64_t threats)
 {
+	uint64_t i;
+
 	if (king & FC_LEFT_COL) {
 		return 0;
 	}
 
-	for (uint64_t i = king >> 9; i; i >>= 9) {
+	for (i = king >> 9; i; i >>= 9) {
 		if (i & threats) {
 			return 1;
 		}
@@ -325,11 +340,13 @@ static int king_in_check_southwest (fc_board_t *board, fc_player_t player,
 static int king_in_check_northeast (fc_board_t *board, fc_player_t player,
 		uint64_t king, uint64_t threats)
 {
+	uint64_t i;
+
 	if (king & FC_RIGHT_COL) {
 		return 0;
 	}
 
-	for (uint64_t i = king << 9; i; i <<= 9) {
+	for (i = king << 9; i; i <<= 9) {
 		if (i & threats) {
 			return 1;
 		}
@@ -346,11 +363,13 @@ static int king_in_check_northeast (fc_board_t *board, fc_player_t player,
 static int king_in_check_southeast (fc_board_t *board, fc_player_t player,
 		uint64_t king, uint64_t threats)
 {
+	uint64_t i;
+
 	if (king & FC_RIGHT_COL) {
 		return 0;
 	}
 
-	for (uint64_t i = king >> 7; i; i >>= 7) {
+	for (i = king >> 7; i; i >>= 7) {
 		if (i & threats) {
 			return 1;
 		}
@@ -367,8 +386,9 @@ static int king_in_check_southeast (fc_board_t *board, fc_player_t player,
 static int king_in_check_diagonally (fc_board_t *board, fc_player_t player,
 		uint64_t king)
 {
-	uint64_t threats = FC_BITBOARD((*board), FC_NEXT_PLAYER(player),
-			FC_QUEEN);
+	uint64_t threats;
+
+	threats = FC_BITBOARD((*board), FC_NEXT_PLAYER(player), FC_QUEEN);
 	threats |= FC_BITBOARD((*board), FC_NEXT_PLAYER(player), FC_BISHOP);
 	threats |= FC_BITBOARD((*board), FC_PARTNER(FC_NEXT_PLAYER(player)),
 			FC_QUEEN);
@@ -385,6 +405,7 @@ static int king_in_check_by_knight (fc_board_t *board, fc_player_t player,
 		uint64_t king)
 {
 	uint64_t knights;
+
 	knights = FC_BITBOARD((*board), FC_NEXT_PLAYER(player), FC_KNIGHT) |
 		  FC_BITBOARD((*board), FC_PARTNER(FC_NEXT_PLAYER(player)),
 					  FC_KNIGHT);
@@ -416,7 +437,9 @@ static int king_in_check_by_knight (fc_board_t *board, fc_player_t player,
  */
 static int is_check (fc_board_t *board, fc_player_t player)
 {
-	uint64_t king = FC_BITBOARD((*board), player, FC_KING);
+	uint64_t king;
+
+	king = FC_BITBOARD((*board), player, FC_KING);
 	if (!king) {
 		return 0;
 	}
@@ -434,19 +457,22 @@ static int is_check (fc_board_t *board, fc_player_t player)
  */
 int fc_board_check_status (fc_board_t *board, fc_player_t player)
 {
+	int i;
+	fc_mlist_t moves;
+	fc_board_t copy;
+	fc_move_t *move;
+
 	assert(board);
 
 	if (!is_check(board, player)) {
 		return 0;
 	}
 
-	fc_mlist_t moves;
 	fc_mlist_init(&moves, 0);
 	fc_board_get_moves(board, &moves, player);
-	for (int i = 0; i < fc_mlist_length(&moves); i++) {
-		fc_board_t copy;
+	for (i = 0; i < fc_mlist_length(&moves); i++) {
 		fc_board_copy(&copy, board);
-		fc_move_t *move = fc_mlist_get(&moves, i);
+		move = fc_mlist_get(&moves, i);
 		fc_board_make_move(&copy, move);
 		if (!is_check(&copy, player)) {
 			/* We must never move such that our opponent is put in
@@ -466,3 +492,4 @@ int fc_board_check_status (fc_board_t *board, fc_player_t player)
 	fc_mlist_free(&moves);
 	return FC_CHECKMATE;
 }
+
