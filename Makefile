@@ -1,6 +1,6 @@
 CC=gcc
 
-STD_FLAGS=-Wall -std=c89 -pedantic
+STD_FLAGS=-Wall -Werror -std=c89 -pedantic
 CFLAGS=-DNDEBUG -O3 $(STD_FLAGS)
 DBG_FLAGS=-g -O0 $(STD_FLAGS) # Use this instead of CFLAGS if you need to debug.
 PROF_FLAGS=-pg

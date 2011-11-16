@@ -411,3 +411,4 @@ int fc_ai_is_move_valid (fc_board_t *board, fc_move_t *move)
 	return is_move_valid_given_check_status(board, move,
 			check_status_before, partner_status_before);
 }
+
