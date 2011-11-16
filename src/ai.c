@@ -8,11 +8,7 @@
 
 void fc_ai_init (fc_ai_t *ai, fc_board_t *board)
 {
-	assert(ai && board);
-	ai->board = board;
-	ai->bv = NULL;
-	ai->mlv = NULL;
-
+	int i;
 	int _default_piece_value[6] = {
 		100,	/* pawns */
 		300,	/* bishops */
@@ -21,7 +17,12 @@ void fc_ai_init (fc_ai_t *ai, fc_board_t *board)
 		900,	/* queens */
 		100000	/* kings */
 	};
-	for (int i = 0; i < 6; i++) {
+
+	assert(ai && board);
+	ai->board = board;
+	ai->bv = NULL;
+	ai->mlv = NULL;
+	for (i = 0; i < 6; i++) {
 		ai->piece_value[i] = _default_piece_value[i];
 	}
 }
@@ -41,7 +42,7 @@ int fc_ai_get_material_value (fc_ai_t *ai, fc_piece_t piece)
 /*
  * Return 1 if player is no longer present in the game; 0 otherwise.
  */
-static inline int is_player_out (fc_board_t *board, fc_player_t player)
+static int is_player_out (fc_board_t *board, fc_player_t player)
 {
 	return !(FC_BITBOARD((*board), player, FC_KING));
 }
@@ -49,7 +50,7 @@ static inline int is_player_out (fc_board_t *board, fc_player_t player)
 /*
  * Return 1 if one side has no remaining moves; 0 otherwise.
  */
-static inline int game_over (fc_board_t *board)
+static int game_over (fc_board_t *board)
 {
 	return ((is_player_out(board, FC_FIRST) &&
 		is_player_out(board, FC_THIRD)) ||
@@ -57,7 +58,7 @@ static inline int game_over (fc_board_t *board)
 		is_player_out(board, FC_FOURTH)));
 }
 
-static inline void append_pawn_promotions_to_moves(fc_mlist_t *list,
+static void append_pawn_promotions_to_moves(fc_mlist_t *list,
 		fc_move_t *move)
 {
 	fc_mlist_append(list, move->player, move->piece, move->opp_player,
@@ -79,19 +80,22 @@ static inline void append_pawn_promotions_to_moves(fc_mlist_t *list,
 static int is_move_valid_given_check_status (fc_board_t *board, fc_move_t *move,
 		int check_status_before, int partner_status_before)
 {
+	int check_status_after, partner_status_after;
+	uint64_t king;
 	fc_board_t copy;
+
 	fc_board_copy(&copy, board);
 	fc_board_make_move(&copy, move);
 
 	if (check_status_before == FC_CHECKMATE) {
-		uint64_t king = FC_BITBOARD((*board), move->player, FC_KING);
+		king = FC_BITBOARD((*board), move->player, FC_KING);
 		if (move->piece == FC_KING && move->move != king) {
 			return 0;
 		} else {
 			return 1;
 		}
 	}
-	int check_status_after = fc_board_check_status(&copy, move->player);
+	check_status_after = fc_board_check_status(&copy, move->player);
 	if (!check_status_before && check_status_after) {
 		return 0;
 	}
@@ -99,7 +103,7 @@ static int is_move_valid_given_check_status (fc_board_t *board, fc_move_t *move,
 		return 0;
 	}
 
-	int partner_status_after = fc_board_check_status(&copy,
+	partner_status_after = fc_board_check_status(&copy,
 			FC_PARTNER(move->player));
 	if (!partner_status_before && partner_status_after) {
 		return 0;
@@ -108,7 +112,7 @@ static int is_move_valid_given_check_status (fc_board_t *board, fc_move_t *move,
 	return 1;
 }
 
-static inline void move_and_adjust_scores (fc_move_t *mv, fc_ai_t *ai,
+static void move_and_adjust_scores (fc_move_t *mv, fc_ai_t *ai,
 		fc_move_t *ret, fc_player_t player, int depth, int *alpha,
 		int *beta, int max);
 
@@ -125,10 +129,18 @@ static int alphabeta_handle_removes(fc_ai_t *ai, fc_move_t *ret,
 static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 		int depth, int alpha, int beta, int max)
 {
+	int i;
 	int score;
-	fc_board_t *board = &(ai->bv[depth]);
+	int current_check_status, partner_check_status;
+	int all_moves_are_invalid;
+	fc_board_t *orig, *board;
+	fc_mlist_t *list;
+	fc_move_t *move;
+	fc_player_t dummy;
+
+	board = &(ai->bv[depth]);
 	if (game_over(board) || depth == 0) {
-		fc_board_t *orig = ai->board;
+		orig = ai->board;
 		ai->board = board;
 		score = fc_ai_score_position(ai, player);
 		ai->board = orig;
@@ -144,24 +156,23 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 				alpha, beta, !max);
 	}
 
-	fc_mlist_t *list = &(ai->mlv[depth - 1]);
+	list = &(ai->mlv[depth - 1]);
 	fc_mlist_clear(list);
 	fc_board_get_moves(board, list, player);
 
-	int all_moves_are_invalid = 1;
-	int current_check_status = fc_board_check_status(board, player);
-	int partner_check_status = fc_board_check_status(board,
+	all_moves_are_invalid = 1;
+	current_check_status = fc_board_check_status(board, player);
+	partner_check_status = fc_board_check_status(board,
 			FC_PARTNER(player));
-	for (int i = 0; i < fc_mlist_length(list); i++) {
+	for (i = 0; i < fc_mlist_length(list); i++) {
 
-		fc_move_t *move = fc_mlist_get(list, i);
+		move = fc_mlist_get(list, i);
 		if (!is_move_valid_given_check_status(board, move,
 					current_check_status,
 					partner_check_status)) {
 			continue;
 		}
 
-		fc_player_t dummy;
 		if (fc_board_move_requires_promotion(board, move, &dummy) &&
 				move->promote == FC_NONE) {
 			append_pawn_promotions_to_moves(list, move);
@@ -190,17 +201,19 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
  * the board and gets the material score of the board.  Adjusts alpha and beta
  * if necessary and sets the ret move pointer to the best move if ret != NULL.
  */
-static inline void move_and_adjust_scores (fc_move_t *mv, fc_ai_t *ai,
+static void move_and_adjust_scores (fc_move_t *mv, fc_ai_t *ai,
 		fc_move_t *ret, fc_player_t player, int depth, int *alpha,
 		int *beta, int max)
 {
-	fc_board_t *board = &(ai->bv[depth]);
-	fc_board_t *copy = &(ai->bv[depth - 1]);
+	int score;
+	fc_board_t *board, *copy;
 
+	board = &(ai->bv[depth]);
+	copy = &(ai->bv[depth - 1]);
 	fc_board_copy(copy, board);
 	fc_board_make_move(copy, mv);
-	int score = alphabeta(ai, NULL, FC_NEXT_PLAYER(player), depth - 1,
-			*alpha, *beta, !max);
+	score = alphabeta(ai, NULL, FC_NEXT_PLAYER(player), depth - 1, *alpha,
+			*beta, !max);
 
 	if (max && score > *alpha) {
 		*alpha = score;
@@ -223,17 +236,22 @@ static inline void move_and_adjust_scores (fc_move_t *mv, fc_ai_t *ai,
 static int alphabeta_handle_removes(fc_ai_t *ai, fc_move_t *ret,
 		fc_player_t player, int depth, int alpha, int beta, int max)
 {
-	fc_board_t *board = &(ai->bv[depth]);
+	int i;
 	int found_valid_move = 0;
-	fc_mlist_t *list = &(ai->mlv[depth - 1]);
+	fc_board_t *board;
+	fc_mlist_t *list;
+	fc_move_t *rm;
+
+	board = &(ai->bv[depth]);
+	list = &(ai->mlv[depth - 1]);
 	fc_mlist_clear(list);
 	fc_board_get_removes(board, list, player);
 	/*
 	 * Go through the list the first time.  If we can remove a piece other
 	 * than the king that won't put us in check, great.
 	 */
-	for (int i = 0; i < fc_mlist_length(list); i++) {
-		fc_move_t *rm = fc_mlist_get(list, i);
+	for (i = 0; i < fc_mlist_length(list); i++) {
+		rm = fc_mlist_get(list, i);
 		if (rm->piece == FC_KING || !fc_ai_is_move_valid(board, rm)) {
 			continue;
 		}
@@ -264,8 +282,8 @@ static int alphabeta_handle_removes(fc_ai_t *ai, fc_move_t *ret,
 	 * Otherwise, go through the whole list again (this time allowing
 	 * putting kings into check(mate)). And return the best move.
 	 */
-	for (int i = 0; i < fc_mlist_length(list); i++) {
-		fc_move_t *rm = fc_mlist_get(list, i);
+	for (i = 0; i < fc_mlist_length(list); i++) {
+		rm = fc_mlist_get(list, i);
 		if (rm->piece == FC_KING) {
 			continue;
 		}
@@ -283,7 +301,9 @@ static int alphabeta_handle_removes(fc_ai_t *ai, fc_move_t *ret,
 
 static void free_ai_mlists (fc_ai_t *ai, int depth)
 {
-	for (int i = 0; i < depth; i++) {
+	int i;
+
+	for (i = 0; i < depth; i++) {
 		fc_mlist_free(&(ai->mlv[i]));
 	}
 	free(ai->mlv);
@@ -292,11 +312,13 @@ static void free_ai_mlists (fc_ai_t *ai, int depth)
 
 static void initialize_ai_mlists (fc_ai_t *ai, int depth)
 {
+	int i;
+
 	if (ai->mlv != NULL) {
 		free_ai_mlists(ai, depth);
 	}
 	ai->mlv = calloc(depth, sizeof(fc_mlist_t));
-	for (int i = 0; i < depth; i++) {
+	for (i = 0; i < depth; i++) {
 		fc_mlist_init(&(ai->mlv[i]), 0);
 	}
 }
@@ -344,8 +366,11 @@ int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player, int depth)
 static int get_material_score (fc_ai_t *ai, fc_player_t player)
 {
 	int ret = 0;
-	for (fc_piece_t i = FC_PAWN; i <= FC_KING; i++) {
-		uint64_t piece, pieces = FC_BITBOARD((*(ai->board)), player, i);
+	uint64_t piece, pieces;
+	fc_piece_t i;
+
+	for (i = FC_PAWN; i <= FC_KING; i++) {
+		pieces = FC_BITBOARD((*(ai->board)), player, i);
 		FC_FOREACH(piece, pieces) {
 			ret += ai->piece_value[i];
 		}
@@ -377,9 +402,11 @@ int fc_ai_score_position (fc_ai_t *ai, fc_player_t player)
  */
 int fc_ai_is_move_valid (fc_board_t *board, fc_move_t *move)
 {
+	int check_status_before, partner_status_before;
+
 	assert(board && move);
-	int check_status_before = fc_board_check_status(board, move->player);
-	int partner_status_before = fc_board_check_status(board,
+	check_status_before = fc_board_check_status(board, move->player);
+	partner_status_before = fc_board_check_status(board,
 			FC_PARTNER(move->player));
 	return is_move_valid_given_check_status(board, move,
 			check_status_before, partner_status_before);
