@@ -1,3 +1,11 @@
+/*
+ * LibForchess
+ * Copyright (c) 2011, Jason M Barnes
+ *
+ * This file is subject to the terms and conditions of the 'LICENSE' file
+ * which is a part of this source code package.
+ */
+
 #ifndef _FC_GAME_H_
 #define _FC_GAME_H_
 
@@ -7,7 +15,7 @@
  * @brief API for the high-level manipulation of a forchess game.
  *
  * This API may be ignored by any users of LibForchess.  It was only written to
- * ease the development of games with the forchess AI becuase the internal
+ * ease the development of games with the forchess AI because the internal
  * structure of the LibForchess API (e.g. bitboards and other structs) are
  * optimized for speed and not necessarily ease of use.
  *

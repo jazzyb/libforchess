@@ -1,3 +1,11 @@
+/*
+ * LibForchess
+ * Copyright (c) 2011, Jason M Barnes
+ *
+ * This file is subject to the terms and conditions of the 'LICENSE' file
+ * which is a part of this source code package.
+ */
+
 #ifndef _FC_BOARD_H_
 #define _FC_BOARD_H_
 
@@ -190,12 +198,30 @@ void fc_board_set_material_value (fc_board_t *board, fc_piece_t piece,
 int fc_board_get_material_value (fc_board_t *board, fc_piece_t piece);
 
 /**
- * TODO
+ * @brief Do not sort moves.
+ *
+ * If called, the board will sort moves it returns from fc_board_get_moves()
+ * or fc_board_get_removes() based on what it thinks are the best moves.
+ *
+ * @note This functionality is not available yet.  At the moment this function
+ * does nothing.
+ *
+ * @param[in] board A pointer to the game board.
+ *
+ * @return void
  */
 void fc_board_sorted_moves (fc_board_t *board);
 
 /**
- * TODO
+ * @brief Do not sort moves.
+ *
+ * If called, the board will not try to sort moves it returns from
+ * fc_board_get_moves() or fc_board_get_removes() based on what it
+ * thinks are the best moves.  This is the default.
+ *
+ * @param[in] board A pointer to the game board.
+ *
+ * @return void
  */
 void fc_board_unsorted_moves (fc_board_t *board);
 

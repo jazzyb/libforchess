@@ -52,8 +52,7 @@ EXAMPLE_FILES=examples/cli/simple.c
 
 libforchess: $(OBJ_FILES)
 	mkdir -p lib
-	ar cr lib/libforchess.a $^
-	ranlib lib/libforchess.a
+	$(CC) -shared -o lib/libforchess.so $^
 
 # FIXME: C99 standard just makes compiling easier; will need to change this
 # later; see also examples and profiler
@@ -84,8 +83,7 @@ libforchess_gprof: $(SRC_FILES) $(INC_FILES)
 	$(CC) -c -o src/moves.o $(CFLAGS) $(WARN_FLAGS) $(PROF_FLAGS) $(INCLUDES) src/moves.c
 	$(CC) -c -o src/game.o $(CFLAGS) $(WARN_FLAGS) $(PROF_FLAGS) $(INCLUDES) src/game.c
 	mkdir -p lib
-	ar cr lib/libforchess.a src/*.o
-	ranlib lib/libforchess.a
+	$(CC) -shared -o lib/libforchess.so $^
 
 profiler: $(EXAMPLE_FILES) $(INC_FILES) libforchess_gprof
 	$(CC) $(CFLAGS) --std=c99 $(PROF_FLAGS) $(INCLUDES) $(LIBS) $(EXAMPLE_FILES) -lforchess
