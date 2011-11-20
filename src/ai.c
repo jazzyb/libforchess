@@ -34,17 +34,17 @@ static int game_over (fc_board_t *board)
 		is_player_out(board, FC_FOURTH)));
 }
 
-static void append_pawn_promotions_to_moves(fc_mlist_t *list,
+static void append_pawn_promotions_to_moves(fc_board_t *board, fc_mlist_t *list,
 		fc_move_t *move)
 {
 	move->promote = FC_QUEEN;
-	fc_mlist_append(list, move);
+	board->list_add_move(list, move);
 	move->promote = FC_KNIGHT;
-	fc_mlist_append(list, move);
+	board->list_add_move(list, move);
 	move->promote = FC_ROOK;
-	fc_mlist_append(list, move);
+	board->list_add_move(list, move);
 	move->promote = FC_BISHOP;
-	fc_mlist_append(list, move);
+	board->list_add_move(list, move);
 	move->promote = FC_NONE;
 }
 
@@ -152,7 +152,7 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 
 		if (fc_board_move_requires_promotion(board, move, &dummy) &&
 				move->promote == FC_NONE) {
-			append_pawn_promotions_to_moves(list, move);
+			append_pawn_promotions_to_moves(board, list, move);
 			continue;
 		}
 		all_moves_are_invalid = 0;

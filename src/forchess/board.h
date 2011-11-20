@@ -34,6 +34,9 @@ typedef enum {
 typedef struct {
 	uint64_t bitb[FC_TOTAL_BITBOARDS];
 	int piece_value[FC_NUM_PIECES];
+
+	int (*list_add_move) (fc_mlist_t *, fc_move_t *);
+	int (*list_combine) (fc_mlist_t *, fc_mlist_t *);
 } fc_board_t;
 
 /* macro to get the first 24 bitboards representing pieces */
@@ -185,6 +188,16 @@ void fc_board_set_material_value (fc_board_t *board, fc_piece_t piece,
  * @return The value of the given piece.
  */
 int fc_board_get_material_value (fc_board_t *board, fc_piece_t piece);
+
+/**
+ * TODO
+ */
+void fc_board_sorted_moves (fc_board_t *board);
+
+/**
+ * TODO
+ */
+void fc_board_unsorted_moves (fc_board_t *board);
 
 /**
  * @brief Returns a list of available moves for player.
