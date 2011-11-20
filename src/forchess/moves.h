@@ -19,6 +19,7 @@ typedef enum {
 	FC_THIRD,
 	FC_FOURTH
 } fc_player_t;
+#define FC_NUM_PLAYERS 4
 
 #define FC_NEXT_PLAYER(player) ((player + 1) % 4)
 #define FC_PARTNER(player) ((player + 2) % 4)
@@ -31,6 +32,7 @@ typedef enum {
 	FC_QUEEN,
 	FC_KING
 } fc_piece_t;
+#define FC_NUM_PIECES (FC_KING + 1)
 
 typedef struct {
 	fc_player_t player;

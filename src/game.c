@@ -105,7 +105,7 @@ int fc_game_save (fc_game_t *game, const char *filename)
 
 int fc_game_load (fc_game_t *game, const char *filename)
 {
-	bzero(game->board, sizeof(fc_board_t));
+	bzero(game->board->bitb, sizeof(game->board->bitb));
 	return fc_board_setup(game->board, filename, &(game->player));
 }
 

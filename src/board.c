@@ -16,6 +16,23 @@ static void update_empty_positions (fc_board_t *b)
 			FC_ALL_PIECES(b, 3));
 }
 
+static void set_material_values_to_defaults (fc_board_t *board)
+{
+	fc_piece_t i;
+	int _default_piece_value[FC_NUM_PIECES] = {
+		100,	/* pawns */
+		300,	/* bishops */
+		350,	/* knights */
+		500,	/* rooks */
+		900,	/* queens */
+		100000	/* kings */
+	};
+
+	for (i = FC_PAWN; i <= FC_KING; i++) {
+		board->piece_value[i] = _default_piece_value[i];
+	}
+}
+
 /*
  * Initialize the bitboard values.
  */
@@ -23,6 +40,7 @@ void fc_board_init (fc_board_t *board)
 {
 	bzero(board->bitb, sizeof(fc_board_t));
 	update_empty_positions(board);
+	set_material_values_to_defaults(board);
 }
 
 /* FIXME switch the row/col values to x/y ones; the current way seems backwards
@@ -118,6 +136,19 @@ int fc_board_remove_piece (fc_board_t *board, int row, int col)
 		}
 	}
 	return 0;
+}
+
+void fc_board_set_material_value (fc_board_t *board, fc_piece_t piece,
+		int value)
+{
+	assert(board);
+	board->piece_value[piece] = value;
+}
+
+int fc_board_get_material_value (fc_board_t *board, fc_piece_t piece)
+{
+	assert(board);
+	return board->piece_value[piece];
 }
 
 /*
@@ -844,11 +875,15 @@ int fc_board_make_pawn_move (fc_board_t *board, fc_move_t *move,
 void fc_board_copy (fc_board_t *dst, fc_board_t *src)
 {
 	int i;
+	fc_piece_t p;
 
 	assert(dst && src);
 
 	for (i = 0; i < FC_TOTAL_BITBOARDS; i++) {
 		dst->bitb[i] = src->bitb[i];
+	}
+	for (p = FC_PAWN; p <= FC_KING; p++) {
+		dst->piece_value[p] = src->piece_value[p];
 	}
 }
 

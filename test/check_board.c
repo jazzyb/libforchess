@@ -6,6 +6,7 @@
 
 START_TEST (test_forchess_getters_and_setters)
 {
+	/* get and set pieces */
 	fc_board_t board;
 	fc_board_init(&board);
 	fc_player_t player = -1;
@@ -16,6 +17,10 @@ START_TEST (test_forchess_getters_and_setters)
 	fail_unless(ret == 1);
 	ret = fc_board_get_piece(&board, &player, &piece, 3, 3);
 	fail_unless(ret == 1 && player == FC_FOURTH && piece == FC_QUEEN);
+
+	/* get and set material values */
+	fc_board_set_material_value(&board, FC_QUEEN, 10000);
+	fail_unless(fc_board_get_material_value(&board, FC_QUEEN) == 10000);
 }
 END_TEST
 

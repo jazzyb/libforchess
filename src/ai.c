@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <limits.h>
+#include <stdio.h> /* REMOVE ME */
 #include <stdlib.h>
 
 #include "forchess/ai.h"
@@ -8,35 +9,10 @@
 
 void fc_ai_init (fc_ai_t *ai, fc_board_t *board)
 {
-	int i;
-	int _default_piece_value[6] = {
-		100,	/* pawns */
-		300,	/* bishops */
-		350,	/* knights */
-		500,	/* rooks */
-		900,	/* queens */
-		100000	/* kings */
-	};
-
 	assert(ai && board);
 	ai->board = board;
 	ai->bv = NULL;
 	ai->mlv = NULL;
-	for (i = 0; i < 6; i++) {
-		ai->piece_value[i] = _default_piece_value[i];
-	}
-}
-
-void fc_ai_set_material_value (fc_ai_t *ai, fc_piece_t piece, int value)
-{
-	assert(ai);
-	ai->piece_value[piece] = value;
-}
-
-int fc_ai_get_material_value (fc_ai_t *ai, fc_piece_t piece)
-{
-	assert(ai);
-	return ai->piece_value[piece];
 }
 
 /*
@@ -373,7 +349,7 @@ static int get_material_score (fc_ai_t *ai, fc_player_t player)
 	for (i = FC_PAWN; i <= FC_KING; i++) {
 		pieces = FC_BITBOARD(ai->board, player, i);
 		FC_FOREACH(piece, pieces) {
-			ret += ai->piece_value[i];
+			ret += fc_board_get_material_value(ai->board, i);
 		}
 	}
 	return ret;

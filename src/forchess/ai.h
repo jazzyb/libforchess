@@ -33,27 +33,6 @@ typedef struct {
 void fc_ai_init (fc_ai_t *ai, fc_board_t *board);
 
 /**
- * @brief Assign a new value for the given piece.
- *
- * @param[in,out] ai A pointer to the AI structure.
- * @param[in] piece A piece.
- * @param[in] value The new material value for the piece.
- *
- * @return void
- */
-void fc_ai_set_material_value (fc_ai_t *ai, fc_piece_t piece, int value);
-
-/**
- * @brief Return the material value of a piece.
- *
- * @param[in] ai A pointer to the AI structure.
- * @param[in] piece The piece.
- *
- * @return The value of the given piece.
- */
-int fc_ai_get_material_value (fc_ai_t *ai, fc_piece_t piece);
-
-/**
  * @brief Returns the best move as determined by the AI.
  *
  * Looks depth moves ahead for player.  Sets the move variable to the best
