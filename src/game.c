@@ -1,3 +1,11 @@
+/*
+ * LibForchess
+ * Copyright (c) 2011, Jason M Barnes
+ *
+ * This file is subject to the terms and conditions of the 'LICENSE' file
+ * which is a part of this source code package.
+ */
+
 #include <assert.h>
 #include <stdlib.h>
 #include <strings.h>

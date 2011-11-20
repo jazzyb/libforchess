@@ -1,6 +1,13 @@
+/*
+ * LibForchess
+ * Copyright (c) 2011, Jason M Barnes
+ *
+ * This file is subject to the terms and conditions of the 'LICENSE' file
+ * which is a part of this source code package.
+ */
+
 #include <assert.h>
 #include <limits.h>
-#include <stdio.h> /* REMOVE ME */
 #include <stdlib.h>
 
 #include "forchess/ai.h"
