@@ -213,13 +213,18 @@ static void move_if_valid (fc_board_t *board, fc_mlist_t *moves,
 		fc_player_t player, fc_piece_t type, uint64_t piece,
 		uint64_t space)
 {
-	fc_player_t opp_player;
-	fc_piece_t opp_piece;
+	fc_move_t move;
+	fc_player_t *opp_player = &(move.opp_player);
+	fc_piece_t *opp_piece = &(move.opp_piece);
+
+	move.player = player;
+	move.piece = type;
+	move.promote = FC_NONE;
+	move.move = piece | space;
 
 	if (space && may_move_to(board, player, space)) {
-		find_player_piece(board, &opp_player, &opp_piece, space);
-		fc_mlist_append(moves, player, type, opp_player, opp_piece,
-				FC_NONE, piece | space);
+		find_player_piece(board, opp_player, opp_piece, space);
+		fc_mlist_append(moves, &move);
 	}
 }
 
@@ -313,23 +318,30 @@ static void pawn_move_if_valid (fc_board_t *board, fc_mlist_t *moves,
 		fc_player_t player, uint64_t pawn, uint64_t m1, uint64_t m2,
 		uint64_t m3)
 {
-	fc_player_t opp_player;
-	fc_piece_t opp_piece;
+	fc_move_t move;
+	fc_player_t *opp_player = &(move.opp_player);
+	fc_piece_t *opp_piece = &(move.opp_piece);
+
+	move.player = player;
+	move.piece = FC_PAWN;
+	move.opp_player = FC_NONE;
+	move.opp_piece = FC_NONE;
+	move.promote = FC_NONE;
 
 	if (fc_is_empty(board, m1)) {
-		fc_mlist_append(moves, player, FC_PAWN, FC_NONE, FC_NONE,
-				FC_NONE, pawn | m1);
+		move.move = pawn | m1;
+		fc_mlist_append(moves, &move);
 	}
 
 	if (is_occupied_by_enemy(board, player, m2)) {
-		find_player_piece(board, &opp_player, &opp_piece, m2);
-		fc_mlist_append(moves, player, FC_PAWN, opp_player, opp_piece,
-				FC_NONE, pawn | m2);
+		move.move = pawn | m2;
+		find_player_piece(board, opp_player, opp_piece, m2);
+		fc_mlist_append(moves, &move);
 	}
 	if (is_occupied_by_enemy(board, player, m3)) {
-		find_player_piece(board, &opp_player, &opp_piece, m3);
-		fc_mlist_append(moves, player, FC_PAWN, opp_player, opp_piece,
-				FC_NONE, pawn | m3);
+		move.move = pawn | m3;
+		find_player_piece(board, opp_player, opp_piece, m3);
+		fc_mlist_append(moves, &move);
 	}
 }
 
@@ -398,17 +410,23 @@ static int move_and_continue (fc_board_t *board, fc_mlist_t *moves,
 		fc_player_t player, fc_piece_t type, uint64_t piece,
 		uint64_t space)
 {
-	fc_player_t opp_player;
-	fc_piece_t opp_piece;
+	fc_move_t move;
+	fc_player_t *opp_player = &(move.opp_player);
+	fc_piece_t *opp_piece = &(move.opp_piece);
+
+	move.player = player;
+	move.piece = type;
+	move.opp_player = FC_NONE;
+	move.opp_piece = FC_NONE;
+	move.promote = FC_NONE;
+	move.move = piece | space;
 
 	if (fc_is_empty(board, space)) {
-		fc_mlist_append(moves, player, type, FC_NONE, FC_NONE, FC_NONE,
-				piece | space);
+		fc_mlist_append(moves, &move);
 		return 1;
 	} else if (is_occupied_by_enemy(board, player, space)) {
-		find_player_piece(board, &opp_player, &opp_piece, space);
-		fc_mlist_append(moves, player, type, opp_player, opp_piece,
-				FC_NONE, piece | space);
+		find_player_piece(board, opp_player, opp_piece, space);
+		fc_mlist_append(moves, &move);
 	}
 	return 0;
 }
@@ -635,14 +653,19 @@ void fc_board_get_removes (fc_board_t *board, fc_mlist_t *moves,
 		fc_player_t player)
 {
 	uint64_t piece, bb;
-	fc_piece_t type;
+	fc_move_t move;
+
+	move.player = player;
+	move.opp_player = FC_NONE;
+	move.opp_piece = FC_NONE;
+	move.promote = FC_NONE;
 
 	assert(board && moves);
-	for (type = FC_PAWN; type <= FC_KING; type++) {
-		bb = FC_BITBOARD((*board), player, type);
+	for (move.piece = FC_PAWN; move.piece <= FC_KING; move.piece++) {
+		bb = FC_BITBOARD((*board), player, move.piece);
 		FC_FOREACH(piece, bb) {
-			fc_mlist_append(moves, player, type, FC_NONE, FC_NONE,
-					FC_NONE, piece);
+			move.move = piece;
+			fc_mlist_append(moves, &move);
 		}
 	}
 }

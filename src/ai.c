@@ -61,14 +61,15 @@ static int game_over (fc_board_t *board)
 static void append_pawn_promotions_to_moves(fc_mlist_t *list,
 		fc_move_t *move)
 {
-	fc_mlist_append(list, move->player, move->piece, move->opp_player,
-			move->opp_piece, FC_QUEEN, move->move);
-	fc_mlist_append(list, move->player, move->piece, move->opp_player,
-			move->opp_piece, FC_KNIGHT, move->move);
-	fc_mlist_append(list, move->player, move->piece, move->opp_player,
-			move->opp_piece, FC_ROOK, move->move);
-	fc_mlist_append(list, move->player, move->piece, move->opp_player,
-			move->opp_piece, FC_BISHOP, move->move);
+	move->promote = FC_QUEEN;
+	fc_mlist_append(list, move);
+	move->promote = FC_KNIGHT;
+	fc_mlist_append(list, move);
+	move->promote = FC_ROOK;
+	fc_mlist_append(list, move);
+	move->promote = FC_BISHOP;
+	fc_mlist_append(list, move);
+	move->promote = FC_NONE;
 }
 
 /*

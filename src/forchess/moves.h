@@ -103,21 +103,19 @@ int fc_mlist_resize (fc_mlist_t *list, int new_size);
 /**
  * @brief Append a new move to the mlist.
  *
+ * This function copies the move parameter onto the end of the mlist.  So, for
+ * example, the user may free the move struct after the call, and the end of
+ * the mlist will still point to a valid move.
+ *
  * @note The mlist will automatically resize itself if it doesn't have enough
  * room for the new move.
  *
  * @param[out] list The list of moves.
- * @param[in] player The player of the new move.
- * @param[in] piece The piece of the new move.
- * @param[in] promote The promotion piece if the move requires it; otherwise,
- * this parameter should probably be called with FC_NONE.
- * @param[in] move The bitboard representing the move.
+ * @param[in] move The new move.
  *
  * @return 1 on success; 0 otherwise
  */
-int fc_mlist_append (fc_mlist_t *list, fc_player_t player, fc_piece_t piece,
-		fc_player_t opp_player, fc_piece_t opp_piece,
-		fc_piece_t promote, uint64_t move);
+int fc_mlist_append (fc_mlist_t *list, fc_move_t *move);
 
 /**
  * @brief Copies the list dst to src.
