@@ -44,7 +44,7 @@ int fc_ai_get_material_value (fc_ai_t *ai, fc_piece_t piece)
  */
 static int is_player_out (fc_board_t *board, fc_player_t player)
 {
-	return !(FC_BITBOARD((*board), player, FC_KING));
+	return !(FC_BITBOARD(board, player, FC_KING));
 }
 
 /*
@@ -89,7 +89,7 @@ static int is_move_valid_given_check_status (fc_board_t *board, fc_move_t *move,
 	fc_board_make_move(&copy, move);
 
 	if (check_status_before == FC_CHECKMATE) {
-		king = FC_BITBOARD((*board), move->player, FC_KING);
+		king = FC_BITBOARD(board, move->player, FC_KING);
 		if (move->piece == FC_KING && move->move != king) {
 			return 0;
 		} else {
@@ -371,7 +371,7 @@ static int get_material_score (fc_ai_t *ai, fc_player_t player)
 	fc_piece_t i;
 
 	for (i = FC_PAWN; i <= FC_KING; i++) {
-		pieces = FC_BITBOARD((*(ai->board)), player, i);
+		pieces = FC_BITBOARD(ai->board, player, i);
 		FC_FOREACH(piece, pieces) {
 			ret += ai->piece_value[i];
 		}

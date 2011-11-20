@@ -13,6 +13,7 @@ START_TEST (test_move_copy)
 	src.promote = FC_KNIGHT;
 	src.move = 129;
 	fc_move_copy(&dst, &src);
+	/* TODO add the other values of the move struct */
 	fail_unless(dst.player == src.player &&
 		    dst.piece == src.piece &&
 		    dst.promote == src.promote &&

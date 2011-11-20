@@ -431,14 +431,14 @@ START_TEST (test_forchess_make_move)
 	fc_board_make_move(&board, &move);
 	fail_unless(fc_board_get_piece(&board, &player, &piece, 1, 4));
 	fail_unless(player == move.player && piece == move.piece);
-	fail_unless(board[FC_FOURTH * 6 + FC_KNIGHT] == UINT64_C(0));
+	fail_unless(board.bitb[FC_FOURTH * 6 + FC_KNIGHT] == UINT64_C(0));
 	/* (3) check removes */
 	move.opp_player = FC_NONE;
 	move.opp_piece = FC_NONE;
 	move.move = UINT64_C(0x1000);
 	fc_board_make_move(&board, &move);
 	for (int i = 0; i < 24; i++) {
-		fail_unless(board[i] == UINT64_C(0));
+		fail_unless(board.bitb[i] == UINT64_C(0));
 	}
 	/* (4) check that pieces change sides on capture of king */
 	fc_player_t dummy;
@@ -450,7 +450,7 @@ START_TEST (test_forchess_make_move)
 	move.promote = FC_NONE;
 	move.move = fc_uint64("b6-a8");
 	fc_board_make_move(&board, &move);
-	fail_unless(board[FC_SECOND * 6 + FC_KING] == UINT64_C(0));
+	fail_unless(board.bitb[FC_SECOND * 6 + FC_KING] == UINT64_C(0));
 	fail_unless(fc_board_get_piece(&board, &player, &piece, 0, 0));
 	fail_unless(player == FC_FIRST);
 	fail_unless(fc_board_get_piece(&board, &player, &piece, 0, 7));
@@ -543,12 +543,12 @@ END_TEST
 START_TEST (test_forchess_board_copy)
 {
 	fc_board_t dst, src;
-	for (int i = 0; i < sizeof(src) / sizeof(uint64_t); i++) {
-		src[i] = i * 1000;
+	for (int i = 0; i < sizeof(src.bitb) / sizeof(uint64_t); i++) {
+		src.bitb[i] = i * 1000;
 	}
 	fc_board_copy(&dst, &src);
-	for (int i = 0; i < sizeof(src) / sizeof(uint64_t); i++) {
-		fail_unless(dst[i] == src[i]);
+	for (int i = 0; i < sizeof(src.bitb) / sizeof(uint64_t); i++) {
+		fail_unless(dst.bitb[i] == src.bitb[i]);
 	}
 }
 END_TEST

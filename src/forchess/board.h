@@ -31,10 +31,12 @@ typedef enum {
 	FC_TOTAL_BITBOARDS
 } fc_bitboards_t;
 
-typedef uint64_t fc_board_t[FC_TOTAL_BITBOARDS];
+typedef struct {
+	uint64_t bitb[FC_TOTAL_BITBOARDS];
+} fc_board_t;
 
 /* macro to get the first 24 bitboards representing pieces */
-#define FC_BITBOARD(board, player, piece) (board[player * 6 + piece])
+#define FC_BITBOARD(board, player, piece) (board->bitb[player * 6 + piece])
 
 /*
  * Cycles through each piece (bit) on the bitboard.
@@ -45,7 +47,8 @@ typedef uint64_t fc_board_t[FC_TOTAL_BITBOARDS];
 	for(piece = (x & (~x + 1)); x; x ^= piece, piece = (x & (~x + 1)))
 
 /* macro to get a particular pawn orientation bitboard */
-#define FC_PAWN_BB(board, orientation) (board[FC_FIRST_PAWNS + orientation])
+#define FC_PAWN_BB(board, orientation) \
+	(board->bitb[FC_FIRST_PAWNS + orientation])
 
 /* Redefine UINT64_C to be something that plays nicer with the C89 standard */
 #undef UINT64_C
@@ -59,7 +62,8 @@ typedef uint64_t fc_board_t[FC_TOTAL_BITBOARDS];
 
 /* returns a bitboard where all pieces for a player are represented by 1 */
 #define FC_ALL_PIECES(b, p) \
-	(b[6*p] | b[6*p+1] | b[6*p+2] | b[6*p+3] | b[6*p+4] | b[6*p+5])
+	(b->bitb[6*p] | b->bitb[6*p+1] | b->bitb[6*p+2] | \
+	 b->bitb[6*p+3] | b->bitb[6*p+4] | b->bitb[6*p+5])
 
 /* returns all pieces for a pair of players */
 #define FC_ALL_ALLIES(b, p) \

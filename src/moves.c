@@ -167,3 +167,4 @@ fc_move_t *fc_mlist_get (fc_mlist_t *list, int index)
 	}
 	return list->moves + index;
 }
+
