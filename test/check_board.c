@@ -1,14 +1,14 @@
 #include <check.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
 
 #include "forchess/board.h"
 
 START_TEST (test_forchess_getters_and_setters)
 {
+	/* get and set pieces */
 	fc_board_t board;
-	bzero(&board, sizeof(board));
+	fc_board_init(&board);
 	fc_player_t player = -1;
 	fc_piece_t piece = -1;
 	int ret = fc_board_get_piece(&board, &player, &piece, 3, 3);
@@ -17,13 +17,17 @@ START_TEST (test_forchess_getters_and_setters)
 	fail_unless(ret == 1);
 	ret = fc_board_get_piece(&board, &player, &piece, 3, 3);
 	fail_unless(ret == 1 && player == FC_FOURTH && piece == FC_QUEEN);
+
+	/* get and set material values */
+	fc_board_set_material_value(&board, FC_QUEEN, 10000);
+	fail_unless(fc_board_get_material_value(&board, FC_QUEEN) == 10000);
 }
 END_TEST
 
 START_TEST (test_forchess_remove_piece)
 {
 	fc_board_t board;
-	bzero(&board, sizeof(board));
+	fc_board_init(&board);
 	fail_unless(!fc_board_remove_piece(&board, 5, 6));
 	fc_board_set_piece(&board, FC_THIRD, FC_KING, 5, 6);
 	fail_unless(fc_board_remove_piece(&board, 5, 6));
@@ -37,7 +41,7 @@ END_TEST
 START_TEST (test_forchess_board_setup)
 {
 	fc_board_t board;
-	bzero(&board, sizeof(board));
+	fc_board_init(&board);
 
 	/* check bad boards */
 	fc_player_t dummy;
@@ -45,24 +49,24 @@ START_TEST (test_forchess_board_setup)
 			         "test/boards/test_forchess_board_setup.1",
 				 &dummy);
 	fail_unless(ret == 0);
-	bzero(board, sizeof(board));
+	fc_board_init(&board);
 	ret = fc_board_setup(&board,
 			     "test/boards/test_forchess_board_setup.2",
 			     &dummy);
 	fail_unless(ret == 0);
-	bzero(board, sizeof(board));
+	fc_board_init(&board);
 	ret = fc_board_setup(&board,
 			     "test/boards/test_forchess_board_setup.3",
 			     &dummy);
 	fail_unless(ret == 0);
-	bzero(board, sizeof(board));
+	fc_board_init(&board);
 	ret = fc_board_setup(&board,
 			     "test/boards/test_forchess_board_setup.4",
 			     &dummy);
 	fail_unless(ret == 0);
 
 	/* now check that the pieces were placed in the appropriate spots */
-	bzero(board, sizeof(board));
+	fc_board_init(&board);
 	ret = fc_board_setup(&board,
 			     "test/boards/test_forchess_board_setup.5",
 			     &dummy);
@@ -87,7 +91,7 @@ extern void fc_get_king_moves (fc_board_t *board,
 START_TEST (test_forchess_king_moves)
 {
 	fc_board_t board;
-	bzero(&board, sizeof(board));
+	fc_board_init(&board);
 
 	fc_board_set_piece(&board, FC_FIRST, FC_KING, 0, 0);
 	fc_board_set_piece(&board, FC_SECOND, FC_PAWN, 2, 2);
@@ -136,7 +140,7 @@ extern void fc_get_knight_moves (fc_board_t *board,
 START_TEST (test_forchess_knight_moves)
 {
 	fc_board_t board;
-	bzero(&board, sizeof(board));
+	fc_board_init(&board);
 
 	fc_board_set_piece(&board, FC_FIRST, FC_KNIGHT, 2, 2);
 	fc_board_set_piece(&board, FC_SECOND, FC_KNIGHT, 1, 0);
@@ -190,7 +194,7 @@ extern void fc_get_pawn_moves (fc_board_t *board,
 START_TEST (test_forchess_pawn_moves)
 {
 	fc_board_t board;
-	bzero(&board, sizeof(board));
+	fc_board_init(&board);
 	fc_board_set_piece(&board, FC_FIRST, FC_PAWN, 1, 3);
 	fc_board_set_piece(&board, FC_FIRST, FC_PAWN, 3, 3);
 	fc_board_set_piece(&board, FC_SECOND, FC_PAWN, 1, 4);
@@ -242,7 +246,7 @@ extern void fc_get_bishop_moves (fc_board_t *board,
 START_TEST (test_forchess_bishop_moves)
 {
 	fc_board_t board;
-	bzero(&board, sizeof(board));
+	fc_board_init(&board);
 	fc_board_set_piece(&board, FC_FIRST, FC_BISHOP, 5, 3);
 	fc_board_set_piece(&board, FC_SECOND, FC_BISHOP, 2, 6);
 	fc_board_set_piece(&board, FC_THIRD, FC_BISHOP, 2, 3);
@@ -310,7 +314,7 @@ extern void fc_get_rook_moves (fc_board_t *board,
 START_TEST (test_forchess_rook_moves)
 {
 	fc_board_t board;
-	bzero(&board, sizeof(board));
+	fc_board_init(&board);
 	fc_board_set_piece(&board, FC_FIRST, FC_ROOK, 1, 0);
 	fc_board_set_piece(&board, FC_FIRST, FC_ROOK, 0, 1);
 	fc_board_set_piece(&board, FC_SECOND, FC_ROOK, 5, 1);
@@ -349,7 +353,7 @@ extern void fc_get_queen_moves (fc_board_t *board,
 START_TEST (test_forchess_queen_moves)
 {
 	fc_board_t board;
-	bzero(&board, sizeof(board));
+	fc_board_init(&board);
 	fc_board_set_piece(&board, FC_FIRST, FC_QUEEN, 1, 0);
 	fc_board_set_piece(&board, FC_FIRST, FC_QUEEN, 0, 1);
 	fc_board_set_piece(&board, FC_SECOND, FC_QUEEN, 5, 2);
@@ -384,7 +388,7 @@ END_TEST
 START_TEST (test_forchess_get_removes)
 {
 	fc_board_t board;
-	bzero(&board, sizeof(board));
+	fc_board_init(&board);
 	fc_board_set_piece(&board, FC_FIRST, FC_KING, 6, 6);
 	fc_board_set_piece(&board, FC_FIRST, FC_QUEEN, 5, 5);
 	fc_board_set_piece(&board, FC_FIRST, FC_ROOK, 4, 4);
@@ -406,10 +410,12 @@ START_TEST (test_forchess_make_move)
 {
 	/* (1) check basic moves */
 	fc_board_t board;
-	bzero(&board, sizeof(board));
+	fc_board_init(&board);
 	fc_move_t move;
 	move.player = FC_FOURTH;
 	move.piece = FC_KNIGHT;
+	move.opp_player = FC_NONE;
+	move.opp_piece = FC_NONE;
 	move.promote = FC_NONE;
 	fc_board_set_piece(&board, move.player, move.piece, 2, 2);
 	move.move = fc_uint64("c3-e2");
@@ -422,28 +428,34 @@ START_TEST (test_forchess_make_move)
 	/* (2) check captures */
 	move.player = FC_FIRST;
 	move.piece = FC_ROOK;
+	move.opp_player = FC_FOURTH;
+	move.opp_piece = FC_KNIGHT;
 	move.promote = FC_NONE;
 	fc_board_set_piece(&board, move.player, move.piece, 4, 4);
 	move.move = fc_uint64("e5-e2");
 	fc_board_make_move(&board, &move);
 	fail_unless(fc_board_get_piece(&board, &player, &piece, 1, 4));
 	fail_unless(player == move.player && piece == move.piece);
-	fail_unless(board[FC_FOURTH * 6 + FC_KNIGHT] == UINT64_C(0));
+	fail_unless(board.bitb[FC_FOURTH * 6 + FC_KNIGHT] == UINT64_C(0));
 	/* (3) check removes */
+	move.opp_player = FC_NONE;
+	move.opp_piece = FC_NONE;
 	move.move = UINT64_C(0x1000);
 	fc_board_make_move(&board, &move);
 	for (int i = 0; i < 24; i++) {
-		fail_unless(board[i] == UINT64_C(0));
+		fail_unless(board.bitb[i] == UINT64_C(0));
 	}
 	/* (4) check that pieces change sides on capture of king */
 	fc_player_t dummy;
 	fc_board_setup(&board, "test/boards/test_forchess_make_move.1", &dummy);
 	move.player = FC_FIRST;
 	move.piece = FC_KNIGHT;
+	move.opp_player = FC_SECOND;
+	move.opp_piece = FC_KING;
 	move.promote = FC_NONE;
 	move.move = fc_uint64("b6-a8");
 	fc_board_make_move(&board, &move);
-	fail_unless(board[FC_SECOND * 6 + FC_KING] == UINT64_C(0));
+	fail_unless(board.bitb[FC_SECOND * 6 + FC_KING] == UINT64_C(0));
 	fail_unless(fc_board_get_piece(&board, &player, &piece, 0, 0));
 	fail_unless(player == FC_FIRST);
 	fail_unless(fc_board_get_piece(&board, &player, &piece, 0, 7));
@@ -465,6 +477,8 @@ START_TEST (test_forchess_make_move)
 	/* (5a) ... even after changing sides multiple times */
 	move.player = FC_FOURTH;
 	move.piece = FC_BISHOP;
+	move.opp_player = FC_FIRST;
+	move.opp_piece = FC_KING;
 	move.promote = FC_NONE;
 	move.move = fc_uint64("b3-c2");
 	fc_board_make_move(&board, &move);
@@ -475,60 +489,56 @@ START_TEST (test_forchess_make_move)
 	fail_unless(fc_mlist_get(&moves, 1)->move == fc_uint64("d6-e5"));
 	fail_unless(fc_mlist_get(&moves, 2)->move == fc_uint64("e6-d7"));
 	fail_unless(fc_mlist_get(&moves, 3)->move == fc_uint64("d8-e7"));
-	/* TODO for pawns:
-	 * 	in fc_board_set_piece() add a condtion to update the new
-	 * 	pawn orientation bitboards if a pawn is set on the board
-	 *
-	 * 	check for orientation in fc_get_pawn_moves(); switch on
-	 * 	orientation before calling pawn_move_if_valid(), but you should
-	 * 	be able to keep everything else the same
-	 *
-	 * 	when exercising fc_board_make_move() you'll need to update pawn
-	 * 	moves on both the pawn bitboard and orientation bitboard; same
-	 * 	goes for conversion
-	 */
 	/* (6) check that moving a pawn to its backboard returns 0, and write
 	 * fc_board_make_pawn_move() */
 	fail_unless(fc_board_make_move(&board, fc_mlist_get(&moves, 2)));
 	move.player = FC_FOURTH;
 	move.piece = FC_PAWN;
+	move.opp_player = FC_NONE;
+	move.opp_piece = FC_NONE;
 	move.promote = FC_NONE;
 	move.move = fc_uint64("d7-c8");
 	fail_unless(!fc_board_make_move(&board, &move));
 	fc_move_set_promotion(&move, FC_QUEEN);
 	fail_unless(fc_board_make_move(&board, &move));
-	//fail_unless(fc_board_make_pawn_move(&board, &move, FC_QUEEN));
 	fc_mlist_clear(&moves);
 	fc_get_queen_moves(&board, &moves, FC_FOURTH);
 	fail_unless(fc_mlist_length(&moves) != 0);
 
 	/* check that pawn bitboards are updating properly */
-	bzero(&board, sizeof(board));
+	fc_board_init(&board);
 	fc_board_setup(&board, "test/boards/test_forchess_make_move.2", &dummy);
 	move.player = FC_FIRST;
 	move.piece = FC_PAWN;
+	move.opp_player = FC_SECOND;
+	move.opp_piece = FC_PAWN;
 	move.promote = FC_NONE;
 	move.move = fc_uint64("a4-a5");
 	fc_board_make_move(&board, &move);
 	move.player = FC_SECOND;
 	move.piece = FC_PAWN;
+	move.opp_player = FC_THIRD;
+	move.opp_piece = FC_PAWN;
 	move.promote = FC_NONE;
 	move.move = fc_uint64("d8-e8");
 	fc_board_make_move(&board, &move);
 	move.player = FC_THIRD;
 	move.piece = FC_PAWN;
+	move.opp_player = FC_FOURTH;
+	move.opp_piece = FC_PAWN;
 	move.promote = FC_NONE;
 	move.move = fc_uint64("h5-h4");
 	fc_board_make_move(&board, &move);
 	move.player = FC_FOURTH;
 	move.piece = FC_PAWN;
+	move.opp_player = FC_FIRST;
+	move.opp_piece = FC_PAWN;
 	move.promote = FC_NONE;
 	move.move = fc_uint64("e1-d1");
 	fc_board_make_move(&board, &move);
 
 	fc_mlist_clear(&moves);
 	fc_get_pawn_moves(&board, &moves, FC_FIRST);
-	//printf("%d\n", fc_mlist_length(&moves));
 	fail_unless(fc_mlist_length(&moves) == 8);
 
 	fc_mlist_free(&moves);
@@ -538,12 +548,12 @@ END_TEST
 START_TEST (test_forchess_board_copy)
 {
 	fc_board_t dst, src;
-	for (int i = 0; i < sizeof(src) / sizeof(uint64_t); i++) {
-		src[i] = i * 1000;
+	for (int i = 0; i < sizeof(src.bitb) / sizeof(uint64_t); i++) {
+		src.bitb[i] = i * 1000;
 	}
 	fc_board_copy(&dst, &src);
-	for (int i = 0; i < sizeof(src) / sizeof(uint64_t); i++) {
-		fail_unless(dst[i] == src[i]);
+	for (int i = 0; i < sizeof(src.bitb) / sizeof(uint64_t); i++) {
+		fail_unless(dst.bitb[i] == src.bitb[i]);
 	}
 }
 END_TEST

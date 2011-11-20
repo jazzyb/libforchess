@@ -1,3 +1,11 @@
+/*
+ * LibForchess
+ * Copyright (c) 2011, Jason M Barnes
+ *
+ * This file is subject to the terms and conditions of the 'LICENSE' file
+ * which is a part of this source code package.
+ */
+
 #ifndef _FC_AI_H_
 #define _FC_AI_H_
 
@@ -9,7 +17,28 @@
 
 #ifndef DOXYGEN_IGNORE
 #include "forchess/board.h"
+
+typedef struct {
+	fc_board_t *board;
+	fc_board_t *bv; /* board vector */
+	fc_mlist_t *mlv; /* move list vector */
+	int piece_value[6];
+} fc_ai_t;
+
 #endif /* DOXYGEN_IGNORE */
+
+/**
+ * @brief Initializes the AI structure.
+ *
+ * Sets the given board for the AI and initializes the default piece material
+ * values.
+ *
+ * @param[in,out] ai A pointer to the AI structure.
+ * @param[in,out] ai A pointer to the game board.
+ *
+ * @return void
+ */
+void fc_ai_init (fc_ai_t *ai, fc_board_t *board);
 
 /**
  * @brief Returns the best move as determined by the AI.
@@ -27,7 +56,7 @@
  *
  * @return 1 on success; 0 otherwise
  */
-int fc_ai_next_move (fc_board_t *board, fc_move_t *move, fc_player_t player,
+int fc_ai_next_move (fc_ai_t *ai, fc_move_t *move, fc_player_t player,
 		int depth);
 
 /**
@@ -43,7 +72,7 @@ int fc_ai_next_move (fc_board_t *board, fc_move_t *move, fc_player_t player,
  *
  * @return The relative material score as defined above.
  */
-int fc_ai_score_position (fc_board_t *board, fc_player_t player);
+int fc_ai_score_position (fc_ai_t *ai, fc_player_t player);
 
 /**
  * @brief Determines whether or not the given move will put the player's or
