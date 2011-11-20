@@ -105,7 +105,7 @@ int fc_game_save (fc_game_t *game, const char *filename)
 
 int fc_game_load (fc_game_t *game, const char *filename)
 {
-	bzero(game->board, sizeof(fc_board_t));
+	bzero(game->board->bitb, sizeof(game->board->bitb));
 	return fc_board_setup(game->board, filename, &(game->player));
 }
 
@@ -124,7 +124,7 @@ fc_player_t fc_game_next_player (fc_game_t *game)
 	fc_player_t next;
 
 	for (next = FC_NEXT_PLAYER(game->player);
-	     !FC_BITBOARD((*(game->board)), next, FC_KING);
+	     !FC_BITBOARD(game->board, next, FC_KING);
 	     next = FC_NEXT_PLAYER(next));
 	game->player = next;
 	return next;
@@ -132,10 +132,10 @@ fc_player_t fc_game_next_player (fc_game_t *game)
 
 int fc_game_number_of_players (fc_game_t *game)
 {
-	return !!FC_BITBOARD((*(game->board)), FC_FIRST, FC_KING) +
-	       !!FC_BITBOARD((*(game->board)), FC_SECOND, FC_KING) +
-	       !!FC_BITBOARD((*(game->board)), FC_THIRD, FC_KING) +
-	       !!FC_BITBOARD((*(game->board)), FC_FOURTH, FC_KING);
+	return !!FC_BITBOARD(game->board, FC_FIRST, FC_KING) +
+	       !!FC_BITBOARD(game->board, FC_SECOND, FC_KING) +
+	       !!FC_BITBOARD(game->board, FC_THIRD, FC_KING) +
+	       !!FC_BITBOARD(game->board, FC_FOURTH, FC_KING);
 }
 
 int fc_game_king_check_status (fc_game_t *game, fc_player_t player)
@@ -245,10 +245,10 @@ int fc_game_is_move_legal (fc_game_t *game, fc_move_t *move)
 
 int fc_game_is_over (fc_game_t *game)
 {
-	return ((!FC_BITBOARD((*(game->board)), FC_FIRST, FC_KING) &&
-			!FC_BITBOARD((*(game->board)), FC_THIRD, FC_KING)) ||
-		(!FC_BITBOARD((*(game->board)), FC_SECOND, FC_KING) &&
-		 	!FC_BITBOARD((*(game->board)), FC_FOURTH, FC_KING)));
+	return ((!FC_BITBOARD(game->board, FC_FIRST, FC_KING) &&
+			!FC_BITBOARD(game->board, FC_THIRD, FC_KING)) ||
+		(!FC_BITBOARD(game->board, FC_SECOND, FC_KING) &&
+		 	!FC_BITBOARD(game->board, FC_FOURTH, FC_KING)));
 }
 
 int fc_game_make_move (fc_game_t *game, fc_move_t *move)
@@ -267,8 +267,7 @@ int fc_game_convert_move_to_coords (fc_game_t *game, int *x1, int *y1,
 	int i;
 	uint64_t m, bit;
 
-	m = FC_BITBOARD((*(game->board)), move->player, move->piece) &
-		move->move;
+	m = FC_BITBOARD(game->board, move->player, move->piece) & move->move;
 	if (!m) {
 		return 0;
 	}

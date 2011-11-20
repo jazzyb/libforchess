@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <limits.h>
+#include <stdio.h> /* REMOVE ME */
 #include <stdlib.h>
 
 #include "forchess/ai.h"
@@ -8,35 +9,10 @@
 
 void fc_ai_init (fc_ai_t *ai, fc_board_t *board)
 {
-	int i;
-	int _default_piece_value[6] = {
-		100,	/* pawns */
-		300,	/* bishops */
-		350,	/* knights */
-		500,	/* rooks */
-		900,	/* queens */
-		100000	/* kings */
-	};
-
 	assert(ai && board);
 	ai->board = board;
 	ai->bv = NULL;
 	ai->mlv = NULL;
-	for (i = 0; i < 6; i++) {
-		ai->piece_value[i] = _default_piece_value[i];
-	}
-}
-
-void fc_ai_set_material_value (fc_ai_t *ai, fc_piece_t piece, int value)
-{
-	assert(ai);
-	ai->piece_value[piece] = value;
-}
-
-int fc_ai_get_material_value (fc_ai_t *ai, fc_piece_t piece)
-{
-	assert(ai);
-	return ai->piece_value[piece];
 }
 
 /*
@@ -44,7 +20,7 @@ int fc_ai_get_material_value (fc_ai_t *ai, fc_piece_t piece)
  */
 static int is_player_out (fc_board_t *board, fc_player_t player)
 {
-	return !(FC_BITBOARD((*board), player, FC_KING));
+	return !(FC_BITBOARD(board, player, FC_KING));
 }
 
 /*
@@ -58,17 +34,18 @@ static int game_over (fc_board_t *board)
 		is_player_out(board, FC_FOURTH)));
 }
 
-static void append_pawn_promotions_to_moves(fc_mlist_t *list,
+static void append_pawn_promotions_to_moves(fc_board_t *board, fc_mlist_t *list,
 		fc_move_t *move)
 {
-	fc_mlist_append(list, move->player, move->piece, move->opp_player,
-			move->opp_piece, FC_QUEEN, move->move);
-	fc_mlist_append(list, move->player, move->piece, move->opp_player,
-			move->opp_piece, FC_KNIGHT, move->move);
-	fc_mlist_append(list, move->player, move->piece, move->opp_player,
-			move->opp_piece, FC_ROOK, move->move);
-	fc_mlist_append(list, move->player, move->piece, move->opp_player,
-			move->opp_piece, FC_BISHOP, move->move);
+	move->promote = FC_QUEEN;
+	board->list_add_move(list, move);
+	move->promote = FC_KNIGHT;
+	board->list_add_move(list, move);
+	move->promote = FC_ROOK;
+	board->list_add_move(list, move);
+	move->promote = FC_BISHOP;
+	board->list_add_move(list, move);
+	move->promote = FC_NONE;
 }
 
 /*
@@ -88,7 +65,7 @@ static int is_move_valid_given_check_status (fc_board_t *board, fc_move_t *move,
 	fc_board_make_move(&copy, move);
 
 	if (check_status_before == FC_CHECKMATE) {
-		king = FC_BITBOARD((*board), move->player, FC_KING);
+		king = FC_BITBOARD(board, move->player, FC_KING);
 		if (move->piece == FC_KING && move->move != king) {
 			return 0;
 		} else {
@@ -175,7 +152,7 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 
 		if (fc_board_move_requires_promotion(board, move, &dummy) &&
 				move->promote == FC_NONE) {
-			append_pawn_promotions_to_moves(list, move);
+			append_pawn_promotions_to_moves(board, list, move);
 			continue;
 		}
 		all_moves_are_invalid = 0;
@@ -370,9 +347,9 @@ static int get_material_score (fc_ai_t *ai, fc_player_t player)
 	fc_piece_t i;
 
 	for (i = FC_PAWN; i <= FC_KING; i++) {
-		pieces = FC_BITBOARD((*(ai->board)), player, i);
+		pieces = FC_BITBOARD(ai->board, player, i);
 		FC_FOREACH(piece, pieces) {
-			ret += ai->piece_value[i];
+			ret += fc_board_get_material_value(ai->board, i);
 		}
 	}
 	return ret;

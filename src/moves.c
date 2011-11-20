@@ -76,22 +76,18 @@ int fc_mlist_resize (fc_mlist_t *list, int new_size)
 	return 1;
 }
 
-int fc_mlist_append (fc_mlist_t *list, fc_player_t player, fc_piece_t piece,
-		fc_player_t opp_player, fc_piece_t opp_piece,
-		fc_piece_t promote, uint64_t move)
+int fc_mlist_append (fc_mlist_t *list, fc_move_t *move)
 {
+	fc_move_t *dst;
+
 	if (list->index >= list->size) {
 		if (!fc_mlist_resize(list, list->size * 2)) {
 			return 0;
 		}
 	}
 
-	list->moves[list->index].player = player;
-	list->moves[list->index].piece = piece;
-	list->moves[list->index].opp_player = opp_player;
-	list->moves[list->index].opp_piece = opp_piece;
-	list->moves[list->index].promote = promote;
-	list->moves[list->index].move = move;
+	dst = &(list->moves[list->index]);
+	fc_move_copy(dst, move);
 	list->index += 1;
 	return 1;
 }
@@ -171,3 +167,4 @@ fc_move_t *fc_mlist_get (fc_mlist_t *list, int index)
 	}
 	return list->moves + index;
 }
+

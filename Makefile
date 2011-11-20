@@ -93,6 +93,6 @@ profiler: $(EXAMPLE_FILES) $(INC_FILES) libforchess_gprof
 	gprof ./a.out > gprof.output
 
 clean:
-	rm -rf test_all a.out src/*.o lib/ docs/man/ gmon.out gprof.output cscope.files cscope.out
+	rm -rf test_all a.out src/*.o lib/ *.dSYM docs/man/ gmon.out gprof.output cscope.files cscope.out
 
 force: ;

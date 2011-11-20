@@ -31,10 +31,16 @@ typedef enum {
 	FC_TOTAL_BITBOARDS
 } fc_bitboards_t;
 
-typedef uint64_t fc_board_t[FC_TOTAL_BITBOARDS];
+typedef struct {
+	uint64_t bitb[FC_TOTAL_BITBOARDS];
+	int piece_value[FC_NUM_PIECES];
+
+	int (*list_add_move) (fc_mlist_t *, fc_move_t *);
+	int (*list_combine) (fc_mlist_t *, fc_mlist_t *);
+} fc_board_t;
 
 /* macro to get the first 24 bitboards representing pieces */
-#define FC_BITBOARD(board, player, piece) (board[player * 6 + piece])
+#define FC_BITBOARD(board, player, piece) (board->bitb[player * 6 + piece])
 
 /*
  * Cycles through each piece (bit) on the bitboard.
@@ -45,7 +51,8 @@ typedef uint64_t fc_board_t[FC_TOTAL_BITBOARDS];
 	for(piece = (x & (~x + 1)); x; x ^= piece, piece = (x & (~x + 1)))
 
 /* macro to get a particular pawn orientation bitboard */
-#define FC_PAWN_BB(board, orientation) (board[FC_FIRST_PAWNS + orientation])
+#define FC_PAWN_BB(board, orientation) \
+	(board->bitb[FC_FIRST_PAWNS + orientation])
 
 /* Redefine UINT64_C to be something that plays nicer with the C89 standard */
 #undef UINT64_C
@@ -59,7 +66,8 @@ typedef uint64_t fc_board_t[FC_TOTAL_BITBOARDS];
 
 /* returns a bitboard where all pieces for a player are represented by 1 */
 #define FC_ALL_PIECES(b, p) \
-	(b[6*p] | b[6*p+1] | b[6*p+2] | b[6*p+3] | b[6*p+4] | b[6*p+5])
+	(b->bitb[6*p] | b->bitb[6*p+1] | b->bitb[6*p+2] | \
+	 b->bitb[6*p+3] | b->bitb[6*p+4] | b->bitb[6*p+5])
 
 /* returns all pieces for a pair of players */
 #define FC_ALL_ALLIES(b, p) \
@@ -158,6 +166,38 @@ int fc_board_get_piece (fc_board_t *board, fc_player_t *player,
  * @return 1 if a piece was found at row and column; 0 otherwise
  */
 int fc_board_remove_piece (fc_board_t *board, int row, int col);
+
+/**
+ * @brief Assign a new value for the given piece.
+ *
+ * @param[in,out] board A pointer to the board.
+ * @param[in] piece A piece.
+ * @param[in] value The new material value for the piece.
+ *
+ * @return void
+ */
+void fc_board_set_material_value (fc_board_t *board, fc_piece_t piece,
+		int value);
+
+/**
+ * @brief Return the material value of a piece.
+ *
+ * @param[in] board A pointer to the board.
+ * @param[in] piece The piece.
+ *
+ * @return The value of the given piece.
+ */
+int fc_board_get_material_value (fc_board_t *board, fc_piece_t piece);
+
+/**
+ * TODO
+ */
+void fc_board_sorted_moves (fc_board_t *board);
+
+/**
+ * TODO
+ */
+void fc_board_unsorted_moves (fc_board_t *board);
 
 /**
  * @brief Returns a list of available moves for player.
