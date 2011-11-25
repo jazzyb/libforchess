@@ -226,6 +226,17 @@ void fc_board_sorted_moves (fc_board_t *board);
 void fc_board_unsorted_moves (fc_board_t *board);
 
 /**
+ * TODO
+ */
+int fc_board_list_add_move (fc_board_t *board, fc_mlist_t *list,
+		fc_move_t *move);
+
+/**
+ * TODO
+ */
+int fc_board_list_combine (fc_board_t *board, fc_mlist_t *dst, fc_mlist_t *src);
+
+/**
  * @brief Returns a list of available moves for player.
  *
  * This list represents all available moves for all pieces under player's

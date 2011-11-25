@@ -49,12 +49,15 @@ typedef struct {
 	fc_piece_t opp_piece;
 	fc_piece_t promote;
 	uint64_t move;
+	int32_t value;
 } fc_move_t;
 
 typedef struct {
 	fc_move_t *moves;
-	int size;
-	int index;
+	uint32_t size;
+	uint32_t index;
+	uint32_t *sorted;
+	int is_sorted_flag;
 } fc_mlist_t;
 
 uint64_t fc_uint64(const char *move);
@@ -96,7 +99,19 @@ void fc_move_set_promotion (fc_move_t *move, fc_piece_t promote);
  *
  * @return 1 on success; 0 otherwise
  */
-int fc_mlist_init (fc_mlist_t *list, int size);
+int fc_mlist_init (fc_mlist_t *list, uint32_t size);
+
+/**
+ * @brief Copies the list dst to src.
+ *
+ * The mlist dst should have already been initialized before this call.
+ *
+ * @param[out] dst The destination mlist.
+ * @param[in] src The source mlist.
+ *
+ * @return 1 on success; 0 otherwise
+ */
+int fc_mlist_copy (fc_mlist_t *dst, fc_mlist_t *src);
 
 /**
  * @brief Resize an mlist.
@@ -108,7 +123,7 @@ int fc_mlist_init (fc_mlist_t *list, int size);
  *
  * @return 1 on success; 0 otherwise
  */
-int fc_mlist_resize (fc_mlist_t *list, int new_size);
+int fc_mlist_resize (fc_mlist_t *list, uint32_t new_size);
 
 /**
  * @brief Append a new move to the mlist.
@@ -128,18 +143,6 @@ int fc_mlist_resize (fc_mlist_t *list, int new_size);
 int fc_mlist_append (fc_mlist_t *list, fc_move_t *move);
 
 /**
- * @brief Copies the list dst to src.
- *
- * The mlist dst should have already been initialized before this call.
- *
- * @param[out] dst The destination mlist.
- * @param[in] src The source mlist.
- *
- * @return 1 on success; 0 otherwise
- */
-int fc_mlist_copy (fc_mlist_t *dst, fc_mlist_t *src);
-
-/**
  * @brief Concatenates src onto the end of dst.
  *
  * @param[out] dst The destination mlist.
@@ -148,6 +151,26 @@ int fc_mlist_copy (fc_mlist_t *dst, fc_mlist_t *src);
  * @return 1 on success; 0 otherwise
  */
 int fc_mlist_cat  (fc_mlist_t *dst, fc_mlist_t *src);
+
+/**
+ * TODO
+ */
+int fc_mlist_sort (fc_mlist_t *list);
+
+/**
+ * TODO
+ */
+int fc_mlist_is_sorted (fc_mlist_t *list);
+
+/**
+ * TODO
+ */
+int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move);
+
+/**
+ * TODO
+ */
+int fc_mlist_merge (fc_mlist_t *dst, fc_mlist_t *src);
 
 /**
  * @brief De-initializes the mlist.

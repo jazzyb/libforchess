@@ -26,6 +26,7 @@ int fc_game_init (fc_game_t *game)
 		return 0;
 	}
 	fc_board_init(game->board);
+	fc_board_sorted_moves(game->board);
 	game->player = FC_NONE;
 	return 1;
 }
