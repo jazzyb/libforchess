@@ -176,6 +176,65 @@ int fc_mlist_cat (fc_mlist_t *dst, fc_mlist_t *src)
 }
 
 /*
+ * Assumes that the move.value variables are already initialized.
+ */
+void static convert_unsorted_to_sorted (fc_mlist_t *list)
+{
+	/* TODO FIXME */
+	list->is_sorted_flag = 1;
+}
+
+/*
+ * NOTE:  A sorted mlist is in DESC order by move.value.  For example,
+ * (5, 3, 2, 4, 1) would become (5, 4, 3, 2, 1).
+ */
+int fc_mlist_sort (fc_mlist_t *list)
+{
+	convert_unsorted_to_sorted(list);
+	return 1;
+}
+
+int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move)
+{
+	uint32_t i;
+	fc_move_t *new, *old;
+
+	if (list->index >= list->size) {
+		if (!fc_mlist_resize(list, list->size * 2)) {
+			return 0;
+		}
+	}
+
+	if (!fc_mlist_is_sorted(list)) {
+		convert_unsorted_to_sorted(list);
+	}
+
+	new = &(list->moves[list->index]);
+	fc_move_copy(new, move);
+
+	/*
+	 * TODO binary search might be faster
+	 */
+	for (i = 0; i < list->index; i++) {
+		old = list->moves + list->sorted[i];
+		if (new->value > old->value) {
+			break;
+		}
+	}
+	(void)memmove(list->sorted + i + 1, list->sorted + i,
+			(list->index - i) * sizeof(int32_t));
+	list->sorted[i] = list->index;
+	list->index += 1;
+	return 1;
+}
+
+int fc_mlist_merge (fc_mlist_t *dst, fc_mlist_t *src)
+{
+	/* TODO FIXME */
+	return 0;
+}
+
+/*
  * This function frees the array of moves pointed to in the structure.  If the
  * user has malloced the fc_mlist_t structure, then they must call free on that
  * themselves.

@@ -55,7 +55,8 @@ void fc_board_unsorted_moves (fc_board_t *board)
  */
 void fc_board_sorted_moves (fc_board_t *board)
 {
-	assert(0); /* FIXME */
+	board->list_add_move = &fc_mlist_insert;
+	board->list_combine = &fc_mlist_merge;
 }
 
 /*
@@ -258,6 +259,41 @@ static int may_move_to (fc_board_t *b, fc_player_t p, uint64_t m)
 	return !(m & FC_ALL_ALLIES(b, p));
 }
 
+static int32_t rank_move (fc_board_t *board, fc_move_t *move)
+{
+	int32_t ret = 0;
+
+	if (move->opp_piece != FC_NONE) {
+		ret += board->piece_value[move->opp_piece];
+	}
+	/* FIXME Why does taking the promotion into account crash the AI?
+	if (move->promote != FC_NONE) {
+		ret += board->piece_value[move->promote];
+	}
+	*/
+
+	return ret;
+}
+
+int fc_board_list_add_move (fc_board_t *board, fc_mlist_t *list,
+		fc_move_t *move)
+{
+	/*
+	 * FIXME
+	 * just remove the unsorted options to the mlists and have this
+	 * function call straight into fc_mlist_insert(); add an extra
+	 * parameter to the function to accept a value for the move
+	 */
+	move->value = rank_move(board, move);
+	return board->list_add_move(list, move);
+}
+
+int fc_board_list_combine (fc_board_t *board, fc_mlist_t *dst,
+		fc_mlist_t *src)
+{
+	return board->list_combine(dst, src);
+}
+
 /*
  * This function updates the move list with the new move if the piece in
  * question is allowed to move to the given space.
@@ -281,7 +317,7 @@ static void move_if_valid (fc_board_t *board, fc_mlist_t *moves,
 
 	if (space && may_move_to(board, player, space)) {
 		find_player_piece(board, opp_player, opp_piece, space);
-		board->list_add_move(moves, &move);
+		fc_board_list_add_move(board, moves, &move);
 	}
 }
 
@@ -387,18 +423,18 @@ static void pawn_move_if_valid (fc_board_t *board, fc_mlist_t *moves,
 
 	if (fc_is_empty(board, m1)) {
 		move.move = pawn | m1;
-		board->list_add_move(moves, &move);
+		fc_board_list_add_move(board, moves, &move);
 	}
 
 	if (is_occupied_by_enemy(board, player, m2)) {
 		move.move = pawn | m2;
 		find_player_piece(board, opp_player, opp_piece, m2);
-		board->list_add_move(moves, &move);
+		fc_board_list_add_move(board, moves, &move);
 	}
 	if (is_occupied_by_enemy(board, player, m3)) {
 		move.move = pawn | m3;
 		find_player_piece(board, opp_player, opp_piece, m3);
-		board->list_add_move(moves, &move);
+		fc_board_list_add_move(board, moves, &move);
 	}
 }
 
@@ -479,11 +515,11 @@ static int move_and_continue (fc_board_t *board, fc_mlist_t *moves,
 	move.move = piece | space;
 
 	if (fc_is_empty(board, space)) {
-		board->list_add_move(moves, &move);
+		fc_board_list_add_move(board, moves, &move);
 		return 1;
 	} else if (is_occupied_by_enemy(board, player, space)) {
 		find_player_piece(board, opp_player, opp_piece, space);
-		board->list_add_move(moves, &move);
+		fc_board_list_add_move(board, moves, &move);
 	}
 	return 0;
 }
@@ -722,7 +758,7 @@ void fc_board_get_removes (fc_board_t *board, fc_mlist_t *moves,
 		bb = FC_BITBOARD(board, player, move.piece);
 		FC_FOREACH(piece, bb) {
 			move.move = piece;
-			board->list_add_move(moves, &move);
+			fc_board_list_add_move(board, moves, &move);
 		}
 	}
 }

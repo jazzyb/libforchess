@@ -204,6 +204,39 @@ START_TEST (test_mlist_cat)
 }
 END_TEST
 
+START_TEST (test_mlist_insert)
+{
+	fc_move_t move;
+	fc_mlist_t list;
+	int ret = fc_mlist_init(&list, 0);
+	fail_unless(ret == 1);
+	move.value = 100;
+	ret = fc_mlist_insert(&list, &move);
+	fail_unless(ret == 1);
+	move.value = 10;
+	ret = fc_mlist_insert(&list, &move);
+	fail_unless(ret == 1);
+	move.value = 40;
+	ret = fc_mlist_insert(&list, &move);
+	fail_unless(ret == 1);
+	move.value = 60;
+	ret = fc_mlist_insert(&list, &move);
+	fail_unless(ret == 1);
+	move.value = 200;
+	ret = fc_mlist_insert(&list, &move);
+	fail_unless(ret == 1);
+	move.value = 40;
+	ret = fc_mlist_insert(&list, &move);
+	fail_unless(ret == 1);
+	fail_unless(fc_mlist_get(&list, 0)->value == 200);
+	fail_unless(fc_mlist_get(&list, 1)->value == 100);
+	fail_unless(fc_mlist_get(&list, 2)->value == 60);
+	fail_unless(fc_mlist_get(&list, 3)->value == 40);
+	fail_unless(fc_mlist_get(&list, 4)->value == 40);
+	fail_unless(fc_mlist_get(&list, 5)->value == 10);
+}
+END_TEST
+
 Suite *move_suite (void)
 {
 	Suite *s = suite_create("Moves");
@@ -214,6 +247,7 @@ Suite *move_suite (void)
 	tcase_add_test(tc_moves, test_mlist_resize);
 	tcase_add_test(tc_moves, test_mlist_copy);
 	tcase_add_test(tc_moves, test_mlist_cat);
+	tcase_add_test(tc_moves, test_mlist_insert);
 	suite_add_tcase(s, tc_moves);
 	return s;
 }

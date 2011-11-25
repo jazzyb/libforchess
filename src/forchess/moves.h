@@ -155,7 +155,7 @@ int fc_mlist_cat  (fc_mlist_t *dst, fc_mlist_t *src);
 /**
  * TODO
  */
-int fc_mlist_sort (fc_mlist_t *list, int (*ranker)(fc_move_t *));
+int fc_mlist_sort (fc_mlist_t *list);
 
 /**
  * TODO
