@@ -57,7 +57,6 @@ typedef struct {
 	uint32_t size;
 	uint32_t index;
 	uint32_t *sorted;
-	int is_sorted_flag;
 } fc_mlist_t;
 
 uint64_t fc_uint64(const char *move);
@@ -124,43 +123,6 @@ int fc_mlist_copy (fc_mlist_t *dst, fc_mlist_t *src);
  * @return 1 on success; 0 otherwise
  */
 int fc_mlist_resize (fc_mlist_t *list, uint32_t new_size);
-
-/**
- * @brief Append a new move to the mlist.
- *
- * This function copies the move parameter onto the end of the mlist.  So, for
- * example, the user may free the move struct after the call, and the end of
- * the mlist will still point to a valid move.
- *
- * @note The mlist will automatically resize itself if it doesn't have enough
- * room for the new move.
- *
- * @param[out] list The list of moves.
- * @param[in] move The new move.
- *
- * @return 1 on success; 0 otherwise
- */
-int fc_mlist_append (fc_mlist_t *list, fc_move_t *move);
-
-/**
- * @brief Concatenates src onto the end of dst.
- *
- * @param[out] dst The destination mlist.
- * @param[in] src The source mlist.
- *
- * @return 1 on success; 0 otherwise
- */
-int fc_mlist_cat  (fc_mlist_t *dst, fc_mlist_t *src);
-
-/**
- * TODO
- */
-int fc_mlist_sort (fc_mlist_t *list);
-
-/**
- * TODO
- */
-int fc_mlist_is_sorted (fc_mlist_t *list);
 
 /**
  * TODO

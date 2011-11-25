@@ -137,6 +137,16 @@ extern void fc_get_knight_moves (fc_board_t *board,
 				 fc_mlist_t *moves,
 				 fc_piece_t piece);
 
+static int move_exists_in_mlist (fc_mlist_t *list, const char *mv_str)
+{
+	for (int i = 0; i < fc_mlist_length(list); i++) {
+		if (fc_mlist_get(list, i)->move == fc_uint64(mv_str)) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
 START_TEST (test_forchess_knight_moves)
 {
 	fc_board_t board;
@@ -152,36 +162,36 @@ START_TEST (test_forchess_knight_moves)
 	fc_mlist_init(&moves, 0);
 	fc_get_knight_moves(&board, &moves, FC_FIRST);
 	fail_unless(fc_mlist_length(&moves) == 7);
-	fail_unless(fc_mlist_get(&moves, 0)->move == fc_uint64("c3-a4"));
-	fail_unless(fc_mlist_get(&moves, 1)->move == fc_uint64("c3-a2"));
-	fail_unless(fc_mlist_get(&moves, 2)->move == fc_uint64("c3-b5"));
-	fail_unless(fc_mlist_get(&moves, 3)->move == fc_uint64("c3-e4"));
-	fail_unless(fc_mlist_get(&moves, 4)->move == fc_uint64("c3-e2"));
-	fail_unless(fc_mlist_get(&moves, 5)->move == fc_uint64("c3-d5"));
-	fail_unless(fc_mlist_get(&moves, 6)->move == fc_uint64("c3-d1"));
+	fail_unless(move_exists_in_mlist(&moves, "c3-a4"));
+	fail_unless(move_exists_in_mlist(&moves, "c3-a2"));
+	fail_unless(move_exists_in_mlist(&moves, "c3-b5"));
+	fail_unless(move_exists_in_mlist(&moves, "c3-e4"));
+	fail_unless(move_exists_in_mlist(&moves, "c3-e2"));
+	fail_unless(move_exists_in_mlist(&moves, "c3-d5"));
+	fail_unless(move_exists_in_mlist(&moves, "c3-d1"));
 
 	fc_mlist_clear(&moves);
 	fc_get_knight_moves(&board, &moves, FC_SECOND);
 	fail_unless(fc_mlist_length(&moves) == 3);
-	fail_unless(fc_mlist_get(&moves, 0)->move == fc_uint64("a2-c3"));
-	fail_unless(fc_mlist_get(&moves, 1)->move == fc_uint64("a2-c1"));
-	fail_unless(fc_mlist_get(&moves, 2)->move == fc_uint64("a2-b4"));
+	fail_unless(move_exists_in_mlist(&moves, "a2-c3"));
+	fail_unless(move_exists_in_mlist(&moves, "a2-c1"));
+	fail_unless(move_exists_in_mlist(&moves, "a2-b4"));
 
 	fc_mlist_clear(&moves);
 	fc_get_knight_moves(&board, &moves, FC_THIRD);
 	fail_unless(fc_mlist_length(&moves) == 2);
-	fail_unless(fc_mlist_get(&moves, 0)->move == fc_uint64("b1-a3"));
-	fail_unless(fc_mlist_get(&moves, 1)->move == fc_uint64("b1-d2"));
+	fail_unless(move_exists_in_mlist(&moves, "b1-a3"));
+	fail_unless(move_exists_in_mlist(&moves, "b1-d2"));
 
 	fc_mlist_clear(&moves);
 	fc_get_knight_moves(&board, &moves, FC_FOURTH);
 	fail_unless(fc_mlist_length(&moves) == 6);
-	fail_unless(fc_mlist_get(&moves, 0)->move == fc_uint64("g6-e7"));
-	fail_unless(fc_mlist_get(&moves, 1)->move == fc_uint64("g6-e5"));
-	fail_unless(fc_mlist_get(&moves, 2)->move == fc_uint64("g6-f8"));
-	fail_unless(fc_mlist_get(&moves, 3)->move == fc_uint64("g6-f4"));
-	fail_unless(fc_mlist_get(&moves, 4)->move == fc_uint64("g6-h4"));
-	fail_unless(fc_mlist_get(&moves, 5)->move == fc_uint64("h8-f7"));
+	fail_unless(move_exists_in_mlist(&moves, "g6-e7"));
+	fail_unless(move_exists_in_mlist(&moves, "g6-e5"));
+	fail_unless(move_exists_in_mlist(&moves, "g6-f8"));
+	fail_unless(move_exists_in_mlist(&moves, "g6-f4"));
+	fail_unless(move_exists_in_mlist(&moves, "g6-h4"));
+	fail_unless(move_exists_in_mlist(&moves, "h8-f7"));
 
 	fc_mlist_free(&moves);
 }
@@ -208,32 +218,32 @@ START_TEST (test_forchess_pawn_moves)
 	fc_mlist_init(&moves, 0);
 	fc_get_pawn_moves(&board, &moves, FC_FIRST);
 	fail_unless(fc_mlist_length(&moves) == 3);
-	fail_unless(fc_mlist_get(&moves, 0)->move == fc_uint64("d2-e3"));
-	fail_unless(fc_mlist_get(&moves, 1)->move == fc_uint64("d2-e2"));
-	fail_unless(fc_mlist_get(&moves, 2)->move == fc_uint64("d4-d5"));
+	fail_unless(move_exists_in_mlist(&moves, "d2-e3"));
+	fail_unless(move_exists_in_mlist(&moves, "d2-e2"));
+	fail_unless(move_exists_in_mlist(&moves, "d4-d5"));
 
 	fc_mlist_clear(&moves);
 	fc_get_pawn_moves(&board, &moves, FC_SECOND);
 	fail_unless(fc_mlist_length(&moves) == 4);
-	fail_unless(fc_mlist_get(&moves, 0)->move == fc_uint64("e2-f1"));
-	fail_unless(fc_mlist_get(&moves, 1)->move == fc_uint64("d5-e4"));
-	fail_unless(fc_mlist_get(&moves, 2)->move == fc_uint64("d5-d4"));
-	fail_unless(fc_mlist_get(&moves, 3)->move == fc_uint64("d5-e5"));
+	fail_unless(move_exists_in_mlist(&moves, "e2-f1"));
+	fail_unless(move_exists_in_mlist(&moves, "d5-e4"));
+	fail_unless(move_exists_in_mlist(&moves, "d5-d4"));
+	fail_unless(move_exists_in_mlist(&moves, "d5-e5"));
 
 	fc_mlist_clear(&moves);
 	fc_get_pawn_moves(&board, &moves, FC_THIRD);
 	fail_unless(fc_mlist_length(&moves) == 3);
-	fail_unless(fc_mlist_get(&moves, 0)->move == fc_uint64("e5-d5"));
-	fail_unless(fc_mlist_get(&moves, 1)->move == fc_uint64("d6-c5"));
-	fail_unless(fc_mlist_get(&moves, 2)->move == fc_uint64("d6-d5"));
+	fail_unless(move_exists_in_mlist(&moves, "e5-d5"));
+	fail_unless(move_exists_in_mlist(&moves, "d6-c5"));
+	fail_unless(move_exists_in_mlist(&moves, "d6-d5"));
 
 	fc_mlist_clear(&moves);
 	fc_get_pawn_moves(&board, &moves, FC_FOURTH);
 	fail_unless(fc_mlist_length(&moves) == 4);
-	fail_unless(fc_mlist_get(&moves, 0)->move == fc_uint64("d1-c2"));
-	fail_unless(fc_mlist_get(&moves, 1)->move == fc_uint64("d1-d2"));
-	fail_unless(fc_mlist_get(&moves, 2)->move == fc_uint64("e6-d7"));
-	fail_unless(fc_mlist_get(&moves, 3)->move == fc_uint64("e6-d6"));
+	fail_unless(move_exists_in_mlist(&moves, "d1-c2"));
+	fail_unless(move_exists_in_mlist(&moves, "d1-d2"));
+	fail_unless(move_exists_in_mlist(&moves, "e6-d7"));
+	fail_unless(move_exists_in_mlist(&moves, "e6-d6"));
 
 	fc_mlist_free(&moves);
 }
@@ -258,50 +268,50 @@ START_TEST (test_forchess_bishop_moves)
 	fc_mlist_init(&moves, 0);
 	fc_get_bishop_moves(&board, &moves, FC_FIRST);
 	fail_unless(fc_mlist_length(&moves) == 9);
-	fail_unless(fc_mlist_get(&moves, 0)->move == fc_uint64("d6-c7"));
-	fail_unless(fc_mlist_get(&moves, 1)->move == fc_uint64("d6-b8"));
-	fail_unless(fc_mlist_get(&moves, 2)->move == fc_uint64("d6-c5"));
-	fail_unless(fc_mlist_get(&moves, 3)->move == fc_uint64("d6-b4"));
-	fail_unless(fc_mlist_get(&moves, 4)->move == fc_uint64("d6-e7"));
-	fail_unless(fc_mlist_get(&moves, 5)->move == fc_uint64("d6-f8"));
-	fail_unless(fc_mlist_get(&moves, 6)->move == fc_uint64("d6-e5"));
-	fail_unless(fc_mlist_get(&moves, 7)->move == fc_uint64("d6-f4"));
-	fail_unless(fc_mlist_get(&moves, 8)->move == fc_uint64("d6-g3"));
+	fail_unless(move_exists_in_mlist(&moves, "d6-c7"));
+	fail_unless(move_exists_in_mlist(&moves, "d6-b8"));
+	fail_unless(move_exists_in_mlist(&moves, "d6-c5"));
+	fail_unless(move_exists_in_mlist(&moves, "d6-b4"));
+	fail_unless(move_exists_in_mlist(&moves, "d6-e7"));
+	fail_unless(move_exists_in_mlist(&moves, "d6-f8"));
+	fail_unless(move_exists_in_mlist(&moves, "d6-e5"));
+	fail_unless(move_exists_in_mlist(&moves, "d6-f4"));
+	fail_unless(move_exists_in_mlist(&moves, "d6-g3"));
 
 	fc_mlist_clear(&moves);
 	fc_get_bishop_moves(&board, &moves, FC_SECOND);
 	fail_unless(fc_mlist_length(&moves) == 6);
-	fail_unless(fc_mlist_get(&moves, 0)->move == fc_uint64("g3-f4"));
-	fail_unless(fc_mlist_get(&moves, 1)->move == fc_uint64("g3-e5"));
-	fail_unless(fc_mlist_get(&moves, 2)->move == fc_uint64("g3-d6"));
-	fail_unless(fc_mlist_get(&moves, 3)->move == fc_uint64("g3-f2"));
-	fail_unless(fc_mlist_get(&moves, 4)->move == fc_uint64("g3-e1"));
-	fail_unless(fc_mlist_get(&moves, 5)->move == fc_uint64("g3-h2"));
+	fail_unless(move_exists_in_mlist(&moves, "g3-f4"));
+	fail_unless(move_exists_in_mlist(&moves, "g3-e5"));
+	fail_unless(move_exists_in_mlist(&moves, "g3-d6"));
+	fail_unless(move_exists_in_mlist(&moves, "g3-f2"));
+	fail_unless(move_exists_in_mlist(&moves, "g3-e1"));
+	fail_unless(move_exists_in_mlist(&moves, "g3-h2"));
 
 	fc_mlist_clear(&moves);
 	fc_get_bishop_moves(&board, &moves, FC_THIRD);
 	fail_unless(fc_mlist_length(&moves) == 10);
-	fail_unless(fc_mlist_get(&moves, 0)->move == fc_uint64("d3-c4"));
-	fail_unless(fc_mlist_get(&moves, 1)->move == fc_uint64("d3-b5"));
-	fail_unless(fc_mlist_get(&moves, 2)->move == fc_uint64("d3-c2"));
-	fail_unless(fc_mlist_get(&moves, 3)->move == fc_uint64("d3-b1"));
-	fail_unless(fc_mlist_get(&moves, 4)->move == fc_uint64("d3-e4"));
-	fail_unless(fc_mlist_get(&moves, 5)->move == fc_uint64("d3-f5"));
-	fail_unless(fc_mlist_get(&moves, 6)->move == fc_uint64("d3-g6"));
-	fail_unless(fc_mlist_get(&moves, 7)->move == fc_uint64("d3-h7"));
-	fail_unless(fc_mlist_get(&moves, 8)->move == fc_uint64("d3-e2"));
-	fail_unless(fc_mlist_get(&moves, 9)->move == fc_uint64("d3-f1"));
+	fail_unless(move_exists_in_mlist(&moves, "d3-c4"));
+	fail_unless(move_exists_in_mlist(&moves, "d3-b5"));
+	fail_unless(move_exists_in_mlist(&moves, "d3-c2"));
+	fail_unless(move_exists_in_mlist(&moves, "d3-b1"));
+	fail_unless(move_exists_in_mlist(&moves, "d3-e4"));
+	fail_unless(move_exists_in_mlist(&moves, "d3-f5"));
+	fail_unless(move_exists_in_mlist(&moves, "d3-g6"));
+	fail_unless(move_exists_in_mlist(&moves, "d3-h7"));
+	fail_unless(move_exists_in_mlist(&moves, "d3-e2"));
+	fail_unless(move_exists_in_mlist(&moves, "d3-f1"));
 
 	fc_mlist_clear(&moves);
 	fc_get_bishop_moves(&board, &moves, FC_FOURTH);
 	fail_unless(fc_mlist_length(&moves) == 7);
-	fail_unless(fc_mlist_get(&moves, 0)->move == fc_uint64("b5-a6"));
-	fail_unless(fc_mlist_get(&moves, 1)->move == fc_uint64("b5-a4"));
-	fail_unless(fc_mlist_get(&moves, 2)->move == fc_uint64("b5-c6"));
-	fail_unless(fc_mlist_get(&moves, 3)->move == fc_uint64("b5-d7"));
-	fail_unless(fc_mlist_get(&moves, 4)->move == fc_uint64("b5-e8"));
-	fail_unless(fc_mlist_get(&moves, 5)->move == fc_uint64("b5-c4"));
-	fail_unless(fc_mlist_get(&moves, 6)->move == fc_uint64("b5-d3"));
+	fail_unless(move_exists_in_mlist(&moves, "b5-a6"));
+	fail_unless(move_exists_in_mlist(&moves, "b5-a4"));
+	fail_unless(move_exists_in_mlist(&moves, "b5-c6"));
+	fail_unless(move_exists_in_mlist(&moves, "b5-d7"));
+	fail_unless(move_exists_in_mlist(&moves, "b5-e8"));
+	fail_unless(move_exists_in_mlist(&moves, "b5-c4"));
+	fail_unless(move_exists_in_mlist(&moves, "b5-d3"));
 
 	fc_mlist_free(&moves);
 }
@@ -472,8 +482,8 @@ START_TEST (test_forchess_make_move)
 	fc_mlist_clear(&moves);
 	fc_get_pawn_moves(&board, &moves, FC_FIRST);
 	fail_unless(fc_mlist_length(&moves) == 4);
-	fail_unless(fc_mlist_get(&moves, 2)->move == fc_uint64("d6-e6"));
-	fail_unless(fc_mlist_get(&moves, 3)->move == fc_uint64("d8-e7"));
+	fail_unless(move_exists_in_mlist(&moves, "d6-e6"));
+	fail_unless(move_exists_in_mlist(&moves, "d8-e7"));
 	/* (5a) ... even after changing sides multiple times */
 	move.player = FC_FOURTH;
 	move.piece = FC_BISHOP;
@@ -485,10 +495,10 @@ START_TEST (test_forchess_make_move)
 	fc_mlist_clear(&moves);
 	fc_get_pawn_moves(&board, &moves, FC_FOURTH);
 	fail_unless(fc_mlist_length(&moves) == 4);
-	fail_unless(fc_mlist_get(&moves, 0)->move == fc_uint64("d4-e5"));
-	fail_unless(fc_mlist_get(&moves, 1)->move == fc_uint64("d6-e5"));
-	fail_unless(fc_mlist_get(&moves, 2)->move == fc_uint64("e6-d7"));
-	fail_unless(fc_mlist_get(&moves, 3)->move == fc_uint64("d8-e7"));
+	fail_unless(move_exists_in_mlist(&moves, "d4-e5"));
+	fail_unless(move_exists_in_mlist(&moves, "d6-e5"));
+	fail_unless(move_exists_in_mlist(&moves, "e6-d7"));
+	fail_unless(move_exists_in_mlist(&moves, "d8-e7"));
 	/* (6) check that moving a pawn to its backboard returns 0, and write
 	 * fc_board_make_pawn_move() */
 	fail_unless(fc_board_make_move(&board, fc_mlist_get(&moves, 2)));

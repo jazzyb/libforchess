@@ -42,24 +42,6 @@ static void set_material_values_to_defaults (fc_board_t *board)
 }
 
 /*
- * Point to unsorted mlist functions (the default).
- */
-void fc_board_unsorted_moves (fc_board_t *board)
-{
-	board->list_add_move = &fc_mlist_append;
-	board->list_combine = &fc_mlist_cat;
-}
-
-/*
- * TODO: Point to sorted mlist functions.
- */
-void fc_board_sorted_moves (fc_board_t *board)
-{
-	board->list_add_move = &fc_mlist_insert;
-	board->list_combine = &fc_mlist_merge;
-}
-
-/*
  * Initialize the bitboard values.
  */
 void fc_board_init (fc_board_t *board)
@@ -67,7 +49,6 @@ void fc_board_init (fc_board_t *board)
 	bzero(board->bitb, sizeof(fc_board_t));
 	update_empty_positions(board);
 	set_material_values_to_defaults(board);
-	fc_board_unsorted_moves(board);
 }
 
 /* FIXME switch the row/col values to x/y ones; the current way seems backwards
@@ -259,7 +240,7 @@ static int may_move_to (fc_board_t *b, fc_player_t p, uint64_t m)
 	return !(m & FC_ALL_ALLIES(b, p));
 }
 
-static int32_t rank_move (fc_board_t *board, fc_move_t *move)
+static int32_t quick_rank_move (fc_board_t *board, fc_move_t *move)
 {
 	int32_t ret = 0;
 
@@ -284,14 +265,8 @@ int fc_board_list_add_move (fc_board_t *board, fc_mlist_t *list,
 	 * function call straight into fc_mlist_insert(); add an extra
 	 * parameter to the function to accept a value for the move
 	 */
-	move->value = rank_move(board, move);
-	return board->list_add_move(list, move);
-}
-
-int fc_board_list_combine (fc_board_t *board, fc_mlist_t *dst,
-		fc_mlist_t *src)
-{
-	return board->list_combine(dst, src);
+	move->value = quick_rank_move(board, move);
+	return fc_mlist_insert(list, move);
 }
 
 /*
@@ -947,7 +922,5 @@ void fc_board_copy (fc_board_t *dst, fc_board_t *src)
 	for (p = FC_PAWN; p <= FC_KING; p++) {
 		dst->piece_value[p] = src->piece_value[p];
 	}
-	dst->list_add_move = src->list_add_move;
-	dst->list_combine = src->list_combine;
 }
 

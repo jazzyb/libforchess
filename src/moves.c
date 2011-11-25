@@ -48,7 +48,6 @@ void fc_move_set_promotion (fc_move_t *move, fc_piece_t promote)
  */
 int fc_mlist_init (fc_mlist_t *list, uint32_t size)
 {
-	list->is_sorted_flag = 0;
 	list->index = 0;
 
 	if (size > 0) {
@@ -95,42 +94,6 @@ int fc_mlist_resize (fc_mlist_t *list, uint32_t new_size)
 	return 1;
 }
 
-static void convert_sorted_to_unsorted (fc_mlist_t *list)
-{
-	uint32_t i;
-
-	for (i = 0; i < list->index; i++) {
-		list->sorted[i] = i;
-	}
-	list->is_sorted_flag = 0;
-}
-
-int fc_mlist_is_sorted (fc_mlist_t *list)
-{
-	return list->is_sorted_flag;
-}
-
-int fc_mlist_append (fc_mlist_t *list, fc_move_t *move)
-{
-	fc_move_t *dst;
-
-	if (list->index >= list->size) {
-		if (!fc_mlist_resize(list, list->size * 2)) {
-			return 0;
-		}
-	}
-
-	if (fc_mlist_is_sorted(list)) {
-		convert_sorted_to_unsorted(list);
-	}
-
-	dst = &(list->moves[list->index]);
-	fc_move_copy(dst, move);
-	list->sorted[list->index] = list->index;
-	list->index += 1;
-	return 1;
-}
-
 int fc_mlist_copy (fc_mlist_t *dst, fc_mlist_t *src)
 {
 	uint32_t i;
@@ -150,47 +113,13 @@ int fc_mlist_copy (fc_mlist_t *dst, fc_mlist_t *src)
 	return 1;
 }
 
-int fc_mlist_cat (fc_mlist_t *dst, fc_mlist_t *src)
-{
-	uint32_t i, resize_flag = 0;
-
-	while (dst->index + src->index > dst->size) {
-		resize_flag = 1;
-		dst->size *= 2;
-	}
-	if (resize_flag && !fc_mlist_resize(dst, dst->size)) {
-		return 0;
-	}
-
-	if (fc_mlist_is_sorted(dst)) {
-		convert_sorted_to_unsorted(dst);
-	}
-
-	for (i = 0; i < src->index; i++) {
-		fc_move_copy(dst->moves + dst->index, src->moves + i);
-		dst->sorted[dst->index] = dst->index;
-		dst->index += 1;
-	}
-
-	return 1;
-}
-
-/*
- * Assumes that the move.value variables are already initialized.
- */
-void static convert_unsorted_to_sorted (fc_mlist_t *list)
-{
-	/* TODO FIXME */
-	list->is_sorted_flag = 1;
-}
-
 /*
  * NOTE:  A sorted mlist is in DESC order by move.value.  For example,
  * (5, 3, 2, 4, 1) would become (5, 4, 3, 2, 1).
  */
 int fc_mlist_sort (fc_mlist_t *list)
 {
-	convert_unsorted_to_sorted(list);
+	/* FIXME TODO */
 	return 1;
 }
 
@@ -203,10 +132,6 @@ int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move)
 		if (!fc_mlist_resize(list, list->size * 2)) {
 			return 0;
 		}
-	}
-
-	if (!fc_mlist_is_sorted(list)) {
-		convert_unsorted_to_sorted(list);
 	}
 
 	new = &(list->moves[list->index]);
@@ -243,7 +168,7 @@ void fc_mlist_free (fc_mlist_t *list)
 {
 	free(list->moves);
 	free(list->sorted);
-	list->is_sorted_flag = list->index = list->size = 0;
+	list->index = list->size = 0;
 }
 
 /*

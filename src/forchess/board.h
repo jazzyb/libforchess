@@ -42,9 +42,6 @@ typedef enum {
 typedef struct {
 	uint64_t bitb[FC_TOTAL_BITBOARDS];
 	int piece_value[FC_NUM_PIECES];
-
-	int (*list_add_move) (fc_mlist_t *, fc_move_t *);
-	int (*list_combine) (fc_mlist_t *, fc_mlist_t *);
 } fc_board_t;
 
 /* macro to get the first 24 bitboards representing pieces */
@@ -198,43 +195,10 @@ void fc_board_set_material_value (fc_board_t *board, fc_piece_t piece,
 int fc_board_get_material_value (fc_board_t *board, fc_piece_t piece);
 
 /**
- * @brief Do not sort moves.
- *
- * If called, the board will sort moves it returns from fc_board_get_moves()
- * or fc_board_get_removes() based on what it thinks are the best moves.
- *
- * @note This functionality is not available yet.  At the moment this function
- * does nothing.
- *
- * @param[in] board A pointer to the game board.
- *
- * @return void
- */
-void fc_board_sorted_moves (fc_board_t *board);
-
-/**
- * @brief Do not sort moves.
- *
- * If called, the board will not try to sort moves it returns from
- * fc_board_get_moves() or fc_board_get_removes() based on what it
- * thinks are the best moves.  This is the default.
- *
- * @param[in] board A pointer to the game board.
- *
- * @return void
- */
-void fc_board_unsorted_moves (fc_board_t *board);
-
-/**
  * TODO
  */
 int fc_board_list_add_move (fc_board_t *board, fc_mlist_t *list,
 		fc_move_t *move);
-
-/**
- * TODO
- */
-int fc_board_list_combine (fc_board_t *board, fc_mlist_t *dst, fc_mlist_t *src);
 
 /**
  * @brief Returns a list of available moves for player.
