@@ -127,7 +127,7 @@ int fc_mlist_resize (fc_mlist_t *list, uint32_t new_size);
 /**
  * TODO
  */
-int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move);
+int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move, int32_t value);
 
 /**
  * TODO

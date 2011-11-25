@@ -123,7 +123,7 @@ int fc_mlist_sort (fc_mlist_t *list)
 	return 1;
 }
 
-int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move)
+int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move, int32_t value)
 {
 	uint32_t i;
 	fc_move_t *new, *old;
@@ -136,6 +136,7 @@ int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move)
 
 	new = &(list->moves[list->index]);
 	fc_move_copy(new, move);
+	new->value = value;
 
 	/*
 	 * TODO binary search might be faster

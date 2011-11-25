@@ -44,7 +44,7 @@ START_TEST (test_mlist_insert1)
 	move.opp_piece = FC_QUEEN;
 	move.promote = FC_NONE;
 	move.move = 129;
-	ret = fc_mlist_insert(&list, &move);
+	ret = fc_mlist_insert(&list, &move, 0);
 	fail_unless(ret == 1 &&
 		    list.moves[0].player == FC_SECOND &&
 		    list.moves[0].piece == FC_ROOK &&
@@ -72,7 +72,7 @@ START_TEST (test_mlist_resize)
 	move.opp_piece = FC_NONE;
 	move.promote = FC_NONE;
 	move.move = 129;
-	ret = fc_mlist_insert(&small, &move);
+	ret = fc_mlist_insert(&small, &move, 0);
 	fail_unless(ret == 1);
 	move.player = FC_THIRD;
 	move.piece = FC_QUEEN;
@@ -80,7 +80,7 @@ START_TEST (test_mlist_resize)
 	move.opp_piece = FC_NONE;
 	move.promote = FC_NONE;
 	move.move = 33;
-	ret = fc_mlist_insert(&small, &move);
+	ret = fc_mlist_insert(&small, &move, 0);
 	fail_unless(ret == 1);
 	move.player = FC_FOURTH;
 	move.piece = FC_PAWN;
@@ -88,7 +88,7 @@ START_TEST (test_mlist_resize)
 	move.opp_piece = FC_NONE;
 	move.promote = FC_NONE;
 	move.move = 17;
-	ret = fc_mlist_insert(&small, &move);
+	ret = fc_mlist_insert(&small, &move, 0);
 	fail_unless(ret == 1 && small.size > 2);
 }
 END_TEST
@@ -105,40 +105,35 @@ START_TEST (test_mlist_copy)
 	move.opp_piece = FC_NONE;
 	move.promote = FC_NONE;
 	move.move = 129;
-	move.value = 0;
-	ret = fc_mlist_insert(&big, &move);
+	ret = fc_mlist_insert(&big, &move, 0);
 	move.player = FC_THIRD;
 	move.piece = FC_QUEEN;
 	move.opp_player = FC_NONE;
 	move.opp_piece = FC_NONE;
 	move.promote = FC_NONE;
 	move.move = 33;
-	move.value = 0;
-	ret = fc_mlist_insert(&big, &move);
+	ret = fc_mlist_insert(&big, &move, 0);
 	move.player = FC_FOURTH;
 	move.piece = FC_PAWN;
 	move.opp_player = FC_NONE;
 	move.opp_piece = FC_NONE;
 	move.promote = FC_NONE;
 	move.move = 17;
-	move.value = 0;
-	ret = fc_mlist_insert(&big, &move);
+	ret = fc_mlist_insert(&big, &move, 0);
 	move.player = FC_THIRD;
 	move.piece = FC_KING;
 	move.opp_player = FC_NONE;
 	move.opp_piece = FC_NONE;
 	move.promote = FC_NONE;
 	move.move = 33;
-	move.value = 0;
-	ret = fc_mlist_insert(&big, &move);
+	ret = fc_mlist_insert(&big, &move, 0);
 	move.player = FC_FOURTH;
 	move.piece = FC_BISHOP;
 	move.opp_player = FC_NONE;
 	move.opp_piece = FC_NONE;
 	move.promote = FC_NONE;
 	move.move = 17;
-	move.value = 0;
-	ret = fc_mlist_insert(&big, &move);
+	ret = fc_mlist_insert(&big, &move, 0);
 	ret = fc_mlist_copy(&small, &big);
 	fail_unless(ret == 1 &&
 		    small.size == big.size &&
@@ -219,22 +214,22 @@ START_TEST (test_mlist_insert2)
 	int ret = fc_mlist_init(&list, 0);
 	fail_unless(ret == 1);
 	move.value = 100;
-	ret = fc_mlist_insert(&list, &move);
+	ret = fc_mlist_insert(&list, &move, move.value);
 	fail_unless(ret == 1);
 	move.value = 10;
-	ret = fc_mlist_insert(&list, &move);
+	ret = fc_mlist_insert(&list, &move, move.value);
 	fail_unless(ret == 1);
 	move.value = 40;
-	ret = fc_mlist_insert(&list, &move);
+	ret = fc_mlist_insert(&list, &move, move.value);
 	fail_unless(ret == 1);
 	move.value = 60;
-	ret = fc_mlist_insert(&list, &move);
+	ret = fc_mlist_insert(&list, &move, move.value);
 	fail_unless(ret == 1);
 	move.value = 200;
-	ret = fc_mlist_insert(&list, &move);
+	ret = fc_mlist_insert(&list, &move, move.value);
 	fail_unless(ret == 1);
 	move.value = 40;
-	ret = fc_mlist_insert(&list, &move);
+	ret = fc_mlist_insert(&list, &move, move.value);
 	fail_unless(ret == 1);
 	fail_unless(fc_mlist_get(&list, 0)->value == 200);
 	fail_unless(fc_mlist_get(&list, 1)->value == 100);

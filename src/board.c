@@ -231,15 +231,6 @@ int fc_board_setup (fc_board_t *board, const char *filename, fc_player_t *first)
 	return 1;
 }
 
-/*
- * Simply determines if the space 'm' is empty or occupied by a piece belonging
- * to a friendly ally.
- */
-static int may_move_to (fc_board_t *b, fc_player_t p, uint64_t m)
-{
-	return !(m & FC_ALL_ALLIES(b, p));
-}
-
 static int32_t quick_rank_move (fc_board_t *board, fc_move_t *move)
 {
 	int32_t ret = 0;
@@ -259,14 +250,16 @@ static int32_t quick_rank_move (fc_board_t *board, fc_move_t *move)
 int fc_board_list_add_move (fc_board_t *board, fc_mlist_t *list,
 		fc_move_t *move)
 {
-	/*
-	 * FIXME
-	 * just remove the unsorted options to the mlists and have this
-	 * function call straight into fc_mlist_insert(); add an extra
-	 * parameter to the function to accept a value for the move
-	 */
-	move->value = quick_rank_move(board, move);
-	return fc_mlist_insert(list, move);
+	return fc_mlist_insert(list, move, quick_rank_move(board, move));
+}
+
+/*
+ * Simply determines if the space 'm' is empty or occupied by a piece belonging
+ * to a friendly ally.
+ */
+static int may_move_to (fc_board_t *b, fc_player_t p, uint64_t m)
+{
+	return !(m & FC_ALL_ALLIES(b, p));
 }
 
 /*
