@@ -54,9 +54,8 @@ typedef struct {
 
 typedef struct {
 	fc_move_t *moves;
-	uint32_t size;
-	uint32_t index;
-	uint32_t *sorted;
+	uint8_t index;
+	uint8_t *sorted;
 } fc_mlist_t;
 
 uint64_t fc_uint64(const char *move);
@@ -83,6 +82,7 @@ void fc_move_copy (fc_move_t *dst, fc_move_t *src);
  */
 void fc_move_set_promotion (fc_move_t *move, fc_piece_t promote);
 
+/* FIXME: */
 /**
  * @brief Initialize an mlist.
  *
@@ -98,7 +98,7 @@ void fc_move_set_promotion (fc_move_t *move, fc_piece_t promote);
  *
  * @return 1 on success; 0 otherwise
  */
-int fc_mlist_init (fc_mlist_t *list, uint32_t size);
+int fc_mlist_init (fc_mlist_t *list);
 
 /**
  * @brief Copies the list dst to src.
@@ -111,18 +111,6 @@ int fc_mlist_init (fc_mlist_t *list, uint32_t size);
  * @return 1 on success; 0 otherwise
  */
 int fc_mlist_copy (fc_mlist_t *dst, fc_mlist_t *src);
-
-/**
- * @brief Resize an mlist.
- *
- * Reset the number of moves that the given mlist may hold.
- *
- * @param[out] list The list to be resized.
- * @param[in] new_size The new number of moves that the list may hold.
- *
- * @return 1 on success; 0 otherwise
- */
-int fc_mlist_resize (fc_mlist_t *list, uint32_t new_size);
 
 /**
  * TODO

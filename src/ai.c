@@ -303,7 +303,7 @@ static void initialize_ai_mlists (fc_ai_t *ai, int depth)
 	}
 	ai->mlv = calloc(depth, sizeof(fc_mlist_t));
 	for (i = 0; i < depth; i++) {
-		fc_mlist_init(&(ai->mlv[i]), 0);
+		fc_mlist_init(&(ai->mlv[i]));
 	}
 }
 

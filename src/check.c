@@ -476,7 +476,7 @@ int fc_board_check_status (fc_board_t *board, fc_player_t player)
 		return 0;
 	}
 
-	fc_mlist_init(&moves, 0);
+	fc_mlist_init(&moves);
 	fc_board_get_moves(board, &moves, player);
 	for (i = 0; i < fc_mlist_length(&moves); i++) {
 		fc_board_copy(&copy, board);

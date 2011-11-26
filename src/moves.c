@@ -6,6 +6,7 @@
  * which is a part of this source code package.
  */
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,26 +42,21 @@ void fc_move_set_promotion (fc_move_t *move, fc_piece_t promote)
 	move->promote = promote;
 }
 
-#define FC_DEFAULT_MLIST_SIZE 130 /* totally arbitrary */
+#define FC_DEFAULT_MLIST_SIZE 255
 
 /*
- * This must be called before the append, copy, and cat functions can be used.
+ * This must be called before the insert, copy, and merge functions can be
+ * used.
  */
-int fc_mlist_init (fc_mlist_t *list, uint32_t size)
+int fc_mlist_init (fc_mlist_t *list)
 {
 	list->index = 0;
 
-	if (size > 0) {
-		list->size = size;
-	} else {
-		list->size = FC_DEFAULT_MLIST_SIZE;
-	}
-
-	list->moves = calloc(list->size, sizeof(*list->moves));
+	list->moves = calloc(FC_DEFAULT_MLIST_SIZE, sizeof(*list->moves));
 	if (!list->moves) {
 		return 0;
 	}
-	list->sorted = calloc(list->size, sizeof(*list->sorted));
+	list->sorted = calloc(FC_DEFAULT_MLIST_SIZE, sizeof(*list->sorted));
 	if (!list->sorted) {
 		free(list->moves);
 		list->moves = NULL;
@@ -70,46 +66,15 @@ int fc_mlist_init (fc_mlist_t *list, uint32_t size)
 	return 1;
 }
 
-int fc_mlist_resize (fc_mlist_t *list, uint32_t new_size)
-{
-	uint32_t *new_sorted;
-	fc_move_t *new_moves;
-
-	if (new_size < list->index) {
-		return 0;
-	}
-
-	new_moves = realloc(list->moves, new_size * sizeof(*new_moves));
-	if (!new_moves) {
-		return 0;
-	}
-	new_sorted = realloc(list->sorted, new_size * sizeof(*new_sorted));
-	if (!new_sorted) {
-		free(new_moves);
-		return 0;
-	}
-	list->moves = new_moves;
-	list->sorted = new_sorted;
-	list->size = new_size;
-	return 1;
-}
-
 int fc_mlist_copy (fc_mlist_t *dst, fc_mlist_t *src)
 {
 	uint32_t i;
 
-	if (dst->size < src->index) {
-		if (!fc_mlist_resize(dst, src->size)) {
-			return 0;
-		}
-	}
-
 	for (i = 0; i < src->index; i++) {
 		fc_move_copy(dst->moves + i, src->moves + i);
 		dst->sorted[i] = src->sorted[i];
-		dst->index += 1;
 	}
-
+	dst->index = src->index;
 	return 1;
 }
 
@@ -124,12 +89,6 @@ int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move, int32_t value)
 {
 	uint32_t i;
 	fc_move_t *new, *old;
-
-	if (list->index >= list->size) {
-		if (!fc_mlist_resize(list, list->size * 2)) {
-			return 0;
-		}
-	}
 
 	new = &(list->moves[list->index]);
 	fc_move_copy(new, move);
@@ -156,16 +115,11 @@ int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move, int32_t value)
  */
 int fc_mlist_merge (fc_mlist_t *dst, fc_mlist_t *src)
 {
-	uint32_t i, resize_flag = 0;
+	uint8_t i;
 	fc_move_t *move;
 
-	while (dst->index + src->index > dst->size) {
-		resize_flag = 1;
-		dst->size *= 2;
-	}
-	if (resize_flag && !fc_mlist_resize(dst, dst->size)) {
-		return 0;
-	}
+	assert((uint32_t)dst->index + (uint32_t)src->index <=
+			FC_DEFAULT_MLIST_SIZE);
 
 	for (i = 0; i < src->index; i++) {
 		move = fc_mlist_get(src, i);
@@ -183,7 +137,7 @@ void fc_mlist_free (fc_mlist_t *list)
 {
 	free(list->moves);
 	free(list->sorted);
-	list->index = list->size = 0;
+	list->index = 0;
 }
 
 /*

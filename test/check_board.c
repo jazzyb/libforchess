@@ -101,7 +101,7 @@ START_TEST (test_forchess_king_moves)
 
 	int len;
 	fc_mlist_t moves;
-	int ret = fc_mlist_init(&moves, 0);
+	int ret = fc_mlist_init(&moves);
 	fc_get_king_moves(&board, &moves, FC_FIRST);
 	fail_unless(fc_mlist_length(&moves) == 3);
 	fail_unless(fc_mlist_get(&moves, 0)->move == fc_uint64("a1-a2"));
@@ -159,7 +159,7 @@ START_TEST (test_forchess_knight_moves)
 	fc_board_set_piece(&board, FC_FOURTH, FC_KNIGHT, 5, 6);
 
 	fc_mlist_t moves;
-	fc_mlist_init(&moves, 0);
+	fc_mlist_init(&moves);
 	fc_get_knight_moves(&board, &moves, FC_FIRST);
 	fail_unless(fc_mlist_length(&moves) == 7);
 	fail_unless(move_exists_in_mlist(&moves, "c3-a4"));
@@ -215,7 +215,7 @@ START_TEST (test_forchess_pawn_moves)
 	fc_board_set_piece(&board, FC_FOURTH, FC_PAWN, 5, 4);
 
 	fc_mlist_t moves;
-	fc_mlist_init(&moves, 0);
+	fc_mlist_init(&moves);
 	fc_get_pawn_moves(&board, &moves, FC_FIRST);
 	fail_unless(fc_mlist_length(&moves) == 3);
 	fail_unless(move_exists_in_mlist(&moves, "d2-e3"));
@@ -265,7 +265,7 @@ START_TEST (test_forchess_bishop_moves)
 	fc_board_set_piece(&board, FC_FOURTH, FC_PAWN, 3, 7);
 
 	fc_mlist_t moves;
-	fc_mlist_init(&moves, 0);
+	fc_mlist_init(&moves);
 	fc_get_bishop_moves(&board, &moves, FC_FIRST);
 	fail_unless(fc_mlist_length(&moves) == 9);
 	fail_unless(move_exists_in_mlist(&moves, "d6-c7"));
@@ -336,7 +336,7 @@ START_TEST (test_forchess_rook_moves)
 
 	/* TODO fill in all the moves for these */
 	fc_mlist_t moves;
-	fc_mlist_init(&moves, 0);
+	fc_mlist_init(&moves);
 	fc_get_rook_moves(&board, &moves, FC_FIRST);
 	fail_unless(fc_mlist_length(&moves) == 20);
 
@@ -375,7 +375,7 @@ START_TEST (test_forchess_queen_moves)
 
 	/* TODO fill in all the moves for these */
 	fc_mlist_t moves;
-	fc_mlist_init(&moves, 0);
+	fc_mlist_init(&moves);
 	fc_get_queen_moves(&board, &moves, FC_FIRST);
 	fail_unless(fc_mlist_length(&moves) == 15 + 13);
 
@@ -408,7 +408,7 @@ START_TEST (test_forchess_get_removes)
 
 	/* TODO fill in all the removes for these */
 	fc_mlist_t rm;
-	fc_mlist_init(&rm, 0);
+	fc_mlist_init(&rm);
 	fc_board_get_removes(&board, &rm, FC_FIRST);
 	fail_unless(fc_mlist_length(&rm) == 6);
 
@@ -476,7 +476,7 @@ START_TEST (test_forchess_make_move)
 	fail_unless(fc_board_get_piece(&board, &player, &piece, 7, 3));
 	fail_unless(player == FC_FIRST);
 	fc_mlist_t moves;
-	fc_mlist_init(&moves, 0);
+	fc_mlist_init(&moves);
 	fc_get_rook_moves(&board, &moves, FC_FIRST);
 	fail_unless(fc_mlist_length(&moves) == 7);
 	fc_mlist_clear(&moves);
