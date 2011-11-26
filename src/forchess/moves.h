@@ -82,7 +82,6 @@ void fc_move_copy (fc_move_t *dst, fc_move_t *src);
  */
 void fc_move_set_promotion (fc_move_t *move, fc_piece_t promote);
 
-/* FIXME: */
 /**
  * @brief Initialize an mlist.
  *
@@ -92,9 +91,6 @@ void fc_move_set_promotion (fc_move_t *move, fc_piece_t promote);
  * before the call to this function.
  *
  * @param[out] list The new list.
- * @param[in] size The number of moves that will be allocated in the list by
- * default.  If the size is less than 1, then the default of 130 moves will be
- * used.
  *
  * @return 1 on success; 0 otherwise
  */
@@ -113,12 +109,32 @@ int fc_mlist_init (fc_mlist_t *list);
 int fc_mlist_copy (fc_mlist_t *dst, fc_mlist_t *src);
 
 /**
- * TODO
+ * @brief Inserts move into list based on value.
+ *
+ * After successive calls to fc_mlist_insert(), the list will hold the moves
+ * in DESCENDING order based on value.  For example, if moves are inserted in
+ * the following order with the values (4, 5, 2, 1, 3).  The moves in the
+ * mlist will be ordered as (5, 4, 3, 2, 1).
+ *
+ * @param list The move list.
+ * @param move The move to be inserted.
+ * @param value The "value" of the move.
+ *
+ * @return 1 on successful insertion; 0 otherwise
  */
 int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move, int32_t value);
 
 /**
- * TODO
+ * @brief Merges two lists together.
+ *
+ * fc_mlist_merge() maintains a sorted order.  The moves in src will be placed
+ * in dst.  See fc_mlist_insert() for a description of the sorted order of the
+ * moves.
+ *
+ * @param dst The list in which to insert the new moves.
+ * @param src The source of the new moves.
+ *
+ * @return 1 on success; 0 otherwise
  */
 int fc_mlist_merge (fc_mlist_t *dst, fc_mlist_t *src);
 

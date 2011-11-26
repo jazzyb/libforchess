@@ -195,7 +195,19 @@ void fc_board_set_material_value (fc_board_t *board, fc_piece_t piece,
 int fc_board_get_material_value (fc_board_t *board, fc_piece_t piece);
 
 /**
- * TODO
+ * @brief Adds a move to list.
+ *
+ * Acts as a wrapper for the fc_mlist_insert() function.  Sets the move's
+ * value and then calls fc_mlist_insert().
+ *
+ * @param[in] board A pointer to the game board.
+ * @param[in] list The move list.  The mlist struct should be allocated and
+ * initialized before the call to this function.
+ * @param[in] move The move to be added to the list.  The move struct is
+ * copied into the list, so list will point to a valid copy of move even if
+ * move is freed or otherwise deallocated after this call.
+ *
+ * @return 1 on success; 0 otherwise
  */
 int fc_board_list_add_move (fc_board_t *board, fc_mlist_t *list,
 		fc_move_t *move);
