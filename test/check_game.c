@@ -65,7 +65,7 @@ START_TEST (test_forchess_game_move_conversions)
 	game.player = FC_FIRST;
 	fc_board_set_piece(game.board, FC_FIRST, FC_KING, 0, 0);
 	fc_mlist_t list;
-	fc_mlist_init(&list, 0);
+	fc_mlist_init(&list);
 	fc_board_get_moves(game.board, &list, FC_FIRST);
 	int w, x, y, z;
 	fc_move_t *move = fc_mlist_get(&list, 0);

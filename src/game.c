@@ -26,7 +26,6 @@ int fc_game_init (fc_game_t *game)
 		return 0;
 	}
 	fc_board_init(game->board);
-	fc_board_sorted_moves(game->board);
 	game->player = FC_NONE;
 	return 1;
 }
@@ -85,7 +84,7 @@ int fc_game_save (fc_game_t *game, const char *filename)
 		return 0;
 	}
 
-	fc_mlist_init(&list, 0);
+	fc_mlist_init(&list);
 	fc_board_get_removes(game->board, &list, game->player);
 	for (i = 0; i < fc_mlist_length(&list); i++) {
 		move = fc_mlist_get(&list, i);
@@ -201,7 +200,7 @@ int fc_game_is_move_legal (fc_game_t *game, fc_move_t *move)
 	}
 
 	valid_move_exists = 0;
-	fc_mlist_init(&list, 0);
+	fc_mlist_init(&list);
 	fc_board_get_moves(game->board, &list, move->player);
 	for (i = 0; i < fc_mlist_length(&list); i++) {
 		other = fc_mlist_get(&list, i);

@@ -50,9 +50,17 @@ EXAMPLE_FILES=examples/cli/simple.c
 %.o: %.c $(INC_FILES)
 	$(CC) -c -o $@ $(CFLAGS) $(WARN_FLAGS) $(INCLUDES) $<
 
+# static or shared library?
+ifeq ($(STATIC), 1)
+libforchess: $(OBJ_FILES)
+	mkdir -p lib
+	ar cr lib/libforchess.a $^
+	ranlib lib/libforchess.a
+else
 libforchess: $(OBJ_FILES)
 	mkdir -p lib
 	$(CC) -shared -o lib/libforchess.so $^
+endif
 
 # FIXME: C99 standard just makes compiling easier; will need to change this
 # later; see also examples and profiler

@@ -54,10 +54,8 @@ typedef struct {
 
 typedef struct {
 	fc_move_t *moves;
-	uint32_t size;
-	uint32_t index;
-	uint32_t *sorted;
-	int is_sorted_flag;
+	uint8_t index;
+	uint8_t *sorted;
 } fc_mlist_t;
 
 uint64_t fc_uint64(const char *move);
@@ -84,6 +82,7 @@ void fc_move_copy (fc_move_t *dst, fc_move_t *src);
  */
 void fc_move_set_promotion (fc_move_t *move, fc_piece_t promote);
 
+/* FIXME: */
 /**
  * @brief Initialize an mlist.
  *
@@ -99,7 +98,7 @@ void fc_move_set_promotion (fc_move_t *move, fc_piece_t promote);
  *
  * @return 1 on success; 0 otherwise
  */
-int fc_mlist_init (fc_mlist_t *list, uint32_t size);
+int fc_mlist_init (fc_mlist_t *list);
 
 /**
  * @brief Copies the list dst to src.
@@ -114,58 +113,9 @@ int fc_mlist_init (fc_mlist_t *list, uint32_t size);
 int fc_mlist_copy (fc_mlist_t *dst, fc_mlist_t *src);
 
 /**
- * @brief Resize an mlist.
- *
- * Reset the number of moves that the given mlist may hold.
- *
- * @param[out] list The list to be resized.
- * @param[in] new_size The new number of moves that the list may hold.
- *
- * @return 1 on success; 0 otherwise
- */
-int fc_mlist_resize (fc_mlist_t *list, uint32_t new_size);
-
-/**
- * @brief Append a new move to the mlist.
- *
- * This function copies the move parameter onto the end of the mlist.  So, for
- * example, the user may free the move struct after the call, and the end of
- * the mlist will still point to a valid move.
- *
- * @note The mlist will automatically resize itself if it doesn't have enough
- * room for the new move.
- *
- * @param[out] list The list of moves.
- * @param[in] move The new move.
- *
- * @return 1 on success; 0 otherwise
- */
-int fc_mlist_append (fc_mlist_t *list, fc_move_t *move);
-
-/**
- * @brief Concatenates src onto the end of dst.
- *
- * @param[out] dst The destination mlist.
- * @param[in] src The source mlist.
- *
- * @return 1 on success; 0 otherwise
- */
-int fc_mlist_cat  (fc_mlist_t *dst, fc_mlist_t *src);
-
-/**
  * TODO
  */
-int fc_mlist_sort (fc_mlist_t *list);
-
-/**
- * TODO
- */
-int fc_mlist_is_sorted (fc_mlist_t *list);
-
-/**
- * TODO
- */
-int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move);
+int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move, int32_t value);
 
 /**
  * TODO
