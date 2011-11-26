@@ -114,15 +114,12 @@ int fc_mlist_copy (fc_mlist_t *dst, fc_mlist_t *src)
 }
 
 /*
+ * The below two functions represent a very naive sorting algorithm, but it
+ * seems to be "fast enough" for the time being.
+ *
  * NOTE:  A sorted mlist is in DESC order by move.value.  For example,
  * (5, 3, 2, 4, 1) would become (5, 4, 3, 2, 1).
  */
-int fc_mlist_sort (fc_mlist_t *list)
-{
-	/* FIXME TODO */
-	return 1;
-}
-
 int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move, int32_t value)
 {
 	uint32_t i;
@@ -154,10 +151,27 @@ int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move, int32_t value)
 	return 1;
 }
 
+/*
+ * NOTE: Assumes that the values are initialized for all moves in both lists.
+ */
 int fc_mlist_merge (fc_mlist_t *dst, fc_mlist_t *src)
 {
-	/* TODO FIXME */
-	return 0;
+	uint32_t i, resize_flag = 0;
+	fc_move_t *move;
+
+	while (dst->index + src->index > dst->size) {
+		resize_flag = 1;
+		dst->size *= 2;
+	}
+	if (resize_flag && !fc_mlist_resize(dst, dst->size)) {
+		return 0;
+	}
+
+	for (i = 0; i < src->index; i++) {
+		move = fc_mlist_get(src, i);
+		fc_mlist_insert(dst, move, move->value);
+	}
+	return 1;
 }
 
 /*

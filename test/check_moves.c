@@ -142,9 +142,7 @@ START_TEST (test_mlist_copy)
 }
 END_TEST
 
-// FIXME convert to test_mlist_merge
-#if 0
-START_TEST (test_mlist_cat)
+START_TEST (test_mlist_merge)
 {
 	fc_mlist_t small, big;
 	int ret = fc_mlist_init(&small, 2);
@@ -155,14 +153,14 @@ START_TEST (test_mlist_cat)
 	move.opp_piece = FC_NONE;
 	move.promote = FC_NONE;
 	move.move = 3;
-	ret = fc_mlist_insert(&small, &move);
+	ret = fc_mlist_insert(&small, &move, 20);
 	move.player = FC_FIRST;
 	move.piece = FC_ROOK;
 	move.opp_player = FC_NONE;
 	move.opp_piece = FC_NONE;
 	move.promote = FC_NONE;
 	move.move = 129;
-	ret = fc_mlist_insert(&small, &move);
+	ret = fc_mlist_insert(&small, &move, 19);
 	ret = fc_mlist_init(&big, 10);
 	move.player = FC_SECOND;
 	move.piece = FC_ROOK;
@@ -170,42 +168,41 @@ START_TEST (test_mlist_cat)
 	move.opp_piece = FC_NONE;
 	move.promote = FC_NONE;
 	move.move = 129;
-	ret = fc_mlist_insert(&big, &move);
+	ret = fc_mlist_insert(&big, &move, 18);
 	move.player = FC_THIRD;
 	move.piece = FC_QUEEN;
 	move.opp_player = FC_NONE;
 	move.opp_piece = FC_NONE;
 	move.promote = FC_NONE;
 	move.move = 33;
-	ret = fc_mlist_insert(&big, &move);
+	ret = fc_mlist_insert(&big, &move, 17);
 	move.player = FC_FOURTH;
 	move.piece = FC_PAWN;
 	move.opp_player = FC_NONE;
 	move.opp_piece = FC_NONE;
 	move.promote = FC_NONE;
 	move.move = 17;
-	ret = fc_mlist_insert(&big, &move);
+	ret = fc_mlist_insert(&big, &move, 16);
 	move.player = FC_THIRD;
 	move.piece = FC_KING;
 	move.opp_player = FC_NONE;
 	move.opp_piece = FC_NONE;
 	move.promote = FC_NONE;
 	move.move = 33;
-	ret = fc_mlist_insert(&big, &move);
+	ret = fc_mlist_insert(&big, &move, 15);
 	move.player = FC_FOURTH;
 	move.piece = FC_BISHOP;
 	move.opp_player = FC_NONE;
 	move.opp_piece = FC_NONE;
 	move.promote = FC_NONE;
 	move.move = 17;
-	ret = fc_mlist_insert(&big, &move);
-	ret = fc_mlist_cat(&small, &big);
+	ret = fc_mlist_insert(&big, &move, 14);
+	ret = fc_mlist_merge(&small, &big);
 	fail_unless(ret == 1 &&
 		    small.index == 7 &&
 		    small.moves[6].piece == FC_BISHOP);
 }
 END_TEST
-#endif
 
 START_TEST (test_mlist_insert2)
 {
@@ -249,7 +246,7 @@ Suite *move_suite (void)
 	tcase_add_test(tc_moves, test_mlist_insert1);
 	tcase_add_test(tc_moves, test_mlist_resize);
 	tcase_add_test(tc_moves, test_mlist_copy);
-	//tcase_add_test(tc_moves, test_mlist_cat);
+	tcase_add_test(tc_moves, test_mlist_merge);
 	tcase_add_test(tc_moves, test_mlist_insert2);
 	suite_add_tcase(s, tc_moves);
 	return s;
