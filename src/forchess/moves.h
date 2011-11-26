@@ -49,12 +49,13 @@ typedef struct {
 	fc_piece_t opp_piece;
 	fc_piece_t promote;
 	uint64_t move;
+	int32_t value;
 } fc_move_t;
 
 typedef struct {
 	fc_move_t *moves;
-	int size;
-	int index;
+	uint8_t index;
+	uint8_t *sorted;
 } fc_mlist_t;
 
 uint64_t fc_uint64(const char *move);
@@ -90,42 +91,10 @@ void fc_move_set_promotion (fc_move_t *move, fc_piece_t promote);
  * before the call to this function.
  *
  * @param[out] list The new list.
- * @param[in] size The number of moves that will be allocated in the list by
- * default.  If the size is less than 1, then the default of 130 moves will be
- * used.
  *
  * @return 1 on success; 0 otherwise
  */
-int fc_mlist_init (fc_mlist_t *list, int size);
-
-/**
- * @brief Resize an mlist.
- *
- * Reset the number of moves that the given mlist may hold.
- *
- * @param[out] list The list to be resized.
- * @param[in] new_size The new number of moves that the list may hold.
- *
- * @return 1 on success; 0 otherwise
- */
-int fc_mlist_resize (fc_mlist_t *list, int new_size);
-
-/**
- * @brief Append a new move to the mlist.
- *
- * This function copies the move parameter onto the end of the mlist.  So, for
- * example, the user may free the move struct after the call, and the end of
- * the mlist will still point to a valid move.
- *
- * @note The mlist will automatically resize itself if it doesn't have enough
- * room for the new move.
- *
- * @param[out] list The list of moves.
- * @param[in] move The new move.
- *
- * @return 1 on success; 0 otherwise
- */
-int fc_mlist_append (fc_mlist_t *list, fc_move_t *move);
+int fc_mlist_init (fc_mlist_t *list);
 
 /**
  * @brief Copies the list dst to src.
@@ -140,14 +109,34 @@ int fc_mlist_append (fc_mlist_t *list, fc_move_t *move);
 int fc_mlist_copy (fc_mlist_t *dst, fc_mlist_t *src);
 
 /**
- * @brief Concatenates src onto the end of dst.
+ * @brief Inserts move into list based on value.
  *
- * @param[out] dst The destination mlist.
- * @param[in] src The source mlist.
+ * After successive calls to fc_mlist_insert(), the list will hold the moves
+ * in DESCENDING order based on value.  For example, if moves are inserted in
+ * the following order with the values (4, 5, 2, 1, 3).  The moves in the
+ * mlist will be ordered as (5, 4, 3, 2, 1).
+ *
+ * @param list The move list.
+ * @param move The move to be inserted.
+ * @param value The "value" of the move.
+ *
+ * @return 1 on successful insertion; 0 otherwise
+ */
+int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move, int32_t value);
+
+/**
+ * @brief Merges two lists together.
+ *
+ * fc_mlist_merge() maintains a sorted order.  The moves in src will be placed
+ * in dst.  See fc_mlist_insert() for a description of the sorted order of the
+ * moves.
+ *
+ * @param dst The list in which to insert the new moves.
+ * @param src The source of the new moves.
  *
  * @return 1 on success; 0 otherwise
  */
-int fc_mlist_cat  (fc_mlist_t *dst, fc_mlist_t *src);
+int fc_mlist_merge (fc_mlist_t *dst, fc_mlist_t *src);
 
 /**
  * @brief De-initializes the mlist.

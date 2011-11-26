@@ -45,13 +45,13 @@ static void append_pawn_promotions_to_moves(fc_board_t *board, fc_mlist_t *list,
 		fc_move_t *move)
 {
 	move->promote = FC_QUEEN;
-	board->list_add_move(list, move);
+	fc_board_list_add_move(board, list, move);
 	move->promote = FC_KNIGHT;
-	board->list_add_move(list, move);
+	fc_board_list_add_move(board, list, move);
 	move->promote = FC_ROOK;
-	board->list_add_move(list, move);
+	fc_board_list_add_move(board, list, move);
 	move->promote = FC_BISHOP;
-	board->list_add_move(list, move);
+	fc_board_list_add_move(board, list, move);
 	move->promote = FC_NONE;
 }
 
@@ -303,7 +303,7 @@ static void initialize_ai_mlists (fc_ai_t *ai, int depth)
 	}
 	ai->mlv = calloc(depth, sizeof(fc_mlist_t));
 	for (i = 0; i < depth; i++) {
-		fc_mlist_init(&(ai->mlv[i]), 0);
+		fc_mlist_init(&(ai->mlv[i]));
 	}
 }
 

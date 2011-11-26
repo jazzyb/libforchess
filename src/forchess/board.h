@@ -42,9 +42,6 @@ typedef enum {
 typedef struct {
 	uint64_t bitb[FC_TOTAL_BITBOARDS];
 	int piece_value[FC_NUM_PIECES];
-
-	int (*list_add_move) (fc_mlist_t *, fc_move_t *);
-	int (*list_combine) (fc_mlist_t *, fc_mlist_t *);
 } fc_board_t;
 
 /* macro to get the first 24 bitboards representing pieces */
@@ -198,32 +195,22 @@ void fc_board_set_material_value (fc_board_t *board, fc_piece_t piece,
 int fc_board_get_material_value (fc_board_t *board, fc_piece_t piece);
 
 /**
- * @brief Do not sort moves.
+ * @brief Adds a move to list.
  *
- * If called, the board will sort moves it returns from fc_board_get_moves()
- * or fc_board_get_removes() based on what it thinks are the best moves.
- *
- * @note This functionality is not available yet.  At the moment this function
- * does nothing.
+ * Acts as a wrapper for the fc_mlist_insert() function.  Sets the move's
+ * value and then calls fc_mlist_insert().
  *
  * @param[in] board A pointer to the game board.
+ * @param[in] list The move list.  The mlist struct should be allocated and
+ * initialized before the call to this function.
+ * @param[in] move The move to be added to the list.  The move struct is
+ * copied into the list, so list will point to a valid copy of move even if
+ * move is freed or otherwise deallocated after this call.
  *
- * @return void
+ * @return 1 on success; 0 otherwise
  */
-void fc_board_sorted_moves (fc_board_t *board);
-
-/**
- * @brief Do not sort moves.
- *
- * If called, the board will not try to sort moves it returns from
- * fc_board_get_moves() or fc_board_get_removes() based on what it
- * thinks are the best moves.  This is the default.
- *
- * @param[in] board A pointer to the game board.
- *
- * @return void
- */
-void fc_board_unsorted_moves (fc_board_t *board);
+int fc_board_list_add_move (fc_board_t *board, fc_mlist_t *list,
+		fc_move_t *move);
 
 /**
  * @brief Returns a list of available moves for player.

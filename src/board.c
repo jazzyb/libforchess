@@ -42,23 +42,6 @@ static void set_material_values_to_defaults (fc_board_t *board)
 }
 
 /*
- * Point to unsorted mlist functions (the default).
- */
-void fc_board_unsorted_moves (fc_board_t *board)
-{
-	board->list_add_move = &fc_mlist_append;
-	board->list_combine = &fc_mlist_cat;
-}
-
-/*
- * TODO: Point to sorted mlist functions.
- */
-void fc_board_sorted_moves (fc_board_t *board)
-{
-	assert(0); /* FIXME */
-}
-
-/*
  * Initialize the bitboard values.
  */
 void fc_board_init (fc_board_t *board)
@@ -66,7 +49,6 @@ void fc_board_init (fc_board_t *board)
 	bzero(board->bitb, sizeof(fc_board_t));
 	update_empty_positions(board);
 	set_material_values_to_defaults(board);
-	fc_board_unsorted_moves(board);
 }
 
 /* FIXME switch the row/col values to x/y ones; the current way seems backwards
@@ -249,6 +231,28 @@ int fc_board_setup (fc_board_t *board, const char *filename, fc_player_t *first)
 	return 1;
 }
 
+static int32_t quick_rank_move (fc_board_t *board, fc_move_t *move)
+{
+	int32_t ret = 0;
+
+	if (move->opp_piece != FC_NONE) {
+		ret += board->piece_value[move->opp_piece];
+	}
+	/* FIXME Why does taking the promotion into account crash the AI?
+	if (move->promote != FC_NONE) {
+		ret += board->piece_value[move->promote];
+	}
+	*/
+
+	return ret;
+}
+
+int fc_board_list_add_move (fc_board_t *board, fc_mlist_t *list,
+		fc_move_t *move)
+{
+	return fc_mlist_insert(list, move, quick_rank_move(board, move));
+}
+
 /*
  * Simply determines if the space 'm' is empty or occupied by a piece belonging
  * to a friendly ally.
@@ -281,7 +285,7 @@ static void move_if_valid (fc_board_t *board, fc_mlist_t *moves,
 
 	if (space && may_move_to(board, player, space)) {
 		find_player_piece(board, opp_player, opp_piece, space);
-		board->list_add_move(moves, &move);
+		fc_board_list_add_move(board, moves, &move);
 	}
 }
 
@@ -387,18 +391,18 @@ static void pawn_move_if_valid (fc_board_t *board, fc_mlist_t *moves,
 
 	if (fc_is_empty(board, m1)) {
 		move.move = pawn | m1;
-		board->list_add_move(moves, &move);
+		fc_board_list_add_move(board, moves, &move);
 	}
 
 	if (is_occupied_by_enemy(board, player, m2)) {
 		move.move = pawn | m2;
 		find_player_piece(board, opp_player, opp_piece, m2);
-		board->list_add_move(moves, &move);
+		fc_board_list_add_move(board, moves, &move);
 	}
 	if (is_occupied_by_enemy(board, player, m3)) {
 		move.move = pawn | m3;
 		find_player_piece(board, opp_player, opp_piece, m3);
-		board->list_add_move(moves, &move);
+		fc_board_list_add_move(board, moves, &move);
 	}
 }
 
@@ -479,11 +483,11 @@ static int move_and_continue (fc_board_t *board, fc_mlist_t *moves,
 	move.move = piece | space;
 
 	if (fc_is_empty(board, space)) {
-		board->list_add_move(moves, &move);
+		fc_board_list_add_move(board, moves, &move);
 		return 1;
 	} else if (is_occupied_by_enemy(board, player, space)) {
 		find_player_piece(board, opp_player, opp_piece, space);
-		board->list_add_move(moves, &move);
+		fc_board_list_add_move(board, moves, &move);
 	}
 	return 0;
 }
@@ -722,7 +726,7 @@ void fc_board_get_removes (fc_board_t *board, fc_mlist_t *moves,
 		bb = FC_BITBOARD(board, player, move.piece);
 		FC_FOREACH(piece, bb) {
 			move.move = piece;
-			board->list_add_move(moves, &move);
+			fc_board_list_add_move(board, moves, &move);
 		}
 	}
 }
@@ -911,7 +915,5 @@ void fc_board_copy (fc_board_t *dst, fc_board_t *src)
 	for (p = FC_PAWN; p <= FC_KING; p++) {
 		dst->piece_value[p] = src->piece_value[p];
 	}
-	dst->list_add_move = src->list_add_move;
-	dst->list_combine = src->list_combine;
 }
 
