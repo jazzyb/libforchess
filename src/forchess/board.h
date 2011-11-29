@@ -59,15 +59,22 @@ typedef struct {
 #define FC_PAWN_BB(board, orientation) \
 	(board->bitb[FC_FIRST_PAWNS + orientation])
 
-/* Redefine UINT64_C to be something that plays nicer with the C89 standard */
-#undef UINT64_C
-#define UINT64_C(x) ((uint64_t)x)
-
+/*
+ * NOTE:  The below macros represent the following values:
+ *
+ * #define FC_LEFT_COL  (UINT64_C(0x0101010101010101))
+ * #define FC_RIGHT_COL (UINT64_C(0x8080808080808080))
+ * #define FC_2LEFT_COL  (UINT64_C(0x0202020202020202))
+ * #define FC_2RIGHT_COL (UINT64_C(0x4040404040404040))
+ *
+ * References to UINT64_C had to be removed as it won't build on a 32-bit
+ * system.
+ */
 /* used to check a piece's position on the board */
-#define FC_LEFT_COL  (UINT64_C(0x0101010101010101))
-#define FC_RIGHT_COL (UINT64_C(0x8080808080808080))
-#define FC_2LEFT_COL  (UINT64_C(0x0202020202020202))
-#define FC_2RIGHT_COL (UINT64_C(0x4040404040404040))
+#define FC_LEFT_COL ((((uint64_t)0x01010101) << 32) | ((uint64_t)0x01010101))
+#define FC_RIGHT_COL ((((uint64_t)0x80808080) << 32) | ((uint64_t)0x80808080))
+#define FC_2LEFT_COL ((((uint64_t)0x02020202) << 32) | ((uint64_t)0x02020202))
+#define FC_2RIGHT_COL ((((uint64_t)0x40404040) << 32) | ((uint64_t)0x40404040))
 
 /* returns a bitboard where all pieces for a player are represented by 1 */
 #define FC_ALL_PIECES(b, p) \

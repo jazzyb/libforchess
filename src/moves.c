@@ -24,12 +24,8 @@ uint64_t fc_uint64 (const char *str)
 	y1 -= '1';
 	y2 -= '1';
 
-/* Redefine UINT64_C to be something that plays nicer with the C89 standard */
-#undef UINT64_C
-#define UINT64_C(x) ((uint64_t)x)
-
-	return ((UINT64_C(1)) << ((y1 * 8) + x1)) |
-	       ((UINT64_C(1)) << ((y2 * 8) + x2));
+	return (((uint64_t)1) << ((y1 * 8) + x1)) |
+	       (((uint64_t)1) << ((y2 * 8) + x2));
 }
 
 void fc_move_copy (fc_move_t *dst, fc_move_t *src)

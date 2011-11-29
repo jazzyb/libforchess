@@ -63,7 +63,7 @@ int fc_board_set_piece (fc_board_t *board, fc_player_t player, fc_piece_t piece,
 	 * FIXME make sure there is not already a piece on this position.
 	 * FIXME also make sure we don't call it with bad row/col values.
 	 */
-	bb = UINT64_C(1) << (row * 8 + col);
+	bb = ((uint64_t)1) << (row * 8 + col);
 	FC_BITBOARD(board, player, piece) |= bb;
 	if (piece == FC_PAWN) {
 		FC_PAWN_BB(board, player) |= bb;
@@ -113,7 +113,7 @@ int fc_board_get_piece (fc_board_t *board, fc_player_t *player,
 
 	assert(board && player && piece);
 
-	bit = UINT64_C(1) << (row * 8 + col);
+	bit = ((uint64_t)1) << (row * 8 + col);
 	find_player_piece(board, player, piece, bit);
 	return (*player != FC_NONE && *piece != FC_NONE);
 }
@@ -132,7 +132,7 @@ int fc_board_remove_piece (fc_board_t *board, int row, int col)
 	assert(board);
 
 	fc_board_get_piece(board, &player, &piece, row, col);
-	bit = UINT64_C(1) << (row * 8 + col);
+	bit = ((uint64_t)1) << (row * 8 + col);
 	for (i = 0; i < 24; i++) {
 		if (board->bitb[i] & bit) {
 			if (piece == FC_PAWN) {
@@ -747,21 +747,36 @@ static void fc_convert_pieces (fc_board_t *board, fc_player_t from,
 			FC_BITBOARD(board, to, FC_PAWN) |= board->bitb[i];
 		}
 	}
-	FC_BITBOARD(board, from, FC_PAWN) = UINT64_C(0);
+	FC_BITBOARD(board, from, FC_PAWN) = ((uint64_t)0);
 
 	for (j = FC_PAWN + 1; j < FC_KING; j++) {
 		FC_BITBOARD(board, to, j) |= FC_BITBOARD(board, from, j);
-		FC_BITBOARD(board, from, j) = UINT64_C(0);
+		FC_BITBOARD(board, from, j) = ((uint64_t)0);
 	}
 }
 
 /*
+ * NOTE:  The below macros represent the following values:
+ *
+ * #define FC_FIRST_BACK_WALL  (UINT64_C(0xff80808080808080))
+ * #define FC_SECOND_BACK_WALL (UINT64_C(0x80808080808080ff))
+ * #define FC_THIRD_BACK_WALL  (UINT64_C(0x01010101010101ff))
+ * #define FC_FOURTH_BACK_WALL (UINT64_C(0xff01010101010101))
+ *
+ * References to UINT64_C had to be removed as it won't build on a 32-bit
+ * system.
+ */
+#define FC_FIRST_BACK_WALL  ((((uint64_t)0xff808080) << 32) | \
+		((uint64_t)0x80808080))
+#define FC_SECOND_BACK_WALL  ((((uint64_t)0x80808080) << 32) | \
+		((uint64_t)0x808080ff))
+#define FC_THIRD_BACK_WALL  ((((uint64_t)0x01010101) << 32) | \
+		((uint64_t)0x010101ff))
+#define FC_FOURTH_BACK_WALL  ((((uint64_t)0xff010101) << 32) | \
+		((uint64_t)0x01010101))
+/*
  * If the given pawn reaches its "back wall" it will get promoted.
  */
-#define FC_FIRST_BACK_WALL  (UINT64_C(0xff80808080808080))
-#define FC_SECOND_BACK_WALL (UINT64_C(0x80808080808080ff))
-#define FC_THIRD_BACK_WALL  (UINT64_C(0x01010101010101ff))
-#define FC_FOURTH_BACK_WALL (UINT64_C(0xff01010101010101))
 static int must_promote (fc_player_t player, uint64_t pawn)
 {
 	switch (player) {
