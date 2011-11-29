@@ -314,13 +314,9 @@ int fc_game_convert_coords_to_move (fc_game_t *game, fc_move_t *move,
 		return 0;
 	}
 
-/* Redefine UINT64_C to be something that plays nicer with the C89 standard */
-#undef UINT64_C
-#define UINT64_C(x) ((uint64_t)x)
-
-	move->move = UINT64_C(1) << ((y1 * 8) + x1);
+	move->move = ((uint64_t)1) << ((y1 * 8) + x1);
 	if (x2 != -1 && y2 != -1) {
-		move->move |= UINT64_C(1) << ((y2 * 8) + x2);
+		move->move |= ((uint64_t)1) << ((y2 * 8) + x2);
 	}
 	return 1;
 }
