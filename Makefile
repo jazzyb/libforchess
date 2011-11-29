@@ -91,7 +91,8 @@ libforchess_gprof: $(SRC_FILES) $(INC_FILES)
 	$(CC) -c -o src/moves.o $(CFLAGS) $(WARN_FLAGS) $(PROF_FLAGS) $(INCLUDES) src/moves.c
 	$(CC) -c -o src/game.o $(CFLAGS) $(WARN_FLAGS) $(PROF_FLAGS) $(INCLUDES) src/game.c
 	mkdir -p lib
-	$(CC) -shared -o lib/libforchess.so $^
+	ar cr lib/libforchess.a src/*.o
+	ranlib lib/libforchess.a
 
 profiler: $(EXAMPLE_FILES) $(INC_FILES) libforchess_gprof
 	$(CC) $(CFLAGS) --std=c99 $(PROF_FLAGS) $(INCLUDES) $(LIBS) $(EXAMPLE_FILES) -lforchess
