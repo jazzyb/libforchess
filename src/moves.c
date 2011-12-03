@@ -64,7 +64,7 @@ int fc_mlist_init (fc_mlist_t *list)
 
 int fc_mlist_copy (fc_mlist_t *dst, fc_mlist_t *src)
 {
-	uint32_t i;
+	uint8_t i;
 
 	for (i = 0; i < src->index; i++) {
 		fc_move_copy(dst->moves + i, src->moves + i);
@@ -83,8 +83,10 @@ int fc_mlist_copy (fc_mlist_t *dst, fc_mlist_t *src)
  */
 int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move, int32_t value)
 {
-	uint32_t i;
+	uint8_t i;
 	fc_move_t *new, *old;
+
+	assert((uint32_t)list->index + 1 <= FC_DEFAULT_MLIST_SIZE);
 
 	new = &(list->moves[list->index]);
 	fc_move_copy(new, move);
@@ -100,7 +102,7 @@ int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move, int32_t value)
 		}
 	}
 	(void)memmove(list->sorted + i + 1, list->sorted + i,
-			(list->index - i) * sizeof(int32_t));
+			(list->index - i) * sizeof(uint8_t));
 	list->sorted[i] = list->index;
 	list->index += 1;
 	return 1;
