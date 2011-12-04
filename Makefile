@@ -9,7 +9,7 @@ endif
 WARN_FLAGS=-Wall -Werror -std=c89 -pedantic
 PROF_FLAGS=-pg
 
-INCLUDES=-I./src
+INCLUDES=-I./include
 
 LIBS=-Llib
 
@@ -27,10 +27,10 @@ TEST_FILES=test/check_forchess.c \
 	   test/check_ai.c \
 	   test/check_game.c
 
-INC_FILES=src/forchess/moves.h \
-	  src/forchess/board.h \
-	  src/forchess/ai.h \
-	  src/forchess/game.h
+INC_FILES=include/forchess/moves.h \
+	  include/forchess/board.h \
+	  include/forchess/ai.h \
+	  include/forchess/game.h
 
 SRC_FILES=src/ai.c \
 	  src/board.c \
