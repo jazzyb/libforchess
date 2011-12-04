@@ -25,12 +25,14 @@ TEST_FILES=test/check_forchess.c \
 	   test/check_board.c \
 	   test/check_check.c \
 	   test/check_fifo.c \
+	   test/check_threads.c \
 	   test/check_ai.c \
 	   test/check_game.c
 
 INC_FILES=include/forchess/moves.h \
 	  include/forchess/board.h \
 	  include/forchess/fifo.h \
+	  include/forchess/threads.h \
 	  include/forchess/ai.h \
 	  include/forchess/game.h
 
@@ -39,14 +41,16 @@ SRC_FILES=src/ai.c \
 	  src/check.c \
 	  src/fifo.c \
 	  src/game.c \
-	  src/moves.c
+	  src/moves.c \
+	  src/threads.c
 
 OBJ_FILES=src/ai.o \
 	  src/board.o \
 	  src/check.o \
 	  src/fifo.o \
 	  src/game.o \
-	  src/moves.o
+	  src/moves.o \
+	  src/threads.o
 
 EXAMPLE_FILES=examples/cli/simple.c
 
@@ -94,6 +98,7 @@ libforchess_gprof: $(SRC_FILES) $(INC_FILES)
 	$(CC) -c -o src/check.o $(CFLAGS) $(WARN_FLAGS) $(PROF_FLAGS) $(INCLUDES) src/check.c
 	$(CC) -c -o src/fifo.o $(CFLAGS) $(WARN_FLAGS) $(PROF_FLAGS) $(INCLUDES) src/fifo.c
 	$(CC) -c -o src/moves.o $(CFLAGS) $(WARN_FLAGS) $(PROF_FLAGS) $(INCLUDES) src/moves.c
+	$(CC) -c -o src/threads.o $(CFLAGS) $(WARN_FLAGS) $(PROF_FLAGS) $(INCLUDES) src/threads.c
 	$(CC) -c -o src/game.o $(CFLAGS) $(WARN_FLAGS) $(PROF_FLAGS) $(INCLUDES) src/game.c
 	mkdir -p lib
 	ar cr lib/libforchess.a src/*.o
