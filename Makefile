@@ -73,11 +73,11 @@ endif
 # FIXME: C99 standard just makes compiling easier; will need to change this
 # later; see also examples and profiler
 check: $(TEST_FILES) libforchess
-	$(CC) -o test_all $(CFLAGS) --std=c99 $(INCLUDES) $(CHECK_FLAGS) $(LIBS) $(TEST_FILES) -lcheck -lforchess
+	$(CC) -o test_all $(CFLAGS) --std=c99 $(INCLUDES) $(CHECK_FLAGS) $(LIBS) $(TEST_FILES) -lcheck -lforchess -lpthread
 	./test_all
 
 examples: $(EXAMPLE_FILES) $(INC_FILES) libforchess
-	$(CC) $(CFLAGS) --std=c99 $(INCLUDES) $(LIBS) $(EXAMPLE_FILES) -lforchess
+	$(CC) $(CFLAGS) --std=c99 $(INCLUDES) $(LIBS) $(EXAMPLE_FILES) -lforchess -lpthread
 
 cscope:
 	find src -type f | egrep '.*\.h|.*\.c$$' > cscope.files
