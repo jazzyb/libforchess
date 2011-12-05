@@ -13,7 +13,9 @@ typedef struct {
 	unsigned char *q;
 	size_t num_elem;
 	size_t elem_size;
-	size_t index;
+	size_t count;
+	size_t push_index;
+	size_t pop_index;
 } fc_fifo_t;
 
 /* TODO: Documentation */
