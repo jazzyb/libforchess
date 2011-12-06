@@ -160,3 +160,18 @@ int fc_tpool_push_task (fc_tpool_t *pool,
 	return task.id;
 }
 
+int fc_tpool_pop_result (fc_tpool_t *pool, void **ret)
+{
+	fc_task_t task;
+
+	pthread_mutex_lock(&pool->mutex);
+	if (!fc_fifo_pop(&pool->resultq, &task)) {
+		pthread_mutex_unlock(&pool->mutex);
+		return 0;
+	}
+	pthread_mutex_unlock(&pool->mutex);
+
+	*ret = task.output_data;
+	return task.id;
+}
+
