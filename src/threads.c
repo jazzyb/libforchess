@@ -6,6 +6,7 @@
  * which is a part of this source code package.
  */
 
+#include <assert.h>
 #include <pthread.h>
 #include <stdlib.h>
 
@@ -20,6 +21,7 @@ int fc_tpool_init (fc_tpool_t *pool, size_t num_threads)
 	}
 	pthread_attr_init(&pool->attr);
 	pthread_attr_setdetachstate(&pool->attr, PTHREAD_CREATE_JOINABLE);
+	pthread_mutex_init(&pool->mutex, NULL);
 	if (!fc_fifo_init(&pool->taskq, num_threads, sizeof(fc_task_t))) {
 		free(pool->threads);
 		return 0;
@@ -39,6 +41,7 @@ int fc_tpool_init (fc_tpool_t *pool, size_t num_threads)
  */
 void fc_tpool_free (fc_tpool_t *pool)
 {
+	pthread_mutex_destroy(&pool->mutex);
 	fc_fifo_free(&pool->taskq);
 	fc_fifo_free(&pool->resultq);
 	free(pool->threads);
@@ -56,7 +59,7 @@ static void *fc_thread_routine (void *data)
 		pthread_mutex_lock(&pool->mutex);
 		if (pool->die) {
 			pthread_mutex_unlock(&pool->mutex);
-			break;
+			goto exit;
 		}
 
 		if (!fc_fifo_pop(&pool->taskq, &task)) {
@@ -72,6 +75,11 @@ static void *fc_thread_routine (void *data)
 		 */
 		while (1) {
 			pthread_mutex_lock(&pool->mutex);
+			if (pool->die) {
+				pthread_mutex_unlock(&pool->mutex);
+				goto exit;
+			}
+
 			if (fc_fifo_push(&pool->resultq, &task)) {
 				pthread_mutex_unlock(&pool->mutex);
 				break;
@@ -80,6 +88,7 @@ static void *fc_thread_routine (void *data)
 		}
 	}
 
+exit:
 	pthread_exit(NULL);
 }
 
@@ -121,7 +130,6 @@ int fc_tpool_stop_threads (fc_tpool_t *pool)
 	return 1;
 }
 
-/*
 int fc_tpool_push_task (fc_tpool_t *pool,
 		void (*callback) (void *input_data, void *output_data),
 		void *input_data, void *output_data)
@@ -139,12 +147,16 @@ int fc_tpool_push_task (fc_tpool_t *pool,
 	task.input_data = input_data;
 	task.output_data = output_data;
 	if (!fc_fifo_push(&pool->taskq, &task)) {
+		/*
+		 * We should have been able to push since we were told the
+		 * queue was not full.  This indicates a threading issue.
+		 */
 		pthread_mutex_unlock(&pool->mutex);
+		assert(0);
 		return 0;
 	}
 
 	pthread_mutex_unlock(&pool->mutex);
 	return task.id;
 }
-*/
 
