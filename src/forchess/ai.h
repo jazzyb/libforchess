@@ -24,8 +24,7 @@ typedef struct {
 	fc_board_t *board;
 	fc_board_t *bv; /* board vector */
 	fc_mlist_t *mlv; /* move list vector */
-	unsigned int seconds;
-	time_t start;
+	time_t timeout;
 } fc_ai_t;
 
 #endif /* DOXYGEN_IGNORE */

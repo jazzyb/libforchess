@@ -44,11 +44,11 @@ static int game_over (fc_board_t *board)
 
 static int time_up (fc_ai_t *ai)
 {
-	if (ai->seconds == 0) {
+	if (ai->timeout == 0) {
 		return 0;
 	}
 
-	return time(NULL) >= ai->start + ai->seconds;
+	return time(NULL) >= ai->timeout;
 }
 
 static void append_pawn_promotions_to_moves(fc_board_t *board, fc_mlist_t *list,
@@ -350,8 +350,7 @@ int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	initialize_ai_mlists(ai, depth);
 	initialize_ai_boards(ai, depth);
 
-	ai->seconds = seconds;
-	ai->start = time(NULL);
+	ai->timeout = (seconds) ? time(NULL) + seconds : 0;
 	(void)alphabeta(ai, ret, player, depth, ALPHA_MIN, BETA_MAX, 1);
 
 	free_ai_boards(ai);
