@@ -94,15 +94,15 @@ START_TEST (test_ai_next_move1)
 	fc_move_t move;
 	fc_ai_t ai;
 	fc_ai_init(&ai, &board);
-	fc_ai_next_move(&ai, &move, FC_FIRST, 4);
+	fc_ai_next_move(&ai, &move, FC_FIRST, 4, 0);
 	fail_unless(move.move == fc_uint64("c8-c1"));
 	//printf("1: %d, 0x%llx\n", move.piece, move.move);
 	fc_board_make_move(&board, &move);
-	fc_ai_next_move(&ai, &move, FC_FOURTH, 4);
+	fc_ai_next_move(&ai, &move, FC_FOURTH, 4, 0);
 	fail_unless(move.move == fc_uint64("a8-c7"));
 	//printf("4: %d, 0x%llx\n", move.piece, move.move);
 	fc_board_make_move(&board, &move);
-	fc_ai_next_move(&ai, &move, FC_FIRST, 4);
+	fc_ai_next_move(&ai, &move, FC_FIRST, 4, 0);
 	fail_unless(move.move == fc_uint64("c1-h1"));
 }
 END_TEST
@@ -117,12 +117,12 @@ START_TEST (test_ai_next_move2)
 	fc_move_t move;
 	fc_ai_t ai;
 	fc_ai_init(&ai, &board);
-	fc_ai_next_move(&ai, &move, FC_FIRST, 6);
+	fc_ai_next_move(&ai, &move, FC_FIRST, 6, 0);
 	fail_unless(move.piece == FC_KNIGHT);
 
 	fc_board_init(&board);
 	fc_board_setup(&board, "test/boards/test_ai_next_move.3", &dummy);
-	fc_ai_next_move(&ai, &move, FC_FIRST, 4);
+	fc_ai_next_move(&ai, &move, FC_FIRST, 4, 0);
 	fail_unless(move.piece == FC_PAWN);
 }
 END_TEST

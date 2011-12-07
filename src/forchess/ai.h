@@ -16,13 +16,16 @@
  */
 
 #ifndef DOXYGEN_IGNORE
+#include <time.h>
+
 #include "forchess/board.h"
 
 typedef struct {
 	fc_board_t *board;
 	fc_board_t *bv; /* board vector */
 	fc_mlist_t *mlv; /* move list vector */
-	int piece_value[6];
+	unsigned int seconds;
+	time_t start;
 } fc_ai_t;
 
 #endif /* DOXYGEN_IGNORE */
@@ -53,11 +56,15 @@ void fc_ai_init (fc_ai_t *ai, fc_board_t *board);
  * @param[in] depth Number of moves to look ahead.  Each player's move
  * represents one "move".  So to look ahead one whole turn, you will need to
  * pass in 4.
+ * @param[in] seconds Approximate amount of time to spend looking for a move.
+ * If seconds is 0, then no time limit is placed on the search; otherwise, the
+ * search will return as quickly as possible after the number of seconds have
+ * expired.
  *
  * @return 1 on success; 0 otherwise
  */
 int fc_ai_next_move (fc_ai_t *ai, fc_move_t *move, fc_player_t player,
-		int depth);
+		int depth, unsigned int seconds);
 
 /**
  * @brief Determine the relative material worth of a given board configuration.

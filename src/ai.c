@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <limits.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "forchess/ai.h"
 #include "forchess/board.h"
@@ -39,6 +40,15 @@ static int game_over (fc_board_t *board)
 		is_player_out(board, FC_THIRD)) ||
 		(is_player_out(board, FC_SECOND) &&
 		is_player_out(board, FC_FOURTH)));
+}
+
+static int time_up (fc_ai_t *ai)
+{
+	if (ai->seconds == 0) {
+		return 0;
+	}
+
+	return time(NULL) >= ai->start + ai->seconds;
 }
 
 static void append_pawn_promotions_to_moves(fc_board_t *board, fc_mlist_t *list,
@@ -123,7 +133,7 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	fc_player_t dummy;
 
 	board = &(ai->bv[depth]);
-	if (game_over(board) || depth == 0) {
+	if (time_up(ai) || game_over(board) || depth == 0) {
 		orig = ai->board;
 		ai->board = board;
 		score = fc_ai_score_position(ai, player);
@@ -328,7 +338,8 @@ static void initialize_ai_boards (fc_ai_t *ai, int depth)
  * Sets the parameter ret to the best move based on alphabeta pruning of the
  * minmax game tree.
  */
-int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player, int depth)
+int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
+		int depth, unsigned int seconds)
 {
 	assert(ai && ai->board && ret);
 	if (is_player_out(ai->board, player) || depth < 1) {
@@ -339,6 +350,8 @@ int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player, int depth)
 	initialize_ai_mlists(ai, depth);
 	initialize_ai_boards(ai, depth);
 
+	ai->seconds = seconds;
+	ai->start = time(NULL);
 	(void)alphabeta(ai, ret, player, depth, ALPHA_MIN, BETA_MAX, 1);
 
 	free_ai_boards(ai);
