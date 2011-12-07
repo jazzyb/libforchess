@@ -9,7 +9,7 @@
 START_TEST (test_thread_start_stop)
 {
 	fc_tpool_t pool;
-	fail_unless(fc_tpool_init(&pool, 4));
+	fail_unless(fc_tpool_init(&pool, 4, 4));
 	fail_unless(fc_tpool_start_threads(&pool));
 	fail_unless(fc_tpool_stop_threads(&pool));
 	fc_tpool_free(&pool);
@@ -23,12 +23,13 @@ static void test_thread_push_callback (void *input, void *output)
 }
 
 #define NUM_TEST_THREADS 16
+#define NUM_TEST_TASKS NUM_TEST_THREADS
 START_TEST (test_thread_push)
 {
 	printf("    Running test_thread_push; this may take some time...");
 	fflush(stdout);
 	fc_tpool_t pool;
-	fail_unless(fc_tpool_init(&pool, NUM_TEST_THREADS));
+	fail_unless(fc_tpool_init(&pool, NUM_TEST_THREADS, NUM_TEST_TASKS));
 	fail_unless(fc_tpool_start_threads(&pool));
 	int arr[NUM_TEST_THREADS];
 	for (int i = 0; i < NUM_TEST_THREADS; i++) {
@@ -66,7 +67,7 @@ START_TEST (test_thread_pop)
 	int input[NUM_POP_ITEMS];
 	int output[NUM_POP_ITEMS];
 	fc_tpool_t pool;
-	fail_unless(fc_tpool_init(&pool, NUM_TEST_THREADS));
+	fail_unless(fc_tpool_init(&pool, NUM_TEST_THREADS, NUM_TEST_TASKS));
 	fail_unless(fc_tpool_start_threads(&pool));
 	for (int i = 0; i < NUM_POP_ITEMS; i++) {
 		input[i] = i;

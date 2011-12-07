@@ -31,7 +31,7 @@ typedef struct {
 	int die;
 } fc_tpool_t;
 
-int fc_tpool_init (fc_tpool_t *pool, size_t num_threads);
+int fc_tpool_init (fc_tpool_t *pool, size_t num_threads, size_t num_tasks);
 int fc_tpool_start_threads (fc_tpool_t *pool);
 int fc_tpool_stop_threads (fc_tpool_t *pool);
 int fc_tpool_push_task (fc_tpool_t *pool,

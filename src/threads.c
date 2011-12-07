@@ -12,7 +12,7 @@
 
 #include "forchess/threads.h"
 
-int fc_tpool_init (fc_tpool_t *pool, size_t num_threads)
+int fc_tpool_init (fc_tpool_t *pool, size_t num_threads, size_t num_tasks)
 {
 	pool->num_threads = num_threads;
 	pool->threads = calloc(num_threads, sizeof(pthread_t));
@@ -22,11 +22,11 @@ int fc_tpool_init (fc_tpool_t *pool, size_t num_threads)
 	pthread_attr_init(&pool->attr);
 	pthread_attr_setdetachstate(&pool->attr, PTHREAD_CREATE_JOINABLE);
 	pthread_mutex_init(&pool->mutex, NULL);
-	if (!fc_fifo_init(&pool->taskq, num_threads, sizeof(fc_task_t))) {
+	if (!fc_fifo_init(&pool->taskq, num_tasks, sizeof(fc_task_t))) {
 		free(pool->threads);
 		return 0;
 	}
-	if (!fc_fifo_init(&pool->resultq, num_threads, sizeof(fc_task_t))) {
+	if (!fc_fifo_init(&pool->resultq, num_tasks, sizeof(fc_task_t))) {
 		free(pool->threads);
 		fc_fifo_free(&pool->taskq);
 		return 0;
