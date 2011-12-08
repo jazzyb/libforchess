@@ -132,8 +132,16 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	fc_move_t *move;
 	fc_player_t dummy;
 
+	if (time_up(ai)) {
+		/*
+		 * Return a value that will fail the conditions in
+		 * move_and_adjust_scores(), i.e. don't take this move into
+		 * consideration.
+		 */
+		return (max) ? beta : alpha;
+	}
 	board = &(ai->bv[depth]);
-	if (time_up(ai) || game_over(board) || depth == 0) {
+	if (game_over(board) || depth == 0) {
 		orig = ai->board;
 		ai->board = board;
 		score = fc_ai_score_position(ai, player);
