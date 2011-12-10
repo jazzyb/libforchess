@@ -2,6 +2,7 @@
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "forchess/ai.h"
 #include "forchess/board.h"
@@ -94,15 +95,15 @@ START_TEST (test_ai_next_move1)
 	fc_move_t move;
 	fc_ai_t ai;
 	fc_ai_init(&ai, &board);
-	fc_ai_next_move(&ai, &move, FC_FIRST, 4);
+	fc_ai_next_move(&ai, &move, FC_FIRST, 4, 0);
 	fail_unless(move.move == fc_uint64("c8-c1"));
 	//printf("1: %d, 0x%llx\n", move.piece, move.move);
 	fc_board_make_move(&board, &move);
-	fc_ai_next_move(&ai, &move, FC_FOURTH, 4);
+	fc_ai_next_move(&ai, &move, FC_FOURTH, 4, 0);
 	fail_unless(move.move == fc_uint64("a8-c7"));
 	//printf("4: %d, 0x%llx\n", move.piece, move.move);
 	fc_board_make_move(&board, &move);
-	fc_ai_next_move(&ai, &move, FC_FIRST, 4);
+	fc_ai_next_move(&ai, &move, FC_FIRST, 4, 0);
 	fail_unless(move.move == fc_uint64("c1-h1"));
 }
 END_TEST
@@ -117,13 +118,34 @@ START_TEST (test_ai_next_move2)
 	fc_move_t move;
 	fc_ai_t ai;
 	fc_ai_init(&ai, &board);
-	fc_ai_next_move(&ai, &move, FC_FIRST, 6);
+	fc_ai_next_move(&ai, &move, FC_FIRST, 6, 0);
 	fail_unless(move.piece == FC_KNIGHT);
 
 	fc_board_init(&board);
 	fc_board_setup(&board, "test/boards/test_ai_next_move.3", &dummy);
-	fc_ai_next_move(&ai, &move, FC_FIRST, 4);
+	fc_ai_next_move(&ai, &move, FC_FIRST, 4, 0);
 	fail_unless(move.piece == FC_PAWN);
+}
+END_TEST
+
+#define TEST_TIMEOUT_SECS 4
+START_TEST (test_ai_timeout)
+{
+	printf("    Running test_ai_timeout; this will take a few seconds...");
+	fflush(stdout);
+	fc_board_t board;
+	fc_board_init(&board);
+	fc_player_t dummy;
+	fc_board_setup(&board, "test/boards/test_ai_timeout.1", &dummy);
+	fc_move_t move;
+	fc_ai_t ai;
+	fc_ai_init(&ai, &board);
+	time_t start = time(NULL);
+	fc_ai_next_move(&ai, &move, FC_FIRST, 12, TEST_TIMEOUT_SECS);
+	time_t finish = time(NULL);
+	fail_unless(finish - start <= TEST_TIMEOUT_SECS);
+	printf("done.\n");
+	fflush(stdout);
 }
 END_TEST
 
@@ -135,6 +157,8 @@ Suite *ai_suite (void)
 	tcase_add_test(tc_ai, test_ai_is_move_valid);
 	tcase_add_test(tc_ai, test_ai_next_move1);
 	tcase_add_test(tc_ai, test_ai_next_move2);
+	tcase_add_test(tc_ai, test_ai_timeout);
+	tcase_set_timeout(tc_ai, 8);
 	suite_add_tcase(s, tc_ai);
 	return s;
 }

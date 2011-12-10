@@ -313,6 +313,8 @@ int fc_game_convert_coords_to_move (fc_game_t *game, fc_move_t *move,
 				y1, x1)) {
 		return 0;
 	}
+	(void)fc_board_get_piece(game->board, &(move->opp_player),
+			&(move->opp_piece), y2, x2);
 
 	move->move = ((uint64_t)1) << ((y1 * 8) + x1);
 	if (x2 != -1 && y2 != -1) {
