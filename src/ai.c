@@ -14,6 +14,7 @@
 #include "forchess/ai.h"
 #include "forchess/board.h"
 #include "forchess/moves.h"
+#include "forchess/threads.h"
 
 void fc_ai_init (fc_ai_t *ai, fc_board_t *board)
 {
@@ -340,6 +341,46 @@ static void initialize_ai_boards (fc_ai_t *ai, int depth)
 	fc_board_copy(&(ai->bv[depth]), ai->board);
 }
 
+struct ab_input {
+	fc_board_t *board;
+	fc_player_t player;
+	int depth;
+	time_t timeout;
+	int alpha;
+	int beta;
+	int max;
+};
+
+struct ab_output {
+	int score;
+	fc_move_t *move;
+};
+
+#if 0
+static void alphabeta_wrapper (void *input, void *output)
+{
+	fc_ai_t ai;
+	struct ab_input *in = input;
+	struct ab_output *out = output;
+
+	fc_ai_init(&ai, in->board);
+	initialize_ai_mlists(&ai, in->depth);
+	initialize_ai_boards(&ai, in->depth);
+	ai.timeout = in->timeout;
+
+	out->score = alphabeta(&ai, out->move, in->player, in->depth,
+			in->alpha, in->beta, in->max);
+
+	free_ai_boards(&ai);
+	free_ai_mlists(&ai, in->depth);
+}
+#endif
+
+static void threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
+		fc_move_t *move, fc_player_t player, int depth)
+{
+}
+
 #define ALPHA_MIN INT_MIN
 #define BETA_MAX INT_MAX
 /*
@@ -347,8 +388,10 @@ static void initialize_ai_boards (fc_ai_t *ai, int depth)
  * minmax game tree.
  */
 int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
-		int depth, unsigned int seconds)
+		int depth, unsigned int seconds, size_t num_threads)
 {
+	fc_tpool_t pool;
+
 	assert(ai && ai->board && ret);
 	if (is_player_out(ai->board, player) || depth < 1) {
 		ret->move = 0;
@@ -357,9 +400,17 @@ int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 
 	initialize_ai_mlists(ai, depth);
 	initialize_ai_boards(ai, depth);
-
 	ai->timeout = (seconds) ? time(NULL) + seconds : 0;
-	(void)alphabeta(ai, ret, player, depth, ALPHA_MIN, BETA_MAX, 1);
+
+	if (num_threads <= 1) {
+		alphabeta(ai, ret, player, depth, ALPHA_MIN, BETA_MAX, 1);
+	} else {
+		fc_tpool_init(&pool, num_threads, FC_DEFAULT_MLIST_SIZE);
+		fc_tpool_start_threads(&pool);
+		threaded_move_search(ai, &pool, ret, player, depth);
+		fc_tpool_stop_threads(&pool);
+		fc_tpool_free(&pool);
+	}
 
 	free_ai_boards(ai);
 	free_ai_mlists(ai, depth);

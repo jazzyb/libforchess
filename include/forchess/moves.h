@@ -52,6 +52,8 @@ typedef struct {
 	int32_t value;
 } fc_move_t;
 
+#define FC_DEFAULT_MLIST_SIZE 255
+
 typedef struct {
 	fc_move_t *moves;
 	uint8_t index;
