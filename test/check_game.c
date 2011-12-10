@@ -64,6 +64,7 @@ START_TEST (test_forchess_game_move_conversions)
 	fc_game_init(&game);
 	game.player = FC_FIRST;
 	fc_board_set_piece(game.board, FC_FIRST, FC_KING, 0, 0);
+	fc_board_set_piece(game.board, FC_SECOND, FC_KING, 0, 1);
 	fc_mlist_t list;
 	fc_mlist_init(&list);
 	fc_board_get_moves(game.board, &list, FC_FIRST);
@@ -73,8 +74,11 @@ START_TEST (test_forchess_game_move_conversions)
 				move));
 	fc_move_t other;
 	fail_unless(fc_game_convert_coords_to_move(&game, &other, w, x, y, z));
+	fail_unless(other.opp_player == FC_SECOND && other.opp_piece == FC_KING);
 	fail_unless(move->player == other.player &&
 		    move->piece == other.piece &&
+		    move->opp_player == other.opp_player &&
+		    move->opp_piece == other.opp_piece &&
 		    move->move == other.move);
 	fc_mlist_free(&list);
 	fc_game_free(&game);
