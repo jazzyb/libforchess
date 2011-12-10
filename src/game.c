@@ -313,6 +313,8 @@ int fc_game_convert_coords_to_move (fc_game_t *game, fc_move_t *move,
 				y1, x1)) {
 		return 0;
 	}
+	(void)fc_board_get_piece(game->board, &(move->opp_player),
+			&(move->opp_piece), y2, x2);
 
 /* Redefine UINT64_C to be something that plays nicer with the C89 standard */
 #undef UINT64_C
