@@ -877,9 +877,6 @@ static void get_valid_removes (fc_board_t *board, fc_mlist_t *list,
  * moves are available, return all the valid, legal removes that are
  * available.
  */
-/*
- * TODO TODO TODO TEST!!!
- */
 void fc_board_get_valid_moves (fc_board_t *board, fc_mlist_t *list,
 		fc_player_t player)
 {
