@@ -732,9 +732,10 @@ void fc_board_get_removes (fc_board_t *board, fc_mlist_t *moves,
 }
 
 /*
- * NOTE:  This function has been stolen verbatim from src/ai.c.  Once we have
- * this function working in board.c we should remove the function (along with
- * fc_ai_is_move_valid()) from ai.c and updates the comments.
+ * All of the code below was once a part of fc_board_is_move_valid() but was
+ * pulled out to increase the speed of the alphabeta function.  See the
+ * comment above fc_board_is_move_valid() for an explanation of what this
+ * function is looking for.
  */
 static int is_move_valid_given_check_status (fc_board_t *board, fc_move_t *move,
 		int check_status_before, int partner_status_before)
@@ -796,9 +797,6 @@ int fc_board_is_move_valid (fc_board_t *board, fc_move_t *move)
 			check_status_before, partner_status_before);
 }
 
-/*
- * NOTE:  Stolen from ai.c.  Needs to be removed from ai.c in the future.
- */
 static void append_pawn_promotions_to_moves(fc_board_t *board, fc_mlist_t *list,
 		fc_move_t *move)
 {
@@ -816,10 +814,6 @@ static void append_pawn_promotions_to_moves(fc_board_t *board, fc_mlist_t *list,
 /*
  * Called from fc_board_get_valid_moves() below if player has no valid, legal
  * moves available.  Fills the move list with the available removes.
- *
- * TODO: Update comments.
- *
- * FIXME: This logic seems wrong... maybe... I don't know; I'm sleepy...
  */
 static void get_valid_removes (fc_board_t *board, fc_mlist_t *list,
 		fc_player_t player)
