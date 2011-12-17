@@ -258,6 +258,12 @@ void fc_board_get_moves (fc_board_t *board, fc_mlist_t *moves,
 void fc_board_get_removes (fc_board_t *board, fc_mlist_t *moves,
 			  fc_player_t player);
 
+/* TODO */
+int fc_board_is_move_valid (fc_board_t *board, fc_move_t *move);
+
+void fc_board_get_valid_moves (fc_board_t *board, fc_mlist_t *moves,
+		fc_player_t player);
+
 /**
  * @brief Determines whether or not the given move requires a pawn to be
  * promoted.

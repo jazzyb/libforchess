@@ -206,9 +206,9 @@ int fc_game_is_move_legal (fc_game_t *game, fc_move_t *move)
 		other = fc_mlist_get(&list, i);
 		if (move->piece == other->piece && move->move == other->move) {
 			fc_mlist_free(&list);
-			return fc_ai_is_move_valid(game->board, move);
+			return fc_board_is_move_valid(game->board, move);
 		}
-		valid_move_exists += fc_ai_is_move_valid(game->board, other);
+		valid_move_exists += fc_board_is_move_valid(game->board, other);
 	}
 	if (valid_move_exists) {
 		fc_mlist_free(&list);
@@ -233,13 +233,13 @@ int fc_game_is_move_legal (fc_game_t *game, fc_move_t *move)
 			continue;
 		}
 		if (move->piece == other->piece && move->move == other->move) {
-			if (fc_ai_is_move_valid(game->board, move)) {
+			if (fc_board_is_move_valid(game->board, move)) {
 				fc_mlist_free(&list);
 				return 1;
 			}
 			found_match = 1;
 		}
-		valid_remove_exists += fc_ai_is_move_valid(game->board, other);
+		valid_remove_exists += fc_board_is_move_valid(game->board, other);
 	}
 
 	if (found_match && !valid_remove_exists) {

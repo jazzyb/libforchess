@@ -109,6 +109,35 @@ int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move, int32_t value)
 }
 
 /*
+ * NOTE:  We may be able to speed this function up if we need to by *not*
+ * removing the move structs and keeping up with two different indices: one
+ * for the moves and another for the sorted index.
+ *
+ * Need to profile and see if the change is worth it.
+ */
+int fc_mlist_delete (fc_mlist_t *list, int index)
+{
+	int i, old_index;
+
+	if (index < 0 || index >= list->index) {
+		return 0;
+	}
+
+	old_index = list->sorted[index];
+	memmove(list->sorted + index, list->sorted + index + 1,
+			(list->index - index) * sizeof(uint8_t));
+	memmove(list->moves + old_index, list->moves + old_index + 1,
+			(list->index - old_index) * sizeof(fc_move_t));
+	for (i = 0; i < list->index; i++) {
+		if (list->sorted[i] > old_index) {
+			list->sorted[i] -= 1;
+		}
+	}
+	list->index -= 1;
+	return 1;
+}
+
+/*
  * NOTE: Assumes that the values are initialized for all moves in both lists.
  */
 int fc_mlist_merge (fc_mlist_t *dst, fc_mlist_t *src)

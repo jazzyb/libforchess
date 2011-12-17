@@ -139,6 +139,14 @@ int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move, int32_t value);
 int fc_mlist_merge (fc_mlist_t *dst, fc_mlist_t *src);
 
 /**
+ * @brief Delete the move at index from the list.
+ *
+ * fc_mlist_delete() maintains sorted order.  See fc_mlist_insert() for a
+ * description of the sorted order of the moves.
+ */
+int fc_mlist_delete (fc_mlist_t *list, int index);
+
+/**
  * @brief De-initializes the mlist.
  *
  * If list was dynamically allocated by the user, then the user must free list

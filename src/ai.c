@@ -51,68 +51,6 @@ static int time_up (fc_ai_t *ai)
 	return time(NULL) >= ai->timeout;
 }
 
-static void append_pawn_promotions_to_moves(fc_board_t *board, fc_mlist_t *list,
-		fc_move_t *move)
-{
-	move->promote = FC_QUEEN;
-	fc_board_list_add_move(board, list, move);
-	move->promote = FC_KNIGHT;
-	fc_board_list_add_move(board, list, move);
-	move->promote = FC_ROOK;
-	fc_board_list_add_move(board, list, move);
-	move->promote = FC_BISHOP;
-	fc_board_list_add_move(board, list, move);
-	move->promote = FC_NONE;
-}
-
-/*
- * All of the code below was once a part of fc_ai_is_move_valid() but was
- * pulled out to increase the speed of the alphabeta function.  See the comment
- * above fc_ai_is_move_valid() for an explanation of what this function is
- * looking for.
- */
-static int is_move_valid_given_check_status (fc_board_t *board, fc_move_t *move,
-		int check_status_before, int partner_status_before)
-{
-	int check_status_after, partner_status_after;
-	uint64_t king;
-	fc_board_t copy;
-
-	fc_board_copy(&copy, board);
-	fc_board_make_move(&copy, move);
-
-	if (check_status_before == FC_CHECKMATE) {
-		king = FC_BITBOARD(board, move->player, FC_KING);
-		if (move->piece == FC_KING && move->move != king) {
-			return 0;
-		} else {
-			return 1;
-		}
-	}
-	check_status_after = fc_board_check_status(&copy, move->player);
-	if (!check_status_before && check_status_after) {
-		return 0;
-	}
-	if (check_status_before == FC_CHECK && check_status_after) {
-		return 0;
-	}
-
-	partner_status_after = fc_board_check_status(&copy,
-			FC_PARTNER(move->player));
-	if (!partner_status_before && partner_status_after) {
-		return 0;
-	}
-
-	return 1;
-}
-
-static void move_and_adjust_scores (fc_move_t *mv, fc_ai_t *ai,
-		fc_move_t *ret, fc_player_t player, int depth, int *alpha,
-		int *beta, int max);
-
-static int alphabeta_handle_removes(fc_ai_t *ai, fc_move_t *ret,
-		fc_player_t player, int depth, int alpha, int beta, int max);
-
 /*
  * Returns the value of the subtree.  If the variable max is set to 1, then the
  * function will try to maximize the value.  If max is set to 0, then it will
@@ -125,12 +63,9 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 {
 	int i;
 	int score;
-	int current_check_status, partner_check_status;
-	int all_moves_are_invalid;
-	fc_board_t *orig, *board;
+	fc_board_t *orig, *board, *copy;
 	fc_mlist_t *list;
 	fc_move_t *move;
-	fc_player_t dummy;
 
 	if (time_up(ai)) {
 		/*
@@ -158,140 +93,30 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 				alpha, beta, !max);
 	}
 
+	copy = &(ai->bv[depth - 1]);
 	list = &(ai->mlv[depth - 1]);
 	fc_mlist_clear(list);
-	fc_board_get_moves(board, list, player);
-
-	all_moves_are_invalid = 1;
-	current_check_status = fc_board_check_status(board, player);
-	partner_check_status = fc_board_check_status(board,
-			FC_PARTNER(player));
+	fc_board_get_valid_moves(board, list, player);
 	for (i = 0; i < fc_mlist_length(list); i++) {
 
 		move = fc_mlist_get(list, i);
-		if (!is_move_valid_given_check_status(board, move,
-					current_check_status,
-					partner_check_status)) {
-			continue;
+		fc_board_copy(copy, board);
+		fc_board_make_move(copy, move);
+
+		score = alphabeta(ai, NULL, FC_NEXT_PLAYER(player), depth - 1,
+				alpha, beta, !max);
+
+		if (max && score > alpha) {
+			alpha = score;
+			if (ret) {
+				fc_move_copy(ret, move);
+			}
+		} else if (!max && score < beta) {
+			beta = score;
+			if (ret) {
+				fc_move_copy(ret, move);
+			}
 		}
-
-		if (fc_board_move_requires_promotion(board, move, &dummy) &&
-				move->promote == FC_NONE) {
-			append_pawn_promotions_to_moves(board, list, move);
-			continue;
-		}
-		all_moves_are_invalid = 0;
-
-		move_and_adjust_scores(move, ai, ret, player, depth, &alpha,
-				&beta, max);
-
-		if (beta <= alpha) {
-			break;
-		}
-	}
-
-	if (all_moves_are_invalid) {
-		return alphabeta_handle_removes(ai, ret, player, depth, alpha,
-				beta, max);
-	}
-
-	return (max) ? alpha : beta;
-}
-
-/*
- * Used in alphabeta() and alphabeta_handle_removes().  Makes the given move on
- * the board and gets the material score of the board.  Adjusts alpha and beta
- * if necessary and sets the ret move pointer to the best move if ret != NULL.
- */
-static void move_and_adjust_scores (fc_move_t *mv, fc_ai_t *ai,
-		fc_move_t *ret, fc_player_t player, int depth, int *alpha,
-		int *beta, int max)
-{
-	int score;
-	fc_board_t *board, *copy;
-
-	board = &(ai->bv[depth]);
-	copy = &(ai->bv[depth - 1]);
-	fc_board_copy(copy, board);
-	fc_board_make_move(copy, mv);
-	score = alphabeta(ai, NULL, FC_NEXT_PLAYER(player), depth - 1, *alpha,
-			*beta, !max);
-
-	if (max && score > *alpha) {
-		*alpha = score;
-		if (ret) {
-			fc_move_copy(ret, mv);
-		}
-	} else if (!max && score < *beta) {
-		*beta = score;
-		if (ret) {
-			fc_move_copy(ret, mv);
-		}
-	}
-}
-
-/*
- * Same as alphabeta above, but evaluates the removes for a position instead of
- * the moves.  This function is only called from the end of alphabeta(), so we
- * can assume that all the checks for game_over(), etc. have already been done.
- */
-static int alphabeta_handle_removes(fc_ai_t *ai, fc_move_t *ret,
-		fc_player_t player, int depth, int alpha, int beta, int max)
-{
-	int i;
-	int found_valid_move = 0;
-	fc_board_t *board;
-	fc_mlist_t *list;
-	fc_move_t *rm;
-
-	board = &(ai->bv[depth]);
-	list = &(ai->mlv[depth - 1]);
-	fc_mlist_clear(list);
-	fc_board_get_removes(board, list, player);
-	/*
-	 * Go through the list the first time.  If we can remove a piece other
-	 * than the king that won't put us in check, great.
-	 */
-	for (i = 0; i < fc_mlist_length(list); i++) {
-		rm = fc_mlist_get(list, i);
-		if (rm->piece == FC_KING || !fc_ai_is_move_valid(board, rm)) {
-			continue;
-		}
-		found_valid_move = 1;
-
-		move_and_adjust_scores(rm, ai, ret, player, depth, &alpha,
-				&beta, max);
-
-		if (beta <= alpha) {
-			break;
-		}
-	}
-	if (found_valid_move) {
-		return (max) ? alpha : beta;
-	}
-
-	/*
-	 * If we only have the king to remove, then remove it.
-	 */
-	if (fc_mlist_length(list) == 1) {
-		move_and_adjust_scores(fc_mlist_get(list, 0), ai, ret, player,
-				depth, &alpha, &beta, max);
-
-		return (max) ? alpha : beta;
-	}
-
-	/*
-	 * Otherwise, go through the whole list again (this time allowing
-	 * putting kings into check(mate)). And return the best move.
-	 */
-	for (i = 0; i < fc_mlist_length(list); i++) {
-		rm = fc_mlist_get(list, i);
-		if (rm->piece == FC_KING) {
-			continue;
-		}
-
-		move_and_adjust_scores(rm, ai, ret, player, depth, &alpha,
-				&beta, max);
 
 		if (beta <= alpha) {
 			break;
@@ -389,30 +214,5 @@ int fc_ai_score_position (fc_ai_t *ai, fc_player_t player)
 		get_material_score(ai, FC_NEXT_PLAYER(player)) +
 		get_material_score(ai, FC_PARTNER(player)) -
 		get_material_score(ai, FC_PARTNER(FC_NEXT_PLAYER(player))));
-}
-
-/*
- * Verifies that we are:
- * 	1. Not moving our king into check.
- * 	2. Not putting our partner's king into check.
- * 	3. If our king is in check, then moving him out of check...
- * 	4. ...unless he's in checkmate; in which case we can move anything BUT
- * 	   the king.
- *
- * Returns 1 if all of the above are true (i.e. the move is allowed); 0
- * otherwise.
- *
- * See is_move_valid_given_check_status() above.
- */
-int fc_ai_is_move_valid (fc_board_t *board, fc_move_t *move)
-{
-	int check_status_before, partner_status_before;
-
-	assert(board && move);
-	check_status_before = fc_board_check_status(board, move->player);
-	partner_status_before = fc_board_check_status(board,
-			FC_PARTNER(move->player));
-	return is_move_valid_given_check_status(board, move,
-			check_status_before, partner_status_before);
 }
 
