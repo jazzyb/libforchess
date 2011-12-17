@@ -66,10 +66,10 @@ static void append_pawn_promotions_to_moves(fc_board_t *board, fc_mlist_t *list,
 }
 
 /*
- * All of the code below was once a part of fc_ai_is_move_valid() but was
- * pulled out to increase the speed of the alphabeta function.  See the comment
- * above fc_ai_is_move_valid() for an explanation of what this function is
- * looking for.
+ * All of the code below was once a part of fc_board_is_move_valid() but was
+ * pulled out to increase the speed of the alphabeta function.  See the
+ * comment above fc_board_is_move_valid() for an explanation of what this
+ * function is looking for.
  */
 static int is_move_valid_given_check_status (fc_board_t *board, fc_move_t *move,
 		int check_status_before, int partner_status_before)
@@ -254,7 +254,8 @@ static int alphabeta_handle_removes(fc_ai_t *ai, fc_move_t *ret,
 	 */
 	for (i = 0; i < fc_mlist_length(list); i++) {
 		rm = fc_mlist_get(list, i);
-		if (rm->piece == FC_KING || !fc_ai_is_move_valid(board, rm)) {
+		if (rm->piece == FC_KING ||
+				!fc_board_is_move_valid(board, rm)) {
 			continue;
 		}
 		found_valid_move = 1;
@@ -389,30 +390,5 @@ int fc_ai_score_position (fc_ai_t *ai, fc_player_t player)
 		get_material_score(ai, FC_NEXT_PLAYER(player)) +
 		get_material_score(ai, FC_PARTNER(player)) -
 		get_material_score(ai, FC_PARTNER(FC_NEXT_PLAYER(player))));
-}
-
-/*
- * Verifies that we are:
- * 	1. Not moving our king into check.
- * 	2. Not putting our partner's king into check.
- * 	3. If our king is in check, then moving him out of check...
- * 	4. ...unless he's in checkmate; in which case we can move anything BUT
- * 	   the king.
- *
- * Returns 1 if all of the above are true (i.e. the move is allowed); 0
- * otherwise.
- *
- * See is_move_valid_given_check_status() above.
- */
-int fc_ai_is_move_valid (fc_board_t *board, fc_move_t *move)
-{
-	int check_status_before, partner_status_before;
-
-	assert(board && move);
-	check_status_before = fc_board_check_status(board, move->player);
-	partner_status_before = fc_board_check_status(board,
-			FC_PARTNER(move->player));
-	return is_move_valid_given_check_status(board, move,
-			check_status_before, partner_status_before);
 }
 
