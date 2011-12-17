@@ -4,6 +4,19 @@
  *
  * This file is subject to the terms and conditions of the 'LICENSE' file
  * which is a part of this source code package.
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef _FC_BOARD_H_
@@ -257,6 +270,12 @@ void fc_board_get_moves (fc_board_t *board, fc_mlist_t *moves,
  */
 void fc_board_get_removes (fc_board_t *board, fc_mlist_t *moves,
 			  fc_player_t player);
+
+/* TODO */
+int fc_board_is_move_valid (fc_board_t *board, fc_move_t *move);
+
+void fc_board_get_valid_moves (fc_board_t *board, fc_mlist_t *moves,
+		fc_player_t player);
 
 /**
  * @brief Determines whether or not the given move requires a pawn to be

@@ -4,6 +4,19 @@
  *
  * This file is subject to the terms and conditions of the 'LICENSE' file
  * which is a part of this source code package.
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <assert.h>
@@ -206,9 +219,9 @@ int fc_game_is_move_legal (fc_game_t *game, fc_move_t *move)
 		other = fc_mlist_get(&list, i);
 		if (move->piece == other->piece && move->move == other->move) {
 			fc_mlist_free(&list);
-			return fc_ai_is_move_valid(game->board, move);
+			return fc_board_is_move_valid(game->board, move);
 		}
-		valid_move_exists += fc_ai_is_move_valid(game->board, other);
+		valid_move_exists += fc_board_is_move_valid(game->board, other);
 	}
 	if (valid_move_exists) {
 		fc_mlist_free(&list);
@@ -233,13 +246,13 @@ int fc_game_is_move_legal (fc_game_t *game, fc_move_t *move)
 			continue;
 		}
 		if (move->piece == other->piece && move->move == other->move) {
-			if (fc_ai_is_move_valid(game->board, move)) {
+			if (fc_board_is_move_valid(game->board, move)) {
 				fc_mlist_free(&list);
 				return 1;
 			}
 			found_match = 1;
 		}
-		valid_remove_exists += fc_ai_is_move_valid(game->board, other);
+		valid_remove_exists += fc_board_is_move_valid(game->board, other);
 	}
 
 	if (found_match && !valid_remove_exists) {

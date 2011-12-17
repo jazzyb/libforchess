@@ -568,6 +568,172 @@ START_TEST (test_forchess_board_copy)
 }
 END_TEST
 
+START_TEST (test_forchess_board_is_move_valid)
+{
+	fc_board_t board;
+	fc_board_init(&board);
+	fc_player_t dummy;
+	fc_board_setup(&board, "test/boards/test_ai_is_move_valid.1", &dummy);
+	fc_move_t move;
+	/* test moving king into check */
+	move.player = FC_FIRST;
+	move.piece = FC_QUEEN;
+	move.opp_player = FC_NONE;
+	move.opp_piece = FC_NONE;
+	move.promote = FC_NONE;
+	move.move = fc_uint64("b1-c2");
+	fail_unless(fc_board_is_move_valid(&board, &move) == 0);
+	/* test putting partner's king into check */
+	move.player = FC_FIRST;
+	move.piece = FC_BISHOP;
+	move.opp_player = FC_NONE;
+	move.opp_piece = FC_NONE;
+	move.promote = FC_NONE;
+	move.move = fc_uint64("h7-g6");
+	fail_unless(fc_board_is_move_valid(&board, &move) == 0);
+	/* forcing us to move out of check */
+	move.player = FC_FOURTH;
+	move.piece = FC_ROOK;
+	move.opp_player = FC_NONE;
+	move.opp_piece = FC_NONE;
+	move.promote = FC_NONE;
+	move.move = fc_uint64("g1-f1");
+	fail_unless(fc_board_is_move_valid(&board, &move) == 0);
+	move.player = FC_FOURTH;
+	move.piece = FC_ROOK;
+	move.opp_player = FC_NONE;
+	move.opp_piece = FC_NONE;
+	move.promote = FC_NONE;
+	move.move = fc_uint64("h2-g2");
+	fail_unless(fc_board_is_move_valid(&board, &move) == 1);
+	/* if checkmate don't move the king, but move anything else */
+	move.player = FC_SECOND;
+	move.piece = FC_KING;
+	move.opp_player = FC_NONE;
+	move.opp_piece = FC_NONE;
+	move.promote = FC_NONE;
+	move.move = fc_uint64("a8-b8");
+	fail_unless(fc_board_is_move_valid(&board, &move) == 0);
+	move.player = FC_SECOND;
+	move.piece = FC_KNIGHT;
+	move.opp_player = FC_NONE;
+	move.opp_piece = FC_NONE;
+	move.promote = FC_NONE;
+	move.move = fc_uint64("a7-c8");
+	fail_unless(fc_board_is_move_valid(&board, &move) == 1);
+	/* check capture king to get out of check */
+	fc_board_remove_piece(&board, 6, 7);
+	move.player = FC_THIRD;
+	move.piece = FC_BISHOP;
+	move.opp_player = FC_FOURTH;
+	move.opp_piece = FC_KING;
+	move.promote = FC_NONE;
+	move.move = fc_uint64("d5-h1");
+	fail_unless(fc_board_is_move_valid(&board, &move) == 1);
+	/* TODO test a remove which puts the king into check(mate) */
+}
+END_TEST
+
+START_TEST (test_forchess_board_get_valid_moves1)
+{
+	fc_board_t board;
+	fc_board_init(&board);
+	fc_player_t dummy;
+	fc_board_setup(&board,
+			"test/boards/test_forchess_board_get_valid_moves.1",
+			&dummy);
+	fc_mlist_t list;
+	fc_mlist_init(&list);
+	/* test that we can not put our king in check */
+	fc_board_get_valid_moves(&board, &list, FC_FOURTH);
+	fail_unless(move_exists_in_mlist(&list, "h1-g1"));
+	fail_unless(!move_exists_in_mlist(&list, "h1-h2"));
+	fail_unless(!move_exists_in_mlist(&list, "h1-g2"));
+	/* test that we cannot put our partner's king in check */
+	fail_unless(!move_exists_in_mlist(&list, "a7-c8"));
+	fail_unless(!move_exists_in_mlist(&list, "a7-c6"));
+	fail_unless(!move_exists_in_mlist(&list, "a7-b5"));
+}
+END_TEST
+
+START_TEST (test_forchess_board_get_valid_moves2)
+{
+	fc_board_t board;
+	fc_board_init(&board);
+	fc_player_t dummy;
+	fc_board_setup(&board,
+			"test/boards/test_forchess_board_get_valid_moves.2",
+			&dummy);
+	fc_mlist_t list;
+	fc_mlist_init(&list);
+	/* test that we must get ourselves out of check */
+	fc_board_get_valid_moves(&board, &list, FC_FIRST);
+	fail_unless(move_exists_in_mlist(&list, "a3-b1"));
+	fail_unless(fc_mlist_length(&list) == 1);
+	// test that we can move anything but the king if we are in checkmate
+	fail_unless(fc_board_remove_piece(&board, 2, 0)); // remove knight
+	fc_mlist_clear(&list);
+	fc_board_get_valid_moves(&board, &list, FC_FIRST);
+	fail_unless(!move_exists_in_mlist(&list, "a1-b1"));
+	fail_unless(!move_exists_in_mlist(&list, "a1-b2"));
+	fail_unless(fc_mlist_length(&list) == 12); // number of rook moves
+}
+END_TEST
+
+START_TEST (test_forchess_board_get_valid_removes1)
+{
+	fc_board_t board;
+	fc_board_init(&board);
+	fc_player_t dummy;
+	fc_board_setup(&board,
+			"test/boards/test_forchess_board_get_valid_removes.1",
+			&dummy);
+	fc_mlist_t list;
+	fc_mlist_init(&list);
+	/* test that we must remove the king */
+	fc_board_get_valid_moves(&board, &list, FC_FIRST);
+	fail_unless(fc_mlist_length(&list) == 1);
+	fail_unless(fc_mlist_get(&list, 0)->move == 1);
+}
+END_TEST
+
+START_TEST (test_forchess_board_get_valid_removes2)
+{
+	fc_board_t board;
+	fc_board_init(&board);
+	fc_player_t dummy;
+	fc_board_setup(&board,
+			"test/boards/test_forchess_board_get_valid_removes.2",
+			&dummy);
+	fc_mlist_t list;
+	fc_mlist_init(&list);
+	/* test that we must remove a piece that won't put us in check */
+	fc_board_get_valid_moves(&board, &list, FC_FIRST);
+	fail_unless(fc_mlist_length(&list) == 1);
+	fail_unless(fc_mlist_get(&list, 0)->move == 512);
+}
+END_TEST
+
+START_TEST (test_forchess_board_get_valid_removes3)
+{
+	fc_board_t board;
+	fc_board_init(&board);
+	fc_player_t dummy;
+	fc_board_setup(&board,
+			"test/boards/test_forchess_board_get_valid_removes.3",
+			&dummy);
+	fc_mlist_t list;
+	fc_mlist_init(&list);
+	/* test that if there are no removes which won't put us in check, then
+	 * remove any piece but the king */
+	fc_board_get_valid_moves(&board, &list, FC_FIRST);
+	fail_unless(fc_mlist_length(&list) == 3);
+	fail_unless(fc_mlist_get(&list, 0)->move == 2);
+	fail_unless(fc_mlist_get(&list, 1)->move == 256);
+	fail_unless(fc_mlist_get(&list, 2)->move == 512);
+}
+END_TEST
+
 Suite *board_suite (void)
 {
 	Suite *s = suite_create("Board");
@@ -584,6 +750,12 @@ Suite *board_suite (void)
 	tcase_add_test(tc_board, test_forchess_get_removes);
 	tcase_add_test(tc_board, test_forchess_make_move);
 	tcase_add_test(tc_board, test_forchess_board_copy);
+	tcase_add_test(tc_board, test_forchess_board_is_move_valid);
+	tcase_add_test(tc_board, test_forchess_board_get_valid_moves1);
+	tcase_add_test(tc_board, test_forchess_board_get_valid_moves2);
+	tcase_add_test(tc_board, test_forchess_board_get_valid_removes1);
+	tcase_add_test(tc_board, test_forchess_board_get_valid_removes2);
+	tcase_add_test(tc_board, test_forchess_board_get_valid_removes3);
 	suite_add_tcase(s, tc_board);
 	return s;
 }

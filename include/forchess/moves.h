@@ -4,6 +4,19 @@
  *
  * This file is subject to the terms and conditions of the 'LICENSE' file
  * which is a part of this source code package.
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef _FC_MOVES_H_
@@ -139,6 +152,14 @@ int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move, int32_t value);
  * @return 1 on success; 0 otherwise
  */
 int fc_mlist_merge (fc_mlist_t *dst, fc_mlist_t *src);
+
+/**
+ * @brief Delete the move at index from the list.
+ *
+ * fc_mlist_delete() maintains sorted order.  See fc_mlist_insert() for a
+ * description of the sorted order of the moves.
+ */
+int fc_mlist_delete (fc_mlist_t *list, int index);
 
 /**
  * @brief De-initializes the mlist.
