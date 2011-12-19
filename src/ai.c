@@ -180,7 +180,7 @@ static void initialize_ai_boards (fc_ai_t *ai, int depth)
 }
 
 struct ab_input {
-	fc_board_t *board;
+	fc_board_t board;
 	fc_player_t player;
 	int depth;
 	time_t timeout;
@@ -194,29 +194,123 @@ struct ab_output {
 	fc_move_t *move;
 };
 
-#if 0
-static void alphabeta_wrapper (void *input, void *output)
+void fc_ai_alphabeta_wrapper (void *input, void *output)
 {
 	fc_ai_t ai;
 	struct ab_input *in = input;
 	struct ab_output *out = output;
 
-	fc_ai_init(&ai, in->board);
+	fc_ai_init(&ai, &in->board);
 	initialize_ai_mlists(&ai, in->depth);
 	initialize_ai_boards(&ai, in->depth);
 	ai.timeout = in->timeout;
 
-	out->score = alphabeta(&ai, out->move, in->player, in->depth,
-			in->alpha, in->beta, in->max);
+	out->score = alphabeta(&ai, NULL, in->player, in->depth, in->alpha,
+			in->beta, in->max);
 
 	free_ai_boards(&ai);
 	free_ai_mlists(&ai, in->depth);
 }
-#endif
 
-static void threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
-		fc_move_t *move, fc_player_t player, int depth)
+static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
+		fc_move_t *ret, fc_player_t player, int depth, int alpha,
+		int beta, int max)
 {
+	int i, rc, count, score;
+	struct ab_input *inputs;
+	struct ab_output *outputs;
+	struct ab_output *retval;
+	fc_mlist_t list;
+	fc_board_t *orig, *copy, *board = &(ai->bv[depth]);
+
+	if (is_player_out(board, player)) {
+		return threaded_move_search(ai, pool, NULL,
+				FC_NEXT_PLAYER(player), depth, alpha, beta,
+				!max);
+	}
+
+	if (game_over(board) || depth == 0) {
+		orig = ai->board;
+		ai->board = board;
+		score = fc_ai_score_position(ai, player);
+		ai->board = orig;
+		/* FIXME:  Why is this different than alphabeta above? */
+		return (max) ? score + depth : (-1 * score) - depth;
+	}
+
+	copy = &(ai->bv[depth - 1]);
+	fc_board_copy(copy, board);
+	fc_mlist_init(&list);
+	fc_board_get_valid_moves(board, &list, player);
+	fc_board_make_move(copy, fc_mlist_get(&list, 0));
+
+	score = threaded_move_search(ai, pool, NULL, FC_NEXT_PLAYER(player),
+			depth - 1, alpha, beta, !max);
+
+	if (max && score > alpha) {
+		alpha = score;
+		if (ret) {
+			fc_move_copy(ret, fc_mlist_get(&list, 0));
+		}
+	} else if (!max && score < beta) {
+		beta = score;
+		if (ret) {
+			fc_move_copy(ret, fc_mlist_get(&list, 0));
+		}
+	}
+
+	if (beta <= alpha) {
+		return (max) ? alpha : beta;
+	}
+
+	inputs = calloc(fc_mlist_length(&list), sizeof(*inputs));
+	outputs = calloc(fc_mlist_length(&list), sizeof(*outputs));
+	for (i = 1, count = 0; i < fc_mlist_length(&list); i++) {
+		fc_board_copy(&inputs[i].board, board);
+		outputs[i].move = fc_mlist_get(&list, i);
+		fc_board_make_move(&inputs[i].board, outputs[i].move);
+		inputs[i].player = FC_NEXT_PLAYER(player);
+		inputs[i].depth = depth - 1;
+		inputs[i].timeout = ai->timeout;
+		inputs[i].alpha = alpha;
+		inputs[i].beta = beta;
+		inputs[i].max = !max;
+
+		rc = fc_tpool_push_task(pool, fc_ai_alphabeta_wrapper,
+				inputs + i, outputs + i);
+		assert(rc);
+		count += 1;
+		continue;
+	}
+
+	while (count) {
+		rc = fc_tpool_pop_result(pool, (void **)&retval);
+		if (!rc) {
+			continue;
+		}
+
+		count -= 1;
+		if (max && retval->score > alpha) {
+			alpha = retval->score;
+			if (ret) {
+				fc_move_copy(ret, retval->move);
+			}
+		} else if (!max && retval->score < beta) {
+			beta = retval->score;
+			if (ret) {
+				fc_move_copy(ret, retval->move);
+			}
+		}
+
+		if (beta <= alpha) {
+			break;
+		}
+	}
+
+	free(inputs);
+	free(outputs);
+	fc_mlist_free(&list);
+	return (max) ? alpha : beta;
 }
 
 #define ALPHA_MIN INT_MIN
@@ -245,7 +339,8 @@ int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	} else {
 		fc_tpool_init(&pool, num_threads, FC_DEFAULT_MLIST_SIZE);
 		fc_tpool_start_threads(&pool);
-		threaded_move_search(ai, &pool, ret, player, depth);
+		threaded_move_search(ai, &pool, ret, player, depth, ALPHA_MIN,
+				BETA_MAX, 1);
 		fc_tpool_stop_threads(&pool);
 		fc_tpool_free(&pool);
 	}
