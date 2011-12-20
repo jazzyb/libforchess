@@ -22,6 +22,7 @@
 #include <assert.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "forchess/threads.h"
 
@@ -37,15 +38,25 @@ int fc_tpool_init (fc_tpool_t *pool, size_t num_threads, size_t num_tasks)
 	pthread_mutex_init(&pool->mutex, NULL);
 	if (!fc_fifo_init(&pool->taskq, num_tasks, sizeof(fc_task_t))) {
 		free(pool->threads);
+		pthread_mutex_destroy(&pool->mutex);
 		return 0;
 	}
 	if (!fc_fifo_init(&pool->resultq, num_tasks, sizeof(fc_task_t))) {
 		free(pool->threads);
+		pthread_mutex_destroy(&pool->mutex);
 		fc_fifo_free(&pool->taskq);
 		return 0;
 	}
 	pool->last_id = 0;
 	pool->die = 0;
+	pool->discard_task = calloc(num_threads, sizeof(int));
+	if (!pool->discard_task) {
+		free(pool->threads);
+		pthread_mutex_destroy(&pool->mutex);
+		fc_fifo_free(&pool->taskq);
+		fc_fifo_free(&pool->resultq);
+		return 0;
+	}
 	return 1;
 }
 
@@ -58,16 +69,30 @@ void fc_tpool_free (fc_tpool_t *pool)
 	fc_fifo_free(&pool->taskq);
 	fc_fifo_free(&pool->resultq);
 	free(pool->threads);
+	free(pool->discard_task);
 }
+
+struct thread_data {
+	int thread_id;
+	fc_tpool_t *pool;
+	int ready;
+	pthread_mutex_t mutex;
+};
 
 static void *fc_thread_routine (void *data)
 {
+	int id;
 	fc_task_t task;
-	fc_tpool_t *pool = data;
+	fc_tpool_t *pool;
+	struct thread_data *tdp = (struct thread_data *)data;
 
-	/*
-	 * Pull tasks from the queue and run them until we are told to die.
-	 */
+	pthread_mutex_lock(&tdp->mutex);
+	id = tdp->thread_id;
+	pool = tdp->pool;
+	tdp->ready = 1;
+	pthread_mutex_unlock(&tdp->mutex);
+
+	/* pull tasks from the queue and run them until we are told to die */
 	while (1) {
 		pthread_mutex_lock(&pool->mutex);
 		if (pool->die) {
@@ -75,17 +100,22 @@ static void *fc_thread_routine (void *data)
 			goto exit;
 		}
 
+		if (pool->discard_task[id]) {
+			pool->discard_task[id] = 0;
+		}
+
 		if (!fc_fifo_pop(&pool->taskq, &task)) {
 			pthread_mutex_unlock(&pool->mutex);
 			continue;
 		}
+
+		assert(pool->idle_thread_count > 0);
+		pool->idle_thread_count -= 1;
 		pthread_mutex_unlock(&pool->mutex);
 
 		task.callback(task.input_data, task.output_data);
 
-		/*
-		 * Put the completed task onto the resultq.
-		 */
+		/* put the completed task onto the resultq */
 		while (1) {
 			pthread_mutex_lock(&pool->mutex);
 			if (pool->die) {
@@ -93,12 +123,20 @@ static void *fc_thread_routine (void *data)
 				goto exit;
 			}
 
+			if (pool->discard_task[id]) {
+				pool->discard_task[id] = 0;
+				break;
+			}
+
 			if (fc_fifo_push(&pool->resultq, &task)) {
-				pthread_mutex_unlock(&pool->mutex);
 				break;
 			}
 			pthread_mutex_unlock(&pool->mutex);
 		}
+
+		assert(pool->idle_thread_count != pool->num_threads);
+		pool->idle_thread_count += 1;
+		pthread_mutex_unlock(&pool->mutex);
 	}
 
 exit:
@@ -108,20 +146,38 @@ exit:
 int fc_tpool_start_threads (fc_tpool_t *pool)
 {
 	int i, rc;
+	struct thread_data data;
 
+	pthread_mutex_init(&data.mutex, NULL);
 	pthread_mutex_lock(&pool->mutex);
 	pool->die = 0;
+	data.pool = pool;
 	for (i = 0; i < pool->num_threads; i++) {
+		data.thread_id = i;
+		data.ready = 0;
 		rc = pthread_create(&pool->threads[i], &pool->attr,
-				&fc_thread_routine, pool);
+				&fc_thread_routine, &data);
 		if (rc != 0) {
 			/* tell previously created threads to stop */
 			pool->die = 1;
 			pthread_mutex_unlock(&pool->mutex);
+			pthread_mutex_destroy(&data.mutex);
 			return 0;
 		}
+
+		/* wait for the thread to tell us it has gotten the data */
+		while (1) {
+			pthread_mutex_lock(&data.mutex);
+			if (data.ready) {
+				pthread_mutex_unlock(&data.mutex);
+				break;
+			}
+			pthread_mutex_unlock(&data.mutex);
+		}
 	}
+	pool->idle_thread_count = pool->num_threads;
 	pthread_mutex_unlock(&pool->mutex);
+	pthread_mutex_destroy(&data.mutex);
 	return 1;
 }
 
@@ -136,6 +192,19 @@ int fc_tpool_stop_threads (fc_tpool_t *pool)
 
 	for (i = 0; i < pool->num_threads; i++) {
 		rc = pthread_join(pool->threads[i], &dummy);
+		if (rc != 0) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+int fc_tpool_kill_threads (fc_tpool_t *pool)
+{
+	int i, rc;
+
+	for (i = 0; i < pool->num_threads; i++) {
+		rc = pthread_cancel(pool->threads[i]);
 		if (rc != 0) {
 			return 0;
 		}
@@ -186,5 +255,64 @@ int fc_tpool_pop_result (fc_tpool_t *pool, void **ret)
 
 	*ret = task.output_data;
 	return task.id;
+}
+
+void fc_tpool_clear_tasks (fc_tpool_t *pool)
+{
+	pthread_mutex_lock(&pool->mutex);
+	fc_fifo_clear(&pool->taskq);
+	memset(pool->discard_task, 0xff, pool->num_threads * sizeof(int));
+	fc_fifo_clear(&pool->resultq);
+	pthread_mutex_unlock(&pool->mutex);
+}
+
+size_t fc_tpool_size (fc_tpool_t *pool)
+{
+	size_t ret;
+
+	pthread_mutex_lock(&pool->mutex);
+	ret = pool->num_threads;
+	pthread_mutex_unlock(&pool->mutex);
+	return ret;
+}
+
+size_t fc_tpool_num_idle_threads (fc_tpool_t *pool)
+{
+	size_t ret;
+
+	pthread_mutex_lock(&pool->mutex);
+	ret = pool->idle_thread_count;
+	pthread_mutex_unlock(&pool->mutex);
+	return ret;
+}
+
+size_t fc_tpool_num_busy_threads (fc_tpool_t *pool)
+{
+	size_t ret;
+
+	pthread_mutex_lock(&pool->mutex);
+	ret = pool->num_threads - pool->idle_thread_count;
+	pthread_mutex_unlock(&pool->mutex);
+	return ret;
+}
+
+size_t fc_tpool_num_pending_tasks (fc_tpool_t *pool)
+{
+	size_t ret;
+
+	pthread_mutex_lock(&pool->mutex);
+	ret = fc_fifo_size(&pool->taskq);
+	pthread_mutex_unlock(&pool->mutex);
+	return ret;
+}
+
+size_t fc_tpool_num_pending_results (fc_tpool_t *pool)
+{
+	size_t ret;
+
+	pthread_mutex_lock(&pool->mutex);
+	ret = fc_fifo_size(&pool->resultq);
+	pthread_mutex_unlock(&pool->mutex);
+	return ret;
 }
 

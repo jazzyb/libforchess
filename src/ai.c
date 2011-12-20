@@ -303,6 +303,8 @@ static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
 		}
 
 		if (beta <= alpha) {
+			/* TODO Clear all the pending tasks/results from the
+			 * thread pool before continuing. */
 			break;
 		}
 	}

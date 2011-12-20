@@ -111,6 +111,109 @@ START_TEST (test_thread_pop)
 }
 END_TEST
 
+static void test_thread_count_callback1 (void *input, void *output)
+{
+}
+
+static void test_thread_count_callback2 (void *input, void *output)
+{
+	while (1) {};
+}
+
+#undef NUM_TEST_TASKS
+#define NUM_TEST_TASKS (NUM_TEST_THREADS * 2)
+START_TEST (test_thread_count_methods)
+{
+	fc_tpool_t pool;
+	fail_unless(fc_tpool_init(&pool, NUM_TEST_THREADS, NUM_TEST_TASKS));
+	fail_unless(fc_tpool_size(&pool) == NUM_TEST_THREADS);
+	fail_unless(fc_tpool_start_threads(&pool));
+	int id = fc_tpool_push_task(&pool, test_thread_count_callback1, NULL,
+			NULL);
+	fail_unless(id == 1);
+	for (int i = 1; i < NUM_TEST_TASKS; i++) {
+		id = fc_tpool_push_task(&pool, test_thread_count_callback2,
+				NULL, NULL);
+		fail_unless(id == i + 1);
+		if (i == 3) {
+			fail_unless(fc_tpool_num_busy_threads(&pool) == 3);
+			fail_unless(fc_tpool_num_idle_threads(&pool) == NUM_TEST_THREADS - 3);
+		}
+	}
+
+	fail_unless(fc_tpool_num_pending_results(&pool) == 1);
+	fail_unless(fc_tpool_num_pending_tasks(&pool) == NUM_TEST_THREADS - 1);
+	fc_tpool_kill_threads(&pool);
+	fc_tpool_free(&pool);
+}
+END_TEST
+
+static void test_thread_clear_callback (void *input, void *output)
+{
+	pthread_mutex_t *mp = (pthread_mutex_t *)input;
+	pthread_mutex_lock(mp);
+	pthread_mutex_unlock(mp);
+}
+
+START_TEST (test_thread_clear)
+{
+	pthread_mutex_t mutex;
+	pthread_mutex_init(&mutex, NULL);
+	fc_tpool_t pool;
+	fail_unless(fc_tpool_init(&pool, NUM_TEST_THREADS, NUM_TEST_TASKS));
+	fail_unless(fc_tpool_size(&pool) == NUM_TEST_THREADS);
+	fail_unless(fc_tpool_start_threads(&pool));
+	fc_tpool_push_task(&pool, test_thread_count_callback1, NULL, NULL);
+	pthread_mutex_lock(&mutex);
+	for (int i = 1; i < NUM_TEST_TASKS; i++) {
+		fc_tpool_push_task(&pool, test_thread_clear_callback, &mutex,
+				NULL);
+	}
+	/* check that we have busy threads */
+	fail_unless(fc_tpool_num_pending_tasks(&pool) != 0);
+	fail_unless(fc_tpool_num_pending_results(&pool) != 0);
+	fail_unless(fc_tpool_num_idle_threads(&pool) != NUM_TEST_THREADS);
+
+	/*
+	 * FIXME:  The call to fc_tpool_clear_tasks() produces the strangest
+	 * bug I have ever encountered.  For some reason, running make check
+	 * results in (sometimes) a segfault, (sometimes) a floating point
+	 * exception (even though I'm not using floating point types to my
+	 * knowledge), and (sometimes) a beautifully passing test.  I see no
+	 * pattern in the madness.  If fc_tpool_clear is commented out, then I
+	 * cannot get the errors.
+	 *
+	 * With check forking turned off (uncommenting check_forchess.c:25),
+	 * then (sometimes) I get the following error:
+	 *
+	 * test/check_ai.c:39:F:Core:test_ai_next_move1:0: Assertion 'move.move == fc_uint64("a8-c7")' failed
+	 *
+	 * But I never get the errors in the previous paragraph.
+	 *
+	 * Running the same in debug mode gives me:
+	 *
+	 * Assertion failed: (side != FC_NONE), function update_enemy_bitboards, file src/board.c, line 1001.
+	 */
+	fc_tpool_clear_tasks(&pool);
+	pthread_mutex_unlock(&mutex);
+	pthread_mutex_lock(&mutex);
+#if 0
+	/* check that everything has been "cleared" */
+	fail_unless(fc_tpool_num_pending_tasks(&pool) == 0);
+	fail_unless(fc_tpool_num_pending_results(&pool) == 0);
+	fail_unless(fc_tpool_num_idle_threads(&pool) == NUM_TEST_THREADS);
+	pthread_mutex_unlock(&mutex);
+
+	/* test that we can still add new tasks to the pool even after
+	 * clearing it */
+	fc_tpool_push_task(&pool, test_thread_count_callback2, NULL, NULL);
+	fail_unless(fc_tpool_num_busy_threads(&pool) == 1);
+	fc_tpool_kill_threads(&pool);
+	fc_tpool_free(&pool);
+#endif
+}
+END_TEST
+
 Suite *thread_suite (void)
 {
 	Suite *s = suite_create("Threads");
@@ -118,6 +221,8 @@ Suite *thread_suite (void)
 	tcase_add_test(tc_threads, test_thread_start_stop);
 	tcase_add_test(tc_threads, test_thread_push);
 	tcase_add_test(tc_threads, test_thread_pop);
+	tcase_add_test(tc_threads, test_thread_count_methods);
+	tcase_add_test(tc_threads, test_thread_clear);
 	/* if the thread tests need some more time for whatever reason: */
 	//tcase_set_timeout(tc_threads, 8);
 	suite_add_tcase(s, tc_threads);
