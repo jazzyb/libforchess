@@ -81,3 +81,13 @@ int fc_fifo_pop (fc_fifo_t *queue, void *ret)
 	return 1;
 }
 
+void fc_fifo_clear (fc_fifo_t *queue)
+{
+	queue->count = queue->pop_index = queue->push_index = 0;
+}
+
+size_t fc_fifo_size (fc_fifo_t *queue)
+{
+	return queue->count;
+}
+

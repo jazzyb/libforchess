@@ -35,8 +35,10 @@ typedef struct {
 int fc_fifo_init (fc_fifo_t *queue, size_t count, size_t size);
 int fc_fifo_push (fc_fifo_t *queue, void *item);
 int fc_fifo_pop (fc_fifo_t *queue, void *ret);
+void fc_fifo_clear (fc_fifo_t *queue);
 int fc_fifo_is_full (fc_fifo_t *queue);
 int fc_fifo_is_empty (fc_fifo_t *queue);
+size_t fc_fifo_size (fc_fifo_t *queue);
 void fc_fifo_free (fc_fifo_t *queue);
 
 #endif

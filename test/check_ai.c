@@ -107,7 +107,7 @@ START_TEST (test_ai_threaded_next_move)
 	//printf("4: %d, 0x%llx\n", move.piece, move.move);
 	fc_board_make_move(&board, &move);
 	fc_ai_next_move(&ai, &move, FC_FIRST, 4, TEST_AI_TIMEOUT, TEST_AI_THREADS);
-	printf("1: %d, 0x%llx\n", move.piece, move.move);
+	//printf("1: %d, 0x%llx\n", move.piece, move.move);
 	fail_unless(move.move == fc_uint64("c1-h1"));
 
 	/* check remove */
