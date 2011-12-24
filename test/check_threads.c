@@ -157,6 +157,8 @@ static void test_thread_clear_callback (void *input, void *output)
 
 START_TEST (test_thread_clear)
 {
+	printf("    Running test_thread_clear...");
+	fflush(stdout);
 	pthread_mutex_t mutex;
 	pthread_mutex_init(&mutex, NULL);
 	fc_tpool_t pool;
@@ -174,30 +176,9 @@ START_TEST (test_thread_clear)
 	fail_unless(fc_tpool_num_pending_results(&pool) != 0);
 	fail_unless(fc_tpool_num_idle_threads(&pool) != NUM_TEST_THREADS);
 
-	/*
-	 * FIXME:  The call to fc_tpool_clear_tasks() produces the strangest
-	 * bug I have ever encountered.  For some reason, running make check
-	 * results in (sometimes) a segfault, (sometimes) a floating point
-	 * exception (even though I'm not using floating point types to my
-	 * knowledge), and (sometimes) a beautifully passing test.  I see no
-	 * pattern in the madness.  If fc_tpool_clear is commented out, then I
-	 * cannot get the errors.
-	 *
-	 * With check forking turned off (uncommenting check_forchess.c:25),
-	 * then (sometimes) I get the following error:
-	 *
-	 * test/check_ai.c:39:F:Core:test_ai_next_move1:0: Assertion 'move.move == fc_uint64("a8-c7")' failed
-	 *
-	 * But I never get the errors in the previous paragraph.
-	 *
-	 * Running the same in debug mode gives me:
-	 *
-	 * Assertion failed: (side != FC_NONE), function update_enemy_bitboards, file src/board.c, line 1001.
-	 */
 	fc_tpool_clear_tasks(&pool);
 	pthread_mutex_unlock(&mutex);
 	pthread_mutex_lock(&mutex);
-#if 0
 	/* check that everything has been "cleared" */
 	fail_unless(fc_tpool_num_pending_tasks(&pool) == 0);
 	fail_unless(fc_tpool_num_pending_results(&pool) == 0);
@@ -206,11 +187,17 @@ START_TEST (test_thread_clear)
 
 	/* test that we can still add new tasks to the pool even after
 	 * clearing it */
-	fc_tpool_push_task(&pool, test_thread_count_callback2, NULL, NULL);
+	pthread_mutex_lock(&mutex);
+	fc_tpool_push_task(&pool, test_thread_clear_callback, &mutex, NULL);
 	fail_unless(fc_tpool_num_busy_threads(&pool) == 1);
 	fc_tpool_kill_threads(&pool);
 	fc_tpool_free(&pool);
-#endif
+	/* FIXME:  We have to make sure that threads have enough time to
+	 * cancel.  Otherwise the stack variables above get blown away, and
+	 * then our threads segfault. */
+	sleep(2);
+	printf("done.\n");
+	fflush(stdout);
 }
 END_TEST
 
