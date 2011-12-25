@@ -266,53 +266,37 @@ void fc_tpool_clear_tasks (fc_tpool_t *pool)
 	pthread_mutex_unlock(&pool->mutex);
 }
 
+#define FC_SYNCHRONIZED_RETURN(value, mutex_ptr) {\
+	size_t _ret;\
+	pthread_mutex_lock(mutex_ptr);\
+	_ret = value;\
+	pthread_mutex_unlock(mutex_ptr);\
+	return _ret;\
+}
+
 size_t fc_tpool_size (fc_tpool_t *pool)
 {
-	size_t ret;
-
-	pthread_mutex_lock(&pool->mutex);
-	ret = pool->num_threads;
-	pthread_mutex_unlock(&pool->mutex);
-	return ret;
+	FC_SYNCHRONIZED_RETURN(pool->num_threads, &pool->mutex);
 }
 
 size_t fc_tpool_num_idle_threads (fc_tpool_t *pool)
 {
-	size_t ret;
-
-	pthread_mutex_lock(&pool->mutex);
-	ret = pool->idle_thread_count;
-	pthread_mutex_unlock(&pool->mutex);
-	return ret;
+	FC_SYNCHRONIZED_RETURN(pool->idle_thread_count, &pool->mutex);
 }
 
 size_t fc_tpool_num_busy_threads (fc_tpool_t *pool)
 {
-	size_t ret;
-
-	pthread_mutex_lock(&pool->mutex);
-	ret = pool->num_threads - pool->idle_thread_count;
-	pthread_mutex_unlock(&pool->mutex);
-	return ret;
+	FC_SYNCHRONIZED_RETURN(pool->num_threads - pool->idle_thread_count,
+			&pool->mutex);
 }
 
 size_t fc_tpool_num_pending_tasks (fc_tpool_t *pool)
 {
-	size_t ret;
-
-	pthread_mutex_lock(&pool->mutex);
-	ret = fc_fifo_size(&pool->taskq);
-	pthread_mutex_unlock(&pool->mutex);
-	return ret;
+	FC_SYNCHRONIZED_RETURN(fc_fifo_size(&pool->taskq), &pool->mutex);
 }
 
 size_t fc_tpool_num_pending_results (fc_tpool_t *pool)
 {
-	size_t ret;
-
-	pthread_mutex_lock(&pool->mutex);
-	ret = fc_fifo_size(&pool->resultq);
-	pthread_mutex_unlock(&pool->mutex);
-	return ret;
+	FC_SYNCHRONIZED_RETURN(fc_fifo_size(&pool->resultq), &pool->mutex);
 }
 
