@@ -225,19 +225,6 @@ int fc_tpool_stop_threads (fc_tpool_t *pool)
 	return 1;
 }
 
-int fc_tpool_kill_threads (fc_tpool_t *pool)
-{
-	int i, rc;
-
-	for (i = 0; i < pool->num_threads; i++) {
-		rc = pthread_cancel(pool->threads[i]);
-		if (rc != 0) {
-			return 0;
-		}
-	}
-	return 1;
-}
-
 int fc_tpool_push_task (fc_tpool_t *pool,
 		void (*callback) (void *input_data, void *output_data),
 		void *input_data, void *output_data)
