@@ -75,7 +75,7 @@ void fc_tpool_free (fc_tpool_t *pool)
 struct thread_data {
 	int thread_id;
 	fc_tpool_t *pool;
-	int ready;
+	pthread_cond_t ready;
 	pthread_mutex_t mutex;
 };
 
@@ -89,7 +89,7 @@ static void *fc_thread_routine (void *data)
 	pthread_mutex_lock(&tdp->mutex);
 	id = tdp->thread_id;
 	pool = tdp->pool;
-	tdp->ready = 1;
+	pthread_cond_signal(&tdp->ready);
 	pthread_mutex_unlock(&tdp->mutex);
 
 	/* pull tasks from the queue and run them until we are told to die */
@@ -148,13 +148,13 @@ int fc_tpool_start_threads (fc_tpool_t *pool)
 	int i, rc;
 	struct thread_data data;
 
+	pthread_cond_init(&data.ready, NULL);
 	pthread_mutex_init(&data.mutex, NULL);
 	pthread_mutex_lock(&pool->mutex);
 	pool->die = 0;
 	data.pool = pool;
 	for (i = 0; i < pool->num_threads; i++) {
 		data.thread_id = i;
-		data.ready = 0;
 		rc = pthread_create(&pool->threads[i], &pool->attr,
 				&fc_thread_routine, &data);
 		if (rc != 0) {
@@ -166,18 +166,14 @@ int fc_tpool_start_threads (fc_tpool_t *pool)
 		}
 
 		/* wait for the thread to tell us it has gotten the data */
-		while (1) {
-			pthread_mutex_lock(&data.mutex);
-			if (data.ready) {
-				pthread_mutex_unlock(&data.mutex);
-				break;
-			}
-			pthread_mutex_unlock(&data.mutex);
-		}
+		pthread_mutex_lock(&data.mutex);
+		pthread_cond_wait(&data.ready, &data.mutex);
+		pthread_mutex_unlock(&data.mutex);
 	}
 	pool->idle_thread_count = pool->num_threads;
 	pthread_mutex_unlock(&pool->mutex);
 	pthread_mutex_destroy(&data.mutex);
+	pthread_cond_destroy(&data.ready);
 	return 1;
 }
 

@@ -117,7 +117,13 @@ static void test_thread_count_callback1 (void *input, void *output)
 
 static void test_thread_count_callback2 (void *input, void *output)
 {
-	while (1) {};
+	void *tmp;
+
+	while (1) {
+		tmp = input;
+		input = output;
+		output = tmp;
+	};
 }
 
 #undef NUM_TEST_TASKS
@@ -136,11 +142,13 @@ START_TEST (test_thread_count_methods)
 				NULL, NULL);
 		fail_unless(id == i + 1);
 		if (i == 3) {
+			sleep(1);
 			fail_unless(fc_tpool_num_busy_threads(&pool) == 3);
 			fail_unless(fc_tpool_num_idle_threads(&pool) == NUM_TEST_THREADS - 3);
 		}
 	}
 
+	sleep(1);
 	fail_unless(fc_tpool_num_pending_results(&pool) == 1);
 	fail_unless(fc_tpool_num_pending_tasks(&pool) == NUM_TEST_THREADS - 1);
 	fc_tpool_kill_threads(&pool);
@@ -171,6 +179,7 @@ START_TEST (test_thread_clear)
 		fc_tpool_push_task(&pool, test_thread_clear_callback, &mutex,
 				NULL);
 	}
+	sleep(1);
 	/* check that we have busy threads */
 	fail_unless(fc_tpool_num_pending_tasks(&pool) != 0);
 	fail_unless(fc_tpool_num_pending_results(&pool) != 0);
@@ -178,6 +187,7 @@ START_TEST (test_thread_clear)
 
 	fc_tpool_clear_tasks(&pool);
 	pthread_mutex_unlock(&mutex);
+	sleep(1);
 	pthread_mutex_lock(&mutex);
 	/* check that everything has been "cleared" */
 	fail_unless(fc_tpool_num_pending_tasks(&pool) == 0);
@@ -189,6 +199,7 @@ START_TEST (test_thread_clear)
 	 * clearing it */
 	pthread_mutex_lock(&mutex);
 	fc_tpool_push_task(&pool, test_thread_clear_callback, &mutex, NULL);
+	sleep(1);
 	fail_unless(fc_tpool_num_busy_threads(&pool) == 1);
 	fc_tpool_kill_threads(&pool);
 	fc_tpool_free(&pool);
@@ -211,7 +222,7 @@ Suite *thread_suite (void)
 	tcase_add_test(tc_threads, test_thread_count_methods);
 	tcase_add_test(tc_threads, test_thread_clear);
 	/* if the thread tests need some more time for whatever reason: */
-	//tcase_set_timeout(tc_threads, 8);
+	tcase_set_timeout(tc_threads, 8);
 	suite_add_tcase(s, tc_threads);
 	return s;
 }
