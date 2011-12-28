@@ -347,4 +347,8 @@ void fc_board_copy (fc_board_t *dst, fc_board_t *src);
  */
 int fc_board_check_status (fc_board_t *board, fc_player_t player);
 
+/* TODO */
+int fc_board_is_player_out (fc_board_t *board, fc_player_t player);
+int fc_board_game_over (fc_board_t *board);
+
 #endif

@@ -37,25 +37,6 @@ void fc_ai_init (fc_ai_t *ai, fc_board_t *board)
 	ai->mlv = NULL;
 }
 
-/*
- * Return 1 if player is no longer present in the game; 0 otherwise.
- */
-static int is_player_out (fc_board_t *board, fc_player_t player)
-{
-	return !(FC_BITBOARD(board, player, FC_KING));
-}
-
-/*
- * Return 1 if one side has no remaining moves; 0 otherwise.
- */
-static int game_over (fc_board_t *board)
-{
-	return ((is_player_out(board, FC_FIRST) &&
-		is_player_out(board, FC_THIRD)) ||
-		(is_player_out(board, FC_SECOND) &&
-		is_player_out(board, FC_FOURTH)));
-}
-
 static int time_up (fc_ai_t *ai)
 {
 	if (ai->timeout == 0) {
@@ -90,7 +71,7 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 		return (max) ? beta : alpha;
 	}
 	board = &(ai->bv[depth]);
-	if (game_over(board) || depth == 0) {
+	if (fc_board_game_over(board) || depth == 0) {
 		orig = ai->board;
 		ai->board = board;
 		score = fc_ai_score_position(ai, player);
@@ -102,7 +83,7 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 		 */
 		return (max) ? score - depth : (-1 * score) + depth;
 	}
-	if (is_player_out(board, player)) {
+	if (fc_board_is_player_out(board, player)) {
 		return alphabeta(ai, NULL, FC_NEXT_PLAYER(player), depth,
 				alpha, beta, !max);
 	}
@@ -223,13 +204,13 @@ static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
 	fc_mlist_t list;
 	fc_board_t *orig, *copy, *board = &(ai->bv[depth]);
 
-	if (is_player_out(board, player)) {
+	if (fc_board_is_player_out(board, player)) {
 		return threaded_move_search(ai, pool, NULL,
 				FC_NEXT_PLAYER(player), depth, alpha, beta,
 				!max);
 	}
 
-	if (game_over(board) || depth == 0) {
+	if (fc_board_game_over(board) || depth == 0) {
 		orig = ai->board;
 		ai->board = board;
 		score = fc_ai_score_position(ai, player);
@@ -325,7 +306,7 @@ int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	fc_tpool_t pool;
 
 	assert(ai && ai->board && ret);
-	if (is_player_out(ai->board, player) || depth < 1) {
+	if (fc_board_is_player_out(ai->board, player) || depth < 1) {
 		ret->move = 0;
 		return 0;
 	}

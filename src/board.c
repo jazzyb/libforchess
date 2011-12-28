@@ -1123,3 +1123,22 @@ void fc_board_copy (fc_board_t *dst, fc_board_t *src)
 	}
 }
 
+/*
+ * Return 1 if player is no longer present in the game; 0 otherwise.
+ */
+int fc_board_is_player_out (fc_board_t *board, fc_player_t player)
+{
+	return !(FC_BITBOARD(board, player, FC_KING));
+}
+
+/*
+ * Return 1 if one side has no remaining moves; 0 otherwise.
+ */
+int fc_board_game_over (fc_board_t *board)
+{
+	return ((fc_board_is_player_out(board, FC_FIRST) &&
+		fc_board_is_player_out(board, FC_THIRD)) ||
+		(fc_board_is_player_out(board, FC_SECOND) &&
+		fc_board_is_player_out(board, FC_FOURTH)));
+}
+
