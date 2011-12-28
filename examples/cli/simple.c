@@ -15,22 +15,23 @@ void get_move (fc_game_t *game, fc_move_t *move, fc_player_t player);
 void str2move (fc_game_t *game, fc_move_t *move, char *str);
 fc_piece_t get_pawn_promotion (void);
 void make_computer_move (fc_game_t *game, fc_player_t player, int depth,
-		int timeout);
+		int timeout, int threads);
 void get_time (char *str, time_t t);
 void move2str (fc_game_t *game, char *str, fc_move_t *move);
 
-int get_arguments (int argc, char **argv, int *depth, int *timeout)
+int get_arguments (int argc, char **argv, int *depth, int *timeout, int *threads)
 {
 	int c;
 	*depth = *timeout = 0;
-	while ((c = getopt(argc, argv, "d:ht:")) != -1) {
+	*threads = 1;
+	while ((c = getopt(argc, argv, "d:hj:t:")) != -1) {
 		switch (c) {
 		case 'd':
 			*depth = strtol(optarg, NULL, 10);
 			break;
 		case 'h':
 			fprintf(stderr,
-				"%s {[-h] | [-d <plycount>] [-t <seconds>] [1] [2] [3] [4]}\n"
+				"%s {[-h] | [-d <plycount>] [-j <threads>] [-t <seconds>] [1] [2] [3] [4]}\n"
 				"    Play forchess!\n"
 				"\n"
 				"    -h: show this help message\n"
@@ -42,12 +43,17 @@ int get_arguments (int argc, char **argv, int *depth, int *timeout)
 				"           -d: the number of moves that you wish the\n"
 				"               program to search; by default the program\n"
 				"               will search depth = num_players * 2\n"
+				"           -j: the number of worker threads that will\n"
+				"               search for the best move\n"
 				"           -t: the maximum number of seconds the program\n"
 				"               should spend searching for a move\n"
 				"    for example: '%s 1 3' will start a game in\n"
 				"           which players 2 and 4 will be played by\n"
 				"           the computer\n\n", argv[0], argv[0]);
 			exit(0);
+		case 'j':
+			*threads = strtol(optarg, NULL, 10);
+			break;
 		case 't':
 			*timeout = strtol(optarg, NULL, 10);
 			break;
@@ -70,28 +76,8 @@ int get_arguments (int argc, char **argv, int *depth, int *timeout)
 
 int main (int argc, char **argv)
 {
-#if 0
-	if (argc == 2 && (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help"))) {
-		fprintf(stderr,
-		        "simple {[-h] | [1] [2] [3] [4]}\n"
-		        "    Play forchess!\n"
-		        "\n"
-		        "    -h: show this help message\n"
-		        "\n"
-		        "    usage: list the players on the command line who\n"
-		        "           will be played by humans; the remainder\n"
-		        "           will be played by the AI\n"
-		        "    for example: 'simple 1 3' will start a game in\n"
-		        "           which players 2 and 4 will be played by\n"
-		        "           the computer\n\n");
-		exit(0);
-	} else if (argc > 5) {
-		fprintf(stderr, "error: too many arguments; see 'simple -h'\n");
-		exit(1);
-	}
-#endif
-	int depth, timeout;
-	int optind = get_arguments(argc, argv, &depth, &timeout);
+	int depth, timeout, threads;
+	int optind = get_arguments(argc, argv, &depth, &timeout, &threads);
 
 	int player_is_human[] = {0, 0, 0, 0};
 	for (int i = optind; i < argc; i++) {
@@ -118,7 +104,7 @@ int main (int argc, char **argv)
 		if (player_is_human[player]) {
 			query_human_for_move(&game, player);
 		} else {
-			make_computer_move(&game, player, depth, timeout);
+			make_computer_move(&game, player, depth, timeout, threads);
 		}
 	}
 
@@ -193,7 +179,7 @@ fc_piece_t get_pawn_promotion (void)
 }
 
 void make_computer_move (fc_game_t *game, fc_player_t player, int depth,
-		int timeout)
+		int timeout, int threads)
 {
 	fc_move_t move;
 	if (!depth) {
@@ -203,9 +189,7 @@ void make_computer_move (fc_game_t *game, fc_player_t player, int depth,
 	fc_ai_init(&ai, fc_game_get_board(game));
 
 	time_t start = time(NULL);
-	/* FIXME Last parameter should be a user option like depth and
-	 * timeout. */
-	if (!fc_ai_next_move(&ai, &move, player, depth, timeout, 1)) {
+	if (!fc_ai_next_move(&ai, &move, player, depth, timeout, threads)) {
 		assert(0);
 	}
 	char time_str[100];
