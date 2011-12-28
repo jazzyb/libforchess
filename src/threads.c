@@ -23,6 +23,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 
 #include "forchess/threads.h"
 
@@ -75,6 +76,7 @@ void fc_tpool_free (fc_tpool_t *pool)
 struct thread_data {
 	int thread_id;
 	fc_tpool_t *pool;
+	struct itimerval itimer;
 	pthread_cond_t ready;
 	pthread_mutex_t mutex;
 };
@@ -89,6 +91,7 @@ static void *fc_thread_routine (void *data)
 	pthread_mutex_lock(&tdp->mutex);
 	id = tdp->thread_id;
 	pool = tdp->pool;
+	setitimer(ITIMER_PROF, &tdp->itimer, NULL);
 	pthread_cond_signal(&tdp->ready);
 	pthread_mutex_unlock(&tdp->mutex);
 
@@ -155,6 +158,7 @@ int fc_tpool_start_threads (fc_tpool_t *pool)
 	data.pool = pool;
 	for (i = 0; i < pool->num_threads; i++) {
 		data.thread_id = i;
+		getitimer(ITIMER_PROF, &data.itimer);
 		rc = pthread_create(&pool->threads[i], &pool->attr,
 				&fc_thread_routine, &data);
 		if (rc != 0) {
