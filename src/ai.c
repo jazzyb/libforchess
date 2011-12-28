@@ -280,7 +280,6 @@ static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
 				inputs + i, outputs + i);
 		assert(rc);
 		count += 1;
-		continue;
 	}
 
 	while (count) {
@@ -303,12 +302,11 @@ static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
 		}
 
 		if (beta <= alpha) {
-			/* TODO Clear all the pending tasks/results from the
-			 * thread pool before continuing. */
 			break;
 		}
 	}
 
+	fc_tpool_clear_tasks(pool);
 	free(inputs);
 	free(outputs);
 	fc_mlist_free(&list);
