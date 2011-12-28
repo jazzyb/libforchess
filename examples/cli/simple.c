@@ -19,19 +19,20 @@ void make_computer_move (fc_game_t *game, fc_player_t player, int depth,
 void get_time (char *str, time_t t);
 void move2str (fc_game_t *game, char *str, fc_move_t *move);
 
-int get_arguments (int argc, char **argv, int *depth, int *timeout, int *threads)
+int get_arguments (int argc, char **argv, char *file, int *depth, int *timeout,
+		int *threads)
 {
 	int c;
 	*depth = *timeout = 0;
 	*threads = 1;
-	while ((c = getopt(argc, argv, "d:hj:t:")) != -1) {
+	while ((c = getopt(argc, argv, "d:f:hj:t:")) != -1) {
 		switch (c) {
 		case 'd':
 			*depth = strtol(optarg, NULL, 10);
 			break;
 		case 'h':
 			fprintf(stderr,
-				"%s {[-h] | [-d <plycount>] [-j <threads>] [-t <seconds>] [1] [2] [3] [4]}\n"
+				"%s {[-h] | [-d <plycount>] [-f <filename>] [-j <threads>] [-t <seconds>] [1] [2] [3] [4]}\n"
 				"    Play forchess!\n"
 				"\n"
 				"    -h: show this help message\n"
@@ -43,6 +44,8 @@ int get_arguments (int argc, char **argv, int *depth, int *timeout, int *threads
 				"           -d: the number of moves that you wish the\n"
 				"               program to search; by default the program\n"
 				"               will search depth = num_players * 2\n"
+				"           -f: game file to load; if none given then a\n"
+				"               new game will be started\n"
 				"           -j: the number of worker threads that will\n"
 				"               search for the best move\n"
 				"           -t: the maximum number of seconds the program\n"
@@ -51,6 +54,9 @@ int get_arguments (int argc, char **argv, int *depth, int *timeout, int *threads
 				"           which players 2 and 4 will be played by\n"
 				"           the computer\n\n", argv[0], argv[0]);
 			exit(0);
+		case 'f':
+			strcpy(file, optarg);
+			break;
 		case 'j':
 			*threads = strtol(optarg, NULL, 10);
 			break;
@@ -77,7 +83,8 @@ int get_arguments (int argc, char **argv, int *depth, int *timeout, int *threads
 int main (int argc, char **argv)
 {
 	int depth, timeout, threads;
-	int optind = get_arguments(argc, argv, &depth, &timeout, &threads);
+	char filename[256] = "examples/cli/simple.fc";
+	int optind = get_arguments(argc, argv, filename, &depth, &timeout, &threads);
 
 	int player_is_human[] = {0, 0, 0, 0};
 	for (int i = optind; i < argc; i++) {
@@ -93,8 +100,8 @@ int main (int argc, char **argv)
 
 	fc_game_t game;
 	fc_game_init(&game);
-	if (!fc_game_load(&game, "examples/cli/simple.fc")) {
-		fprintf(stderr, "error: cannot read start file\n");
+	if (!fc_game_load(&game, filename)) {
+		fprintf(stderr, "error: cannot read file '%s'\n", filename);
 		exit(1);
 	}
 
