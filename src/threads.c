@@ -81,69 +81,94 @@ struct thread_data {
 	pthread_mutex_t mutex;
 };
 
-static void *fc_thread_routine (void *data)
+/*
+ * Called from the start of fc_thread_routine to initialize the necessary
+ * variables.
+ */
+static void initialize_thread_routine (struct thread_data *tdp, int *id,
+		fc_tpool_t **pool)
 {
-	int id;
-	fc_task_t task;
-	fc_tpool_t *pool;
-	struct thread_data *tdp = (struct thread_data *)data;
-
 	pthread_mutex_lock(&tdp->mutex);
-	id = tdp->thread_id;
-	pool = tdp->pool;
+	*id = tdp->thread_id;
+	*pool = tdp->pool;
 	setitimer(ITIMER_PROF, &tdp->itimer, NULL);
 	pthread_cond_signal(&tdp->ready);
 	pthread_mutex_unlock(&tdp->mutex);
+}
 
-	/* pull tasks from the queue and run them until we are told to die */
-	while (1) {
+/*
+ * Returns 1 if it successfully pulled a new task from the taskq.  Returns 0
+ * if the thread must shutdown.
+ */
+static int pull_task_from_queue (int id, fc_task_t *task, fc_tpool_t *pool)
+{
+	do {
 		pthread_mutex_lock(&pool->mutex);
 		if (pool->die) {
 			pthread_mutex_unlock(&pool->mutex);
-			goto exit;
+			return 0;
 		}
 		if (pool->discard_task[id]) {
 			pool->discard_task[id] = 0;
 		}
 		pthread_mutex_unlock(&pool->mutex);
+	} while (!fc_fifo_pop(&pool->taskq, task));
 
-		if (!fc_fifo_pop(&pool->taskq, &task)) {
-			continue;
-		}
+	pthread_mutex_lock(&pool->mutex);
+	assert(pool->idle_thread_count > 0);
+	pool->idle_thread_count -= 1;
+	pthread_mutex_unlock(&pool->mutex);
+	return 1;
+}
 
+/*
+ * Tries to push the task on to the resultq.  Returns 0 if the thread must
+ * shutdown; otherwise 1.
+ */
+static int push_result_to_queue (int id, fc_task_t *task, fc_tpool_t *pool)
+{
+	do {
 		pthread_mutex_lock(&pool->mutex);
-		assert(pool->idle_thread_count > 0);
-		pool->idle_thread_count -= 1;
+		if (pool->die) {
+			pthread_mutex_unlock(&pool->mutex);
+			return 0;
+		}
+		if (pool->discard_task[id]) {
+			pool->discard_task[id] = 0;
+			pthread_mutex_unlock(&pool->mutex);
+			break;
+		}
 		pthread_mutex_unlock(&pool->mutex);
+	} while (!fc_fifo_push(&pool->resultq, task));
+
+	pthread_mutex_lock(&pool->mutex);
+	assert(pool->idle_thread_count != pool->num_threads);
+	pool->idle_thread_count += 1;
+	pthread_mutex_unlock(&pool->mutex);
+	return 1;
+}
+
+static void *fc_thread_routine (void *data)
+{
+	int id;
+	fc_task_t task;
+	fc_tpool_t *pool;
+
+	initialize_thread_routine((struct thread_data *)data, &id, &pool);
+
+	/* pull tasks from the queue and run them until we are told to die */
+	while (1) {
+		if (!pull_task_from_queue(id, &task, pool)) {
+			break;
+		}
 
 		task.callback(task.input_data, task.output_data);
 
-		/* put the completed task onto the resultq */
-		while (1) {
-			pthread_mutex_lock(&pool->mutex);
-			if (pool->die) {
-				pthread_mutex_unlock(&pool->mutex);
-				goto exit;
-			}
-			if (pool->discard_task[id]) {
-				pool->discard_task[id] = 0;
-				pthread_mutex_unlock(&pool->mutex);
-				break;
-			}
-			pthread_mutex_unlock(&pool->mutex);
-
-			if (fc_fifo_push(&pool->resultq, &task)) {
-				break;
-			}
+		if (!push_result_to_queue(id, &task, pool)) {
+			break;
 		}
-
-		pthread_mutex_lock(&pool->mutex);
-		assert(pool->idle_thread_count != pool->num_threads);
-		pool->idle_thread_count += 1;
-		pthread_mutex_unlock(&pool->mutex);
 	}
 
-exit:
 	pthread_exit(NULL);
 }
 
@@ -163,10 +188,10 @@ int fc_tpool_start_threads (fc_tpool_t *pool)
 		rc = pthread_create(&pool->threads[i], &pool->attr,
 				&fc_thread_routine, &data);
 		if (rc != 0) {
-			/* tell previously created threads to stop */
 			pool->die = 1;
 			pthread_mutex_unlock(&pool->mutex);
 			pthread_mutex_destroy(&data.mutex);
+			assert(0);
 			return 0;
 		}
 
@@ -219,26 +244,16 @@ int fc_tpool_push_task (fc_tpool_t *pool,
 {
 	fc_task_t task;
 
-	pthread_mutex_lock(&pool->mutex);
-	if (fc_fifo_is_full(&pool->taskq)) {
-		pthread_mutex_unlock(&pool->mutex);
-		return 0;
-	}
-
-	task.id = ++pool->last_id;
+	task.id = pool->last_id + 1;
 	task.callback = callback;
 	task.input_data = input_data;
 	task.output_data = output_data;
 	if (!fc_fifo_push(&pool->taskq, &task)) {
-		/*
-		 * We should have been able to push since we were told the
-		 * queue was not full.  This indicates a threading issue.
-		 */
-		pthread_mutex_unlock(&pool->mutex);
-		assert(0);
 		return 0;
 	}
 
+	pthread_mutex_lock(&pool->mutex);
+	pool->last_id += 1;
 	pthread_mutex_unlock(&pool->mutex);
 	return task.id;
 }
@@ -247,12 +262,9 @@ int fc_tpool_pop_result (fc_tpool_t *pool, void **ret)
 {
 	fc_task_t task;
 
-	pthread_mutex_lock(&pool->mutex);
 	if (!fc_fifo_pop(&pool->resultq, &task)) {
-		pthread_mutex_unlock(&pool->mutex);
 		return 0;
 	}
-	pthread_mutex_unlock(&pool->mutex);
 
 	*ret = task.output_data;
 	return task.id;
@@ -293,11 +305,11 @@ size_t fc_tpool_num_busy_threads (fc_tpool_t *pool)
 
 size_t fc_tpool_num_pending_tasks (fc_tpool_t *pool)
 {
-	FC_SYNCHRONIZED_RETURN(fc_fifo_size(&pool->taskq), &pool->mutex);
+	return fc_fifo_size(&pool->taskq);
 }
 
 size_t fc_tpool_num_pending_results (fc_tpool_t *pool)
 {
-	FC_SYNCHRONIZED_RETURN(fc_fifo_size(&pool->resultq), &pool->mutex);
+	return fc_fifo_size(&pool->resultq);
 }
 
