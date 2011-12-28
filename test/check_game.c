@@ -67,7 +67,7 @@ START_TEST (test_forchess_game_move_conversions)
 	fc_board_set_piece(game.board, FC_SECOND, FC_KING, 0, 1);
 	fc_mlist_t list;
 	fc_mlist_init(&list);
-	fc_board_get_moves(game.board, &list, FC_FIRST);
+	fc_board_get_all_moves(game.board, &list, FC_FIRST);
 	int w, x, y, z;
 	fc_move_t *move = fc_mlist_get(&list, 0);
 	fail_unless(fc_game_convert_move_to_coords(&game, &w, &x, &y, &z,

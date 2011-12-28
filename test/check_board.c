@@ -409,7 +409,7 @@ START_TEST (test_forchess_get_removes)
 	/* TODO fill in all the removes for these */
 	fc_mlist_t rm;
 	fc_mlist_init(&rm);
-	fc_board_get_removes(&board, &rm, FC_FIRST);
+	fc_board_get_all_removes(&board, &rm, FC_FIRST);
 	fail_unless(fc_mlist_length(&rm) == 6);
 
 	fc_mlist_free(&rm);
@@ -645,7 +645,7 @@ START_TEST (test_forchess_board_get_valid_moves1)
 	fc_mlist_t list;
 	fc_mlist_init(&list);
 	/* test that we can not put our king in check */
-	fc_board_get_valid_moves(&board, &list, FC_FOURTH);
+	fc_board_get_moves(&board, &list, FC_FOURTH);
 	fail_unless(move_exists_in_mlist(&list, "h1-g1"));
 	fail_unless(!move_exists_in_mlist(&list, "h1-h2"));
 	fail_unless(!move_exists_in_mlist(&list, "h1-g2"));
@@ -667,13 +667,13 @@ START_TEST (test_forchess_board_get_valid_moves2)
 	fc_mlist_t list;
 	fc_mlist_init(&list);
 	/* test that we must get ourselves out of check */
-	fc_board_get_valid_moves(&board, &list, FC_FIRST);
+	fc_board_get_moves(&board, &list, FC_FIRST);
 	fail_unless(move_exists_in_mlist(&list, "a3-b1"));
 	fail_unless(fc_mlist_length(&list) == 1);
 	// test that we can move anything but the king if we are in checkmate
 	fail_unless(fc_board_remove_piece(&board, 2, 0)); // remove knight
 	fc_mlist_clear(&list);
-	fc_board_get_valid_moves(&board, &list, FC_FIRST);
+	fc_board_get_moves(&board, &list, FC_FIRST);
 	fail_unless(!move_exists_in_mlist(&list, "a1-b1"));
 	fail_unless(!move_exists_in_mlist(&list, "a1-b2"));
 	fail_unless(fc_mlist_length(&list) == 12); // number of rook moves
@@ -691,7 +691,7 @@ START_TEST (test_forchess_board_get_valid_removes1)
 	fc_mlist_t list;
 	fc_mlist_init(&list);
 	/* test that we must remove the king */
-	fc_board_get_valid_moves(&board, &list, FC_FIRST);
+	fc_board_get_moves(&board, &list, FC_FIRST);
 	fail_unless(fc_mlist_length(&list) == 1);
 	fail_unless(fc_mlist_get(&list, 0)->move == 1);
 }
@@ -708,7 +708,7 @@ START_TEST (test_forchess_board_get_valid_removes2)
 	fc_mlist_t list;
 	fc_mlist_init(&list);
 	/* test that we must remove a piece that won't put us in check */
-	fc_board_get_valid_moves(&board, &list, FC_FIRST);
+	fc_board_get_moves(&board, &list, FC_FIRST);
 	fail_unless(fc_mlist_length(&list) == 1);
 	fail_unless(fc_mlist_get(&list, 0)->move == 512);
 }
@@ -726,7 +726,7 @@ START_TEST (test_forchess_board_get_valid_removes3)
 	fc_mlist_init(&list);
 	/* test that if there are no removes which won't put us in check, then
 	 * remove any piece but the king */
-	fc_board_get_valid_moves(&board, &list, FC_FIRST);
+	fc_board_get_moves(&board, &list, FC_FIRST);
 	fail_unless(fc_mlist_length(&list) == 3);
 	fail_unless(fc_mlist_get(&list, 0)->move == 2);
 	fail_unless(fc_mlist_get(&list, 1)->move == 256);

@@ -110,7 +110,7 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	copy = &(ai->bv[depth - 1]);
 	list = &(ai->mlv[depth - 1]);
 	fc_mlist_clear(list);
-	fc_board_get_valid_moves(board, list, player);
+	fc_board_get_moves(board, list, player);
 	for (i = 0; i < fc_mlist_length(list); i++) {
 
 		move = fc_mlist_get(list, i);
@@ -241,7 +241,7 @@ static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
 	copy = &(ai->bv[depth - 1]);
 	fc_board_copy(copy, board);
 	fc_mlist_init(&list);
-	fc_board_get_valid_moves(board, &list, player);
+	fc_board_get_moves(board, &list, player);
 	fc_board_make_move(copy, fc_mlist_get(&list, 0));
 
 	score = threaded_move_search(ai, pool, NULL, FC_NEXT_PLAYER(player),
