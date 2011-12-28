@@ -102,16 +102,16 @@ static void *fc_thread_routine (void *data)
 			pthread_mutex_unlock(&pool->mutex);
 			goto exit;
 		}
-
 		if (pool->discard_task[id]) {
 			pool->discard_task[id] = 0;
 		}
+		pthread_mutex_unlock(&pool->mutex);
 
 		if (!fc_fifo_pop(&pool->taskq, &task)) {
-			pthread_mutex_unlock(&pool->mutex);
 			continue;
 		}
 
+		pthread_mutex_lock(&pool->mutex);
 		assert(pool->idle_thread_count > 0);
 		pool->idle_thread_count -= 1;
 		pthread_mutex_unlock(&pool->mutex);
@@ -125,18 +125,19 @@ static void *fc_thread_routine (void *data)
 				pthread_mutex_unlock(&pool->mutex);
 				goto exit;
 			}
-
 			if (pool->discard_task[id]) {
 				pool->discard_task[id] = 0;
+				pthread_mutex_unlock(&pool->mutex);
 				break;
 			}
+			pthread_mutex_unlock(&pool->mutex);
 
 			if (fc_fifo_push(&pool->resultq, &task)) {
 				break;
 			}
-			pthread_mutex_unlock(&pool->mutex);
 		}
 
+		pthread_mutex_lock(&pool->mutex);
 		assert(pool->idle_thread_count != pool->num_threads);
 		pool->idle_thread_count += 1;
 		pthread_mutex_unlock(&pool->mutex);
