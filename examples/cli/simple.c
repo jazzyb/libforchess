@@ -202,7 +202,9 @@ void make_computer_move (fc_game_t *game, fc_player_t player, int depth,
 	fc_ai_init(&ai, fc_game_get_board(game));
 
 	time_t start = time(NULL);
-	if (!fc_ai_next_move(&ai, &move, player, depth, timeout)) {
+	/* FIXME Last parameter should be a user option like depth and
+	 * timeout. */
+	if (!fc_ai_next_move(&ai, &move, player, depth, timeout, 1)) {
 		assert(0);
 	}
 	char time_str[100];

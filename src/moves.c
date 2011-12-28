@@ -51,8 +51,6 @@ void fc_move_set_promotion (fc_move_t *move, fc_piece_t promote)
 	move->promote = promote;
 }
 
-#define FC_DEFAULT_MLIST_SIZE 255
-
 /*
  * This must be called before the insert, copy, and merge functions can be
  * used.

@@ -76,7 +76,7 @@ void fc_ai_init (fc_ai_t *ai, fc_board_t *board);
  * @return 1 on success; 0 otherwise
  */
 int fc_ai_next_move (fc_ai_t *ai, fc_move_t *move, fc_player_t player,
-		int depth, unsigned int seconds);
+		int depth, unsigned int seconds, size_t num_threads);
 
 /**
  * @brief Determine the relative material worth of a given board configuration.
