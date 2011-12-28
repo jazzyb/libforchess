@@ -47,6 +47,32 @@ static int time_up (fc_ai_t *ai)
 }
 
 /*
+ * Adjusts the alpha and beta values given the score.  If ret is not NULL, it
+ * copies the move to ret.  Returns 1 if the given score was a cutoff for the
+ * search; 0 otherwise.
+ */
+static int alphabeta_cutoff (int score, int *alpha, int *beta, fc_move_t *move,
+		fc_move_t *ret, int max)
+{
+	if (max && score > *alpha) {
+		*alpha = score;
+		if (ret) {
+			fc_move_copy(ret, move);
+		}
+	} else if (!max && score < *beta) {
+		*beta = score;
+		if (ret) {
+			fc_move_copy(ret, move);
+		}
+	}
+	if (*beta <= *alpha) {
+		return 1;
+	}
+
+	return 0;
+}
+
+/*
  * Returns the value of the subtree.  If the variable max is set to 1, then the
  * function will try to maximize the value.  If max is set to 0, then it will
  * try to minimize the value.
@@ -65,7 +91,7 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	if (time_up(ai)) {
 		/*
 		 * Return a value that will fail the conditions in
-		 * move_and_adjust_scores(), i.e. don't take this move into
+		 * alphabeta_cutoff(), i.e. don't take this move into
 		 * consideration.
 		 */
 		return (max) ? beta : alpha;
@@ -101,19 +127,7 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 		score = alphabeta(ai, NULL, FC_NEXT_PLAYER(player), depth - 1,
 				alpha, beta, !max);
 
-		if (max && score > alpha) {
-			alpha = score;
-			if (ret) {
-				fc_move_copy(ret, move);
-			}
-		} else if (!max && score < beta) {
-			beta = score;
-			if (ret) {
-				fc_move_copy(ret, move);
-			}
-		}
-
-		if (beta <= alpha) {
+		if (alphabeta_cutoff(score, &alpha, &beta, move, ret, max)) {
 			break;
 		}
 	}
@@ -202,6 +216,7 @@ static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
 	struct ab_output *outputs;
 	struct ab_output *retval;
 	fc_mlist_t list;
+	fc_move_t *move;
 	fc_board_t *orig, *copy, *board = &(ai->bv[depth]);
 
 	if (fc_board_is_player_out(board, player)) {
@@ -219,31 +234,22 @@ static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
 		return (max) ? score + depth : (-1 * score) - depth;
 	}
 
+	/* set alpha and beta based on the initial move */
 	copy = &(ai->bv[depth - 1]);
 	fc_board_copy(copy, board);
 	fc_mlist_init(&list);
 	fc_board_get_moves(board, &list, player);
-	fc_board_make_move(copy, fc_mlist_get(&list, 0));
+	move = fc_mlist_get(&list, 0);
+	fc_board_make_move(copy, move);
 
 	score = threaded_move_search(ai, pool, NULL, FC_NEXT_PLAYER(player),
 			depth - 1, alpha, beta, !max);
 
-	if (max && score > alpha) {
-		alpha = score;
-		if (ret) {
-			fc_move_copy(ret, fc_mlist_get(&list, 0));
-		}
-	} else if (!max && score < beta) {
-		beta = score;
-		if (ret) {
-			fc_move_copy(ret, fc_mlist_get(&list, 0));
-		}
-	}
-
-	if (beta <= alpha) {
+	if (alphabeta_cutoff(score, &alpha, &beta, move, ret, max)) {
 		return (max) ? alpha : beta;
 	}
 
+	/* then go through the rest of the list */
 	inputs = calloc(fc_mlist_length(&list), sizeof(*inputs));
 	outputs = calloc(fc_mlist_length(&list), sizeof(*outputs));
 	for (i = 1, count = 0; i < fc_mlist_length(&list); i++) {
@@ -270,19 +276,8 @@ static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
 		}
 
 		count -= 1;
-		if (max && retval->score > alpha) {
-			alpha = retval->score;
-			if (ret) {
-				fc_move_copy(ret, retval->move);
-			}
-		} else if (!max && retval->score < beta) {
-			beta = retval->score;
-			if (ret) {
-				fc_move_copy(ret, retval->move);
-			}
-		}
-
-		if (beta <= alpha) {
+		if (alphabeta_cutoff(retval->score, &alpha, &beta, retval->move,
+					ret, max)) {
 			break;
 		}
 	}
