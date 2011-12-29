@@ -4,6 +4,19 @@
  *
  * This file is subject to the terms and conditions of the 'LICENSE' file
  * which is a part of this source code package.
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <assert.h>
@@ -24,12 +37,8 @@ uint64_t fc_uint64 (const char *str)
 	y1 -= '1';
 	y2 -= '1';
 
-/* Redefine UINT64_C to be something that plays nicer with the C89 standard */
-#undef UINT64_C
-#define UINT64_C(x) ((uint64_t)x)
-
-	return ((UINT64_C(1)) << ((y1 * 8) + x1)) |
-	       ((UINT64_C(1)) << ((y2 * 8) + x2));
+	return (((uint64_t)1) << ((y1 * 8) + x1)) |
+	       (((uint64_t)1) << ((y2 * 8) + x2));
 }
 
 void fc_move_copy (fc_move_t *dst, fc_move_t *src)
@@ -41,8 +50,6 @@ void fc_move_set_promotion (fc_move_t *move, fc_piece_t promote)
 {
 	move->promote = promote;
 }
-
-#define FC_DEFAULT_MLIST_SIZE 255
 
 /*
  * This must be called before the insert, copy, and merge functions can be
@@ -68,7 +75,7 @@ int fc_mlist_init (fc_mlist_t *list)
 
 int fc_mlist_copy (fc_mlist_t *dst, fc_mlist_t *src)
 {
-	uint32_t i;
+	uint8_t i;
 
 	for (i = 0; i < src->index; i++) {
 		fc_move_copy(dst->moves + i, src->moves + i);
@@ -87,8 +94,10 @@ int fc_mlist_copy (fc_mlist_t *dst, fc_mlist_t *src)
  */
 int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move, int32_t value)
 {
-	uint32_t i;
+	uint8_t i;
 	fc_move_t *new, *old;
+
+	assert((uint32_t)list->index + 1 <= FC_DEFAULT_MLIST_SIZE);
 
 	new = &(list->moves[list->index]);
 	fc_move_copy(new, move);
@@ -104,9 +113,38 @@ int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move, int32_t value)
 		}
 	}
 	(void)memmove(list->sorted + i + 1, list->sorted + i,
-			(list->index - i) * sizeof(int32_t));
+			(list->index - i) * sizeof(uint8_t));
 	list->sorted[i] = list->index;
 	list->index += 1;
+	return 1;
+}
+
+/*
+ * NOTE:  We may be able to speed this function up if we need to by *not*
+ * removing the move structs and keeping up with two different indices: one
+ * for the moves and another for the sorted index.
+ *
+ * Need to profile and see if the change is worth it.
+ */
+int fc_mlist_delete (fc_mlist_t *list, int index)
+{
+	int i, old_index;
+
+	if (index < 0 || index >= list->index) {
+		return 0;
+	}
+
+	old_index = list->sorted[index];
+	memmove(list->sorted + index, list->sorted + index + 1,
+			(list->index - index) * sizeof(uint8_t));
+	memmove(list->moves + old_index, list->moves + old_index + 1,
+			(list->index - old_index) * sizeof(fc_move_t));
+	for (i = 0; i < list->index; i++) {
+		if (list->sorted[i] > old_index) {
+			list->sorted[i] -= 1;
+		}
+	}
+	list->index -= 1;
 	return 1;
 }
 

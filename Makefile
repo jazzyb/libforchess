@@ -9,7 +9,7 @@ endif
 WARN_FLAGS=-Wall -Werror -std=c89 -pedantic
 PROF_FLAGS=-pg
 
-INCLUDES=-I./src
+INCLUDES=-I./include
 
 LIBS=-Llib
 
@@ -24,25 +24,33 @@ TEST_FILES=test/check_forchess.c \
 	   test/check_moves.c \
 	   test/check_board.c \
 	   test/check_check.c \
+	   test/check_fifo.c \
+	   test/check_threads.c \
 	   test/check_ai.c \
 	   test/check_game.c
 
-INC_FILES=src/forchess/moves.h \
-	  src/forchess/board.h \
-	  src/forchess/ai.h \
-	  src/forchess/game.h
+INC_FILES=include/forchess/moves.h \
+	  include/forchess/board.h \
+	  include/forchess/fifo.h \
+	  include/forchess/threads.h \
+	  include/forchess/ai.h \
+	  include/forchess/game.h
 
 SRC_FILES=src/ai.c \
 	  src/board.c \
 	  src/check.c \
+	  src/fifo.c \
 	  src/game.c \
-	  src/moves.c
+	  src/moves.c \
+	  src/threads.c
 
 OBJ_FILES=src/ai.o \
 	  src/board.o \
 	  src/check.o \
+	  src/fifo.o \
 	  src/game.o \
-	  src/moves.o
+	  src/moves.o \
+	  src/threads.o
 
 EXAMPLE_FILES=examples/cli/simple.c
 
@@ -65,11 +73,11 @@ endif
 # FIXME: C99 standard just makes compiling easier; will need to change this
 # later; see also examples and profiler
 check: $(TEST_FILES) libforchess
-	$(CC) -o test_all $(CFLAGS) --std=c99 $(INCLUDES) $(CHECK_FLAGS) $(LIBS) $(TEST_FILES) -lcheck -lforchess
+	$(CC) -o test_all $(CFLAGS) --std=c99 $(INCLUDES) $(CHECK_FLAGS) $(LIBS) $(TEST_FILES) -lcheck -lforchess -lpthread
 	./test_all
 
 examples: $(EXAMPLE_FILES) $(INC_FILES) libforchess
-	$(CC) $(CFLAGS) --std=c99 $(INCLUDES) $(LIBS) $(EXAMPLE_FILES) -lforchess
+	$(CC) $(CFLAGS) --std=c99 $(INCLUDES) $(LIBS) $(EXAMPLE_FILES) -lforchess -lpthread
 
 cscope:
 	find src -type f | egrep '.*\.h|.*\.c$$' > cscope.files
@@ -88,13 +96,16 @@ libforchess_gprof: $(SRC_FILES) $(INC_FILES)
 	$(CC) -c -o src/ai.o $(CFLAGS) $(WARN_FLAGS) $(PROF_FLAGS) $(INCLUDES) src/ai.c
 	$(CC) -c -o src/board.o $(CFLAGS) $(WARN_FLAGS) $(PROF_FLAGS) $(INCLUDES) src/board.c
 	$(CC) -c -o src/check.o $(CFLAGS) $(WARN_FLAGS) $(PROF_FLAGS) $(INCLUDES) src/check.c
+	$(CC) -c -o src/fifo.o $(CFLAGS) $(WARN_FLAGS) $(PROF_FLAGS) $(INCLUDES) src/fifo.c
 	$(CC) -c -o src/moves.o $(CFLAGS) $(WARN_FLAGS) $(PROF_FLAGS) $(INCLUDES) src/moves.c
+	$(CC) -c -o src/threads.o $(CFLAGS) $(WARN_FLAGS) $(PROF_FLAGS) $(INCLUDES) src/threads.c
 	$(CC) -c -o src/game.o $(CFLAGS) $(WARN_FLAGS) $(PROF_FLAGS) $(INCLUDES) src/game.c
 	mkdir -p lib
-	$(CC) -shared -o lib/libforchess.so $^
+	ar cr lib/libforchess.a src/*.o
+	ranlib lib/libforchess.a
 
 profiler: $(EXAMPLE_FILES) $(INC_FILES) libforchess_gprof
-	$(CC) $(CFLAGS) --std=c99 $(PROF_FLAGS) $(INCLUDES) $(LIBS) $(EXAMPLE_FILES) -lforchess
+	$(CC) $(CFLAGS) --std=c99 $(PROF_FLAGS) $(INCLUDES) $(LIBS) $(EXAMPLE_FILES) -lforchess -lpthread
 	./a.out
 	gprof ./a.out > gprof.output
 

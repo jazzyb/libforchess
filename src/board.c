@@ -4,6 +4,19 @@
  *
  * This file is subject to the terms and conditions of the 'LICENSE' file
  * which is a part of this source code package.
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <assert.h>
@@ -63,7 +76,7 @@ int fc_board_set_piece (fc_board_t *board, fc_player_t player, fc_piece_t piece,
 	 * FIXME make sure there is not already a piece on this position.
 	 * FIXME also make sure we don't call it with bad row/col values.
 	 */
-	bb = UINT64_C(1) << (row * 8 + col);
+	bb = ((uint64_t)1) << (row * 8 + col);
 	FC_BITBOARD(board, player, piece) |= bb;
 	if (piece == FC_PAWN) {
 		FC_PAWN_BB(board, player) |= bb;
@@ -113,7 +126,7 @@ int fc_board_get_piece (fc_board_t *board, fc_player_t *player,
 
 	assert(board && player && piece);
 
-	bit = UINT64_C(1) << (row * 8 + col);
+	bit = ((uint64_t)1) << (row * 8 + col);
 	find_player_piece(board, player, piece, bit);
 	return (*player != FC_NONE && *piece != FC_NONE);
 }
@@ -132,7 +145,7 @@ int fc_board_remove_piece (fc_board_t *board, int row, int col)
 	assert(board);
 
 	fc_board_get_piece(board, &player, &piece, row, col);
-	bit = UINT64_C(1) << (row * 8 + col);
+	bit = ((uint64_t)1) << (row * 8 + col);
 	for (i = 0; i < 24; i++) {
 		if (board->bitb[i] & bit) {
 			if (piece == FC_PAWN) {
@@ -694,7 +707,7 @@ void fc_get_queen_moves (fc_board_t *board, fc_mlist_t *moves,
 	}
 }
 
-void fc_board_get_moves (fc_board_t *board, fc_mlist_t *moves,
+void fc_board_get_all_moves (fc_board_t *board, fc_mlist_t *moves,
 		fc_player_t player)
 {
 	assert(board && moves);
@@ -710,7 +723,7 @@ void fc_board_get_moves (fc_board_t *board, fc_mlist_t *moves,
  * Return the pieces that the player is allowed to remove (i.e. all the pieces
  * the player has).
  */
-void fc_board_get_removes (fc_board_t *board, fc_mlist_t *moves,
+void fc_board_get_all_removes (fc_board_t *board, fc_mlist_t *moves,
 		fc_player_t player)
 {
 	uint64_t piece, bb;
@@ -732,6 +745,184 @@ void fc_board_get_removes (fc_board_t *board, fc_mlist_t *moves,
 }
 
 /*
+ * All of the code below was once a part of fc_board_is_move_valid() but was
+ * pulled out to increase the speed of the alphabeta function.  See the
+ * comment above fc_board_is_move_valid() for an explanation of what this
+ * function is looking for.
+ */
+static int is_move_valid_given_check_status (fc_board_t *board, fc_move_t *move,
+		int check_status_before, int partner_status_before)
+{
+	int check_status_after, partner_status_after;
+	uint64_t king;
+	fc_board_t copy;
+
+	fc_board_copy(&copy, board);
+	fc_board_make_move(&copy, move);
+
+	if (check_status_before == FC_CHECKMATE) {
+		king = FC_BITBOARD(board, move->player, FC_KING);
+		if (move->piece == FC_KING && move->move != king) {
+			return 0;
+		} else {
+			return 1;
+		}
+	}
+	check_status_after = fc_board_check_status(&copy, move->player);
+	if (!check_status_before && check_status_after) {
+		return 0;
+	}
+	if (check_status_before == FC_CHECK && check_status_after) {
+		return 0;
+	}
+
+	partner_status_after = fc_board_check_status(&copy,
+			FC_PARTNER(move->player));
+	if (!partner_status_before && partner_status_after) {
+		return 0;
+	}
+
+	return 1;
+}
+
+/*
+ * Verifies that we are:
+ * 	1. Not moving our king into check.
+ * 	2. Not putting our partner's king into check.
+ * 	3. If our king is in check, then moving him out of check...
+ * 	4. ...unless he's in checkmate; in which case we can move anything BUT
+ * 	   the king.
+ *
+ * Returns 1 if all of the above are true (i.e. the move is allowed); 0
+ * otherwise.
+ *
+ * See is_move_valid_given_check_status() above.
+ */
+int fc_board_is_move_valid (fc_board_t *board, fc_move_t *move)
+{
+	int check_status_before, partner_status_before;
+
+	assert(board && move);
+	check_status_before = fc_board_check_status(board, move->player);
+	partner_status_before = fc_board_check_status(board,
+			FC_PARTNER(move->player));
+	return is_move_valid_given_check_status(board, move,
+			check_status_before, partner_status_before);
+}
+
+static void append_pawn_promotions_to_moves(fc_board_t *board, fc_mlist_t *list,
+		fc_move_t *move)
+{
+	move->promote = FC_QUEEN;
+	fc_board_list_add_move(board, list, move);
+	move->promote = FC_KNIGHT;
+	fc_board_list_add_move(board, list, move);
+	move->promote = FC_ROOK;
+	fc_board_list_add_move(board, list, move);
+	move->promote = FC_BISHOP;
+	fc_board_list_add_move(board, list, move);
+	move->promote = FC_NONE;
+}
+
+/*
+ * Called from fc_board_get_moves() below if player has no valid, legal
+ * moves available.  Fills the move list with the available removes.
+ */
+static void get_valid_removes (fc_board_t *board, fc_mlist_t *list,
+		fc_player_t player)
+{
+	int i;
+	int found_valid_move = 0;
+	fc_move_t *rm;
+
+	fc_board_get_all_removes(board, list, player);
+
+	/*
+	 * If we only have the king to remove, then remove it.
+	 */
+	if (fc_mlist_length(list) == 1) {
+		return;
+	}
+
+	/*
+	 * Go through the list the first time.  If we can remove a piece other
+	 * than the king that won't put us in check, great.
+	 */
+	for (i = 0; i < fc_mlist_length(list); i++) {
+		rm = fc_mlist_get(list, i);
+		if (rm->piece == FC_KING ||
+				!fc_board_is_move_valid(board, rm)) {
+			fc_mlist_delete(list, i);
+			i -= 1;
+			continue;
+		}
+		found_valid_move = 1;
+	}
+	if (found_valid_move) {
+		return;
+	}
+
+	/*
+	 * Otherwise, go through the whole list again (this time allowing
+	 * putting kings into check(mate)). And return the best move.
+	 */
+	fc_mlist_clear(list);
+	fc_board_get_all_removes(board, list, player);
+	for (i = 0; i < fc_mlist_length(list); i++) {
+		rm = fc_mlist_get(list, i);
+		if (rm->piece == FC_KING) {
+			fc_mlist_delete(list, i);
+			i -= 1;
+			continue;
+		}
+	}
+}
+
+/*
+ * Return only the moves that are valid and legal.  Returns all moves that do
+ * not put player's or player's partner's king in check.  If no valid, legal
+ * moves are available, return all the valid, legal removes that are
+ * available.
+ */
+void fc_board_get_moves (fc_board_t *board, fc_mlist_t *list,
+		fc_player_t player)
+{
+	int i;
+	int all_moves_are_invalid = 1;
+	int current_check_status, partner_check_status;
+	fc_move_t *move;
+	fc_player_t dummy;
+
+	fc_board_get_all_moves(board, list, player);
+	current_check_status = fc_board_check_status(board, player);
+	partner_check_status = fc_board_check_status(board, FC_PARTNER(player));
+	for (i = 0; i < fc_mlist_length(list); i++) {
+		move = fc_mlist_get(list, i);
+		if (!is_move_valid_given_check_status(board, move,
+					current_check_status,
+					partner_check_status)) {
+			fc_mlist_delete(list, i);
+			i -= 1;
+			continue;
+		}
+
+		if (fc_board_move_requires_promotion(board, move, &dummy) &&
+				move->promote == FC_NONE) {
+			append_pawn_promotions_to_moves(board, list, move);
+			fc_mlist_delete(list, i);
+			i -= 1;
+			continue;
+		}
+		all_moves_are_invalid = 0;
+	}
+
+	if (all_moves_are_invalid) {
+		fc_mlist_clear(list);
+		get_valid_removes(board, list, player);
+	}
+}
+
+/*
  * Give all player 'from's pieces to player 'to'.
  */
 static void fc_convert_pieces (fc_board_t *board, fc_player_t from,
@@ -747,21 +938,36 @@ static void fc_convert_pieces (fc_board_t *board, fc_player_t from,
 			FC_BITBOARD(board, to, FC_PAWN) |= board->bitb[i];
 		}
 	}
-	FC_BITBOARD(board, from, FC_PAWN) = UINT64_C(0);
+	FC_BITBOARD(board, from, FC_PAWN) = ((uint64_t)0);
 
 	for (j = FC_PAWN + 1; j < FC_KING; j++) {
 		FC_BITBOARD(board, to, j) |= FC_BITBOARD(board, from, j);
-		FC_BITBOARD(board, from, j) = UINT64_C(0);
+		FC_BITBOARD(board, from, j) = ((uint64_t)0);
 	}
 }
 
 /*
+ * NOTE:  The below macros represent the following values:
+ *
+ * #define FC_FIRST_BACK_WALL  (UINT64_C(0xff80808080808080))
+ * #define FC_SECOND_BACK_WALL (UINT64_C(0x80808080808080ff))
+ * #define FC_THIRD_BACK_WALL  (UINT64_C(0x01010101010101ff))
+ * #define FC_FOURTH_BACK_WALL (UINT64_C(0xff01010101010101))
+ *
+ * References to UINT64_C had to be removed as it won't build on a 32-bit
+ * system.
+ */
+#define FC_FIRST_BACK_WALL  ((((uint64_t)0xff808080) << 32) | \
+		((uint64_t)0x80808080))
+#define FC_SECOND_BACK_WALL  ((((uint64_t)0x80808080) << 32) | \
+		((uint64_t)0x808080ff))
+#define FC_THIRD_BACK_WALL  ((((uint64_t)0x01010101) << 32) | \
+		((uint64_t)0x010101ff))
+#define FC_FOURTH_BACK_WALL  ((((uint64_t)0xff010101) << 32) | \
+		((uint64_t)0x01010101))
+/*
  * If the given pawn reaches its "back wall" it will get promoted.
  */
-#define FC_FIRST_BACK_WALL  (UINT64_C(0xff80808080808080))
-#define FC_SECOND_BACK_WALL (UINT64_C(0x80808080808080ff))
-#define FC_THIRD_BACK_WALL  (UINT64_C(0x01010101010101ff))
-#define FC_FOURTH_BACK_WALL (UINT64_C(0xff01010101010101))
 static int must_promote (fc_player_t player, uint64_t pawn)
 {
 	switch (player) {
@@ -915,5 +1121,48 @@ void fc_board_copy (fc_board_t *dst, fc_board_t *src)
 	for (p = FC_PAWN; p <= FC_KING; p++) {
 		dst->piece_value[p] = src->piece_value[p];
 	}
+}
+
+/*
+ * Return 1 if player is no longer present in the game; 0 otherwise.
+ */
+int fc_board_is_player_out (fc_board_t *board, fc_player_t player)
+{
+	return !(FC_BITBOARD(board, player, FC_KING));
+}
+
+/*
+ * Return 1 if one side has no remaining moves; 0 otherwise.
+ */
+int fc_board_game_over (fc_board_t *board)
+{
+	return ((fc_board_is_player_out(board, FC_FIRST) &&
+		fc_board_is_player_out(board, FC_THIRD)) ||
+		(fc_board_is_player_out(board, FC_SECOND) &&
+		fc_board_is_player_out(board, FC_FOURTH)));
+}
+
+static int get_material_score (fc_board_t *board, fc_player_t player)
+{
+	int ret = 0;
+	uint64_t piece, pieces;
+	fc_piece_t i;
+
+	for (i = FC_PAWN; i <= FC_KING; i++) {
+		pieces = FC_BITBOARD(board, player, i);
+		FC_FOREACH(piece, pieces) {
+			ret += fc_board_get_material_value(board, i);
+		}
+	}
+	return ret;
+}
+
+int fc_board_score_position (fc_board_t *board, fc_player_t player)
+{
+	assert(board);
+	return (get_material_score(board, player) -
+		get_material_score(board, FC_NEXT_PLAYER(player)) +
+		get_material_score(board, FC_PARTNER(player)) -
+		get_material_score(board, FC_PARTNER(FC_NEXT_PLAYER(player))));
 }
 

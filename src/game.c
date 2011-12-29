@@ -4,6 +4,19 @@
  *
  * This file is subject to the terms and conditions of the 'LICENSE' file
  * which is a part of this source code package.
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <assert.h>
@@ -85,7 +98,7 @@ int fc_game_save (fc_game_t *game, const char *filename)
 	}
 
 	fc_mlist_init(&list);
-	fc_board_get_removes(game->board, &list, game->player);
+	fc_board_get_all_removes(game->board, &list, game->player);
 	for (i = 0; i < fc_mlist_length(&list); i++) {
 		move = fc_mlist_get(&list, i);
 		remove2position(str, move->move);
@@ -97,7 +110,7 @@ int fc_game_save (fc_game_t *game, const char *filename)
 	     player != game->player;
 	     player = FC_NEXT_PLAYER(player)) {
 		fc_mlist_clear(&list);
-		fc_board_get_removes(game->board, &list, player);
+		fc_board_get_all_removes(game->board, &list, player);
 		for (i = 0; i < fc_mlist_length(&list); i++) {
 			move = fc_mlist_get(&list, i);
 			remove2position(str, move->move);
@@ -201,14 +214,14 @@ int fc_game_is_move_legal (fc_game_t *game, fc_move_t *move)
 
 	valid_move_exists = 0;
 	fc_mlist_init(&list);
-	fc_board_get_moves(game->board, &list, move->player);
+	fc_board_get_all_moves(game->board, &list, move->player);
 	for (i = 0; i < fc_mlist_length(&list); i++) {
 		other = fc_mlist_get(&list, i);
 		if (move->piece == other->piece && move->move == other->move) {
 			fc_mlist_free(&list);
-			return fc_ai_is_move_valid(game->board, move);
+			return fc_board_is_move_valid(game->board, move);
 		}
-		valid_move_exists += fc_ai_is_move_valid(game->board, other);
+		valid_move_exists += fc_board_is_move_valid(game->board, other);
 	}
 	if (valid_move_exists) {
 		fc_mlist_free(&list);
@@ -216,7 +229,7 @@ int fc_game_is_move_legal (fc_game_t *game, fc_move_t *move)
 	}
 
 	fc_mlist_clear(&list);
-	fc_board_get_removes(game->board, &list, move->player);
+	fc_board_get_all_removes(game->board, &list, move->player);
 
 	/* Check to see if it is okay to remove the king. */
 	if (fc_mlist_length(&list) == 1 && move->piece == FC_KING &&
@@ -233,13 +246,13 @@ int fc_game_is_move_legal (fc_game_t *game, fc_move_t *move)
 			continue;
 		}
 		if (move->piece == other->piece && move->move == other->move) {
-			if (fc_ai_is_move_valid(game->board, move)) {
+			if (fc_board_is_move_valid(game->board, move)) {
 				fc_mlist_free(&list);
 				return 1;
 			}
 			found_match = 1;
 		}
-		valid_remove_exists += fc_ai_is_move_valid(game->board, other);
+		valid_remove_exists += fc_board_is_move_valid(game->board, other);
 	}
 
 	if (found_match && !valid_remove_exists) {
@@ -316,13 +329,9 @@ int fc_game_convert_coords_to_move (fc_game_t *game, fc_move_t *move,
 	(void)fc_board_get_piece(game->board, &(move->opp_player),
 			&(move->opp_piece), y2, x2);
 
-/* Redefine UINT64_C to be something that plays nicer with the C89 standard */
-#undef UINT64_C
-#define UINT64_C(x) ((uint64_t)x)
-
-	move->move = UINT64_C(1) << ((y1 * 8) + x1);
+	move->move = ((uint64_t)1) << ((y1 * 8) + x1);
 	if (x2 != -1 && y2 != -1) {
-		move->move |= UINT64_C(1) << ((y2 * 8) + x2);
+		move->move |= ((uint64_t)1) << ((y2 * 8) + x2);
 	}
 	return 1;
 }

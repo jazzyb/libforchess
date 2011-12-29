@@ -4,6 +4,19 @@
  *
  * This file is subject to the terms and conditions of the 'LICENSE' file
  * which is a part of this source code package.
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef _FC_BOARD_H_
@@ -59,15 +72,22 @@ typedef struct {
 #define FC_PAWN_BB(board, orientation) \
 	(board->bitb[FC_FIRST_PAWNS + orientation])
 
-/* Redefine UINT64_C to be something that plays nicer with the C89 standard */
-#undef UINT64_C
-#define UINT64_C(x) ((uint64_t)x)
-
+/*
+ * NOTE:  The below macros represent the following values:
+ *
+ * #define FC_LEFT_COL  (UINT64_C(0x0101010101010101))
+ * #define FC_RIGHT_COL (UINT64_C(0x8080808080808080))
+ * #define FC_2LEFT_COL  (UINT64_C(0x0202020202020202))
+ * #define FC_2RIGHT_COL (UINT64_C(0x4040404040404040))
+ *
+ * References to UINT64_C had to be removed as it won't build on a 32-bit
+ * system.
+ */
 /* used to check a piece's position on the board */
-#define FC_LEFT_COL  (UINT64_C(0x0101010101010101))
-#define FC_RIGHT_COL (UINT64_C(0x8080808080808080))
-#define FC_2LEFT_COL  (UINT64_C(0x0202020202020202))
-#define FC_2RIGHT_COL (UINT64_C(0x4040404040404040))
+#define FC_LEFT_COL ((((uint64_t)0x01010101) << 32) | ((uint64_t)0x01010101))
+#define FC_RIGHT_COL ((((uint64_t)0x80808080) << 32) | ((uint64_t)0x80808080))
+#define FC_2LEFT_COL ((((uint64_t)0x02020202) << 32) | ((uint64_t)0x02020202))
+#define FC_2RIGHT_COL ((((uint64_t)0x40404040) << 32) | ((uint64_t)0x40404040))
 
 /* returns a bitboard where all pieces for a player are represented by 1 */
 #define FC_ALL_PIECES(b, p) \
@@ -229,7 +249,7 @@ int fc_board_list_add_move (fc_board_t *board, fc_mlist_t *list,
  *
  * @return void
  */
-void fc_board_get_moves (fc_board_t *board, fc_mlist_t *moves,
+void fc_board_get_all_moves (fc_board_t *board, fc_mlist_t *moves,
 			 fc_player_t player);
 
 /**
@@ -248,8 +268,44 @@ void fc_board_get_moves (fc_board_t *board, fc_mlist_t *moves,
  *
  * @return void
  */
-void fc_board_get_removes (fc_board_t *board, fc_mlist_t *moves,
+void fc_board_get_all_removes (fc_board_t *board, fc_mlist_t *moves,
 			  fc_player_t player);
+
+/**
+ * @brief Determines whether or not the given move will put the player's or
+ * partner's king in check.
+ *
+ * A "valid" move meets the following criteria:
+ * 	-# It does not move the player's king into check.
+ * 	-# It does not put our partner's king into check (unless he is already
+ * 	in check).
+ * 	-# If the player's king is in check, then it will move him out of
+ * 	check...
+ * 	-# unless he's in checkmate; in which case the player may move any
+ * 	piece EXCEPT the king.
+ *
+ * @param[in] board A pointer to the game board.
+ * @param[in] move The move we are testing.
+ *
+ * @return 1 if the move is "valid" as defined above; 0 otherwise
+ */
+int fc_board_is_move_valid (fc_board_t *board, fc_move_t *move);
+
+/**
+ * @brief Return a player's valid moves.
+ *
+ * This returns all moves that are valid for the player to make.  If there are
+ * no moves available to the player, then it will return a list of pieces that
+ * the player may remove.
+ *
+ * @param board A pointer to the board game.
+ * @param moves The list of moves that are returned.
+ * @param player The player in question.
+ *
+ * @return void
+ */
+void fc_board_get_moves (fc_board_t *board, fc_mlist_t *moves,
+		fc_player_t player);
 
 /**
  * @brief Determines whether or not the given move requires a pawn to be
@@ -320,5 +376,41 @@ void fc_board_copy (fc_board_t *dst, fc_board_t *src);
  * king is in check; FC_CHECKMATE if the player's king is in checkmate
  */
 int fc_board_check_status (fc_board_t *board, fc_player_t player);
+
+/**
+ * @brief Determines whether or not a player has been eliminated from the
+ * game.
+ *
+ * @param board A pointer to the game board.
+ * @param player The player in question.
+ *
+ * @return 1 if the player's king is no longer present in the game; 0
+ * otherwise.
+ */
+int fc_board_is_player_out (fc_board_t *board, fc_player_t player);
+
+/**
+ * @brief Determines if one team has reached a winning position.
+ *
+ * @param board A pointer to the game board.
+ *
+ * @return 1 if one side has been eliminated; 0 otherwise.
+ */
+int fc_board_game_over (fc_board_t *board);
+
+/**
+ * @brief Determine the relative material worth of a given board configuration.
+ *
+ * Returns the player's "score".  This number is determined by adding up
+ * player's and player's partner's material score and subtracting their
+ * opponent's material score.  This gives a basic idea of who is ahead (not
+ * taking into account position) in the game.
+ *
+ * @param[in] board A pointer to the game board.
+ * @param[in] player The player we are returning the score for.
+ *
+ * @return The relative material score as defined above.
+ */
+int fc_board_score_position (fc_board_t *board, fc_player_t player);
 
 #endif

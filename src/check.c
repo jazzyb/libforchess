@@ -4,6 +4,19 @@
  *
  * This file is subject to the terms and conditions of the 'LICENSE' file
  * which is a part of this source code package.
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <assert.h>
@@ -477,7 +490,7 @@ int fc_board_check_status (fc_board_t *board, fc_player_t player)
 	}
 
 	fc_mlist_init(&moves);
-	fc_board_get_moves(board, &moves, player);
+	fc_board_get_all_moves(board, &moves, player);
 	for (i = 0; i < fc_mlist_length(&moves); i++) {
 		fc_board_copy(&copy, board);
 		move = fc_mlist_get(&moves, i);

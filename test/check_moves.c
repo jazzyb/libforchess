@@ -194,6 +194,61 @@ START_TEST (test_mlist_insert2)
 }
 END_TEST
 
+static void print_sorted_indices (fc_mlist_t *list)
+{
+	printf("index == %d\n", list->index);
+	printf("sorted = {");
+	for (int i = 0; i < list->index; i++) {
+		printf("%d, ", list->sorted[i]);
+	}
+	printf("}\n");
+}
+
+START_TEST (test_mlist_delete)
+{
+	fc_move_t move;
+	fc_mlist_t list;
+	fail_unless(fc_mlist_init(&list));
+	move.value = 100;
+	fail_unless(fc_mlist_insert(&list, &move, move.value));
+	move.value = 10;
+	fail_unless(fc_mlist_insert(&list, &move, move.value));
+	move.value = 40;
+	fail_unless(fc_mlist_insert(&list, &move, move.value));
+	move.value = 60;
+	fail_unless(fc_mlist_insert(&list, &move, move.value));
+	move.value = 200;
+	fail_unless(fc_mlist_insert(&list, &move, move.value));
+	move.value = 40;
+	fail_unless(fc_mlist_insert(&list, &move, move.value));
+
+	fail_unless(fc_mlist_delete(&list, 2));
+	fail_unless(fc_mlist_delete(&list, 0));
+	fail_unless(fc_mlist_get(&list, 0)->value == 100);
+	fail_unless(fc_mlist_get(&list, 1)->value == 40);
+	fail_unless(fc_mlist_get(&list, 2)->value == 40);
+	fail_unless(fc_mlist_get(&list, 3)->value == 10);
+
+	//print_sorted_indices(&list);
+	move.value = 250;
+	fail_unless(fc_mlist_insert(&list, &move, move.value));
+	//print_sorted_indices(&list);
+	move.value = 15;
+	fail_unless(fc_mlist_insert(&list, &move, move.value));
+	fail_unless(fc_mlist_delete(&list, 2));
+	//print_sorted_indices(&list);
+	move.value = 62;
+	fail_unless(fc_mlist_insert(&list, &move, move.value));
+	//print_sorted_indices(&list);
+	fail_unless(fc_mlist_get(&list, 0)->value == 250);
+	fail_unless(fc_mlist_get(&list, 1)->value == 100);
+	fail_unless(fc_mlist_get(&list, 2)->value == 62);
+	fail_unless(fc_mlist_get(&list, 3)->value == 40);
+	fail_unless(fc_mlist_get(&list, 4)->value == 15);
+	fail_unless(fc_mlist_get(&list, 5)->value == 10);
+}
+END_TEST
+
 Suite *move_suite (void)
 {
 	Suite *s = suite_create("Moves");
@@ -204,6 +259,7 @@ Suite *move_suite (void)
 	tcase_add_test(tc_moves, test_mlist_copy);
 	tcase_add_test(tc_moves, test_mlist_merge);
 	tcase_add_test(tc_moves, test_mlist_insert2);
+	tcase_add_test(tc_moves, test_mlist_delete);
 	suite_add_tcase(s, tc_moves);
 	return s;
 }
