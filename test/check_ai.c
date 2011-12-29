@@ -7,18 +7,6 @@
 #include "forchess/ai.h"
 #include "forchess/board.h"
 
-START_TEST (test_ai_score_position)
-{
-	fc_board_t board;
-	fc_board_init(&board);
-	fc_player_t dummy;
-	fc_board_setup(&board, "test/boards/test_ai_score_position.1", &dummy);
-	fc_ai_t ai;
-	fc_ai_init(&ai, &board);
-	fail_unless(fc_ai_score_position(&ai, FC_FIRST) == -100);
-}
-END_TEST
-
 #define TEST_AI_TIMEOUT 0
 #define TEST_AI_THREADS 1
 /* basic AI test */
@@ -128,7 +116,6 @@ Suite *ai_suite (void)
 {
 	Suite *s = suite_create("AI");
 	TCase *tc_ai = tcase_create("Core");
-	tcase_add_test(tc_ai, test_ai_score_position);
 	tcase_add_test(tc_ai, test_ai_next_move1);
 	tcase_add_test(tc_ai, test_ai_next_move2);
 	tcase_add_test(tc_ai, test_ai_timeout);

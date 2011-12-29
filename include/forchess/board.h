@@ -271,9 +271,27 @@ void fc_board_get_all_moves (fc_board_t *board, fc_mlist_t *moves,
 void fc_board_get_all_removes (fc_board_t *board, fc_mlist_t *moves,
 			  fc_player_t player);
 
-/* TODO */
+/**
+ * @brief Determines whether or not the given move will put the player's or
+ * partner's king in check.
+ *
+ * A "valid" move meets the following criteria:
+ * 	-# It does not move the player's king into check.
+ * 	-# It does not put our partner's king into check (unless he is already
+ * 	in check).
+ * 	-# If the player's king is in check, then it will move him out of
+ * 	check...
+ * 	-# unless he's in checkmate; in which case the player may move any
+ * 	piece EXCEPT the king.
+ *
+ * @param[in] board A pointer to the game board.
+ * @param[in] move The move we are testing.
+ *
+ * @return 1 if the move is "valid" as defined above; 0 otherwise
+ */
 int fc_board_is_move_valid (fc_board_t *board, fc_move_t *move);
 
+/* TODO */
 void fc_board_get_moves (fc_board_t *board, fc_mlist_t *moves,
 		fc_player_t player);
 
@@ -350,5 +368,20 @@ int fc_board_check_status (fc_board_t *board, fc_player_t player);
 /* TODO */
 int fc_board_is_player_out (fc_board_t *board, fc_player_t player);
 int fc_board_game_over (fc_board_t *board);
+
+/**
+ * @brief Determine the relative material worth of a given board configuration.
+ *
+ * Returns the player's "score".  This number is determined by adding up
+ * player's and player's partner's material score and subtracting their
+ * opponent's material score.  This gives a basic idea of who is ahead (not
+ * taking into account position) in the game.
+ *
+ * @param[in] board A pointer to the game board.
+ * @param[in] player The player we are returning the score for.
+ *
+ * @return The relative material score as defined above.
+ */
+int fc_board_score_position (fc_board_t *board, fc_player_t player);
 
 #endif

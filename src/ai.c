@@ -100,7 +100,7 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	if (fc_board_game_over(board) || depth == 0) {
 		orig = ai->board;
 		ai->board = board;
-		score = fc_ai_score_position(ai, player);
+		score = fc_board_score_position(ai->board, player);
 		ai->board = orig;
 		/*
 		 * Adjusting the scores with the current depth expedites the
@@ -133,6 +133,64 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	}
 
 	return (max) ? alpha : beta;
+}
+
+static int negascout (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
+		int depth, int alpha, int beta)
+{
+	int i, b;
+	int score;
+	fc_board_t *board, *copy;
+	fc_mlist_t *list;
+	fc_move_t *move;
+
+	if (time_up(ai)) {
+		return beta;
+	}
+	board = &(ai->bv[depth]);
+	if (fc_board_game_over(board) || depth == 0) {
+		fc_board_t *orig = ai->board;
+		ai->board = board;
+		score = fc_board_score_position(ai->board, player);
+		ai->board = orig;
+		return score;
+	}
+	if (fc_board_is_player_out(board, player)) {
+		return -negascout(ai, NULL, FC_NEXT_PLAYER(player), depth,
+				-beta, -alpha);
+	}
+
+	copy = &(ai->bv[depth - 1]);
+	list = &(ai->mlv[depth - 1]);
+	fc_mlist_clear(list);
+	fc_board_get_moves(board, list, player);
+	for (b = beta, i = 0; i < fc_mlist_length(list); b = alpha + 1, i++) {
+
+		move = fc_mlist_get(list, i);
+		fc_board_copy(copy, board);
+		fc_board_make_move(copy, move);
+
+		score = -negascout(ai, NULL, FC_NEXT_PLAYER(player), depth - 1,
+				-b, -alpha);
+
+		if (i != 0 && alpha < score && score < beta) {
+			score = -negascout(ai, NULL, FC_NEXT_PLAYER(player),
+					depth - 1, -beta, -alpha);
+		}
+
+		if (score > alpha) {
+			alpha = score;
+			if (ret) {
+				fc_move_copy(ret, move);
+			}
+		}
+
+		if (alpha >= beta) {
+			break;
+		}
+	}
+
+	return alpha;
 }
 
 static void free_ai_mlists (fc_ai_t *ai, int depth)
@@ -228,7 +286,7 @@ static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
 	if (fc_board_game_over(board) || depth == 0) {
 		orig = ai->board;
 		ai->board = board;
-		score = fc_ai_score_position(ai, player);
+		score = fc_board_score_position(ai->board, player);
 		ai->board = orig;
 		/* FIXME:  Why is this different than alphabeta above? */
 		return (max) ? score + depth : (-1 * score) - depth;
@@ -311,7 +369,7 @@ int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	ai->timeout = (seconds) ? time(NULL) + seconds : 0;
 
 	if (num_threads <= 1) {
-		alphabeta(ai, ret, player, depth, ALPHA_MIN, BETA_MAX, 1);
+		negascout(ai, ret, player, depth, ALPHA_MIN + 1, BETA_MAX);
 	} else {
 		fc_tpool_init(&pool, num_threads, FC_DEFAULT_MLIST_SIZE);
 		fc_tpool_start_threads(&pool);
@@ -325,29 +383,5 @@ int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	free_ai_mlists(ai, depth);
 
 	return 1;
-}
-
-static int get_material_score (fc_ai_t *ai, fc_player_t player)
-{
-	int ret = 0;
-	uint64_t piece, pieces;
-	fc_piece_t i;
-
-	for (i = FC_PAWN; i <= FC_KING; i++) {
-		pieces = FC_BITBOARD(ai->board, player, i);
-		FC_FOREACH(piece, pieces) {
-			ret += fc_board_get_material_value(ai->board, i);
-		}
-	}
-	return ret;
-}
-
-int fc_ai_score_position (fc_ai_t *ai, fc_player_t player)
-{
-	assert(ai);
-	return (get_material_score(ai, player) -
-		get_material_score(ai, FC_NEXT_PLAYER(player)) +
-		get_material_score(ai, FC_PARTNER(player)) -
-		get_material_score(ai, FC_PARTNER(FC_NEXT_PLAYER(player))));
 }
 
