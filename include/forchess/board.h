@@ -291,7 +291,19 @@ void fc_board_get_all_removes (fc_board_t *board, fc_mlist_t *moves,
  */
 int fc_board_is_move_valid (fc_board_t *board, fc_move_t *move);
 
-/* TODO */
+/**
+ * @brief Return a player's valid moves.
+ *
+ * This returns all moves that are valid for the player to make.  If there are
+ * no moves available to the player, then it will return a list of pieces that
+ * the player may remove.
+ *
+ * @param board A pointer to the board game.
+ * @param moves The list of moves that are returned.
+ * @param player The player in question.
+ *
+ * @return void
+ */
 void fc_board_get_moves (fc_board_t *board, fc_mlist_t *moves,
 		fc_player_t player);
 
@@ -365,8 +377,25 @@ void fc_board_copy (fc_board_t *dst, fc_board_t *src);
  */
 int fc_board_check_status (fc_board_t *board, fc_player_t player);
 
-/* TODO */
+/**
+ * @brief Determines whether or not a player has been eliminated from the
+ * game.
+ *
+ * @param board A pointer to the game board.
+ * @param player The player in question.
+ *
+ * @return 1 if the player's king is no longer present in the game; 0
+ * otherwise.
+ */
 int fc_board_is_player_out (fc_board_t *board, fc_player_t player);
+
+/**
+ * @brief Determines if one team has reached a winning position.
+ *
+ * @param board A pointer to the game board.
+ *
+ * @return 1 if one side has been eliminated; 0 otherwise.
+ */
 int fc_board_game_over (fc_board_t *board);
 
 /**
