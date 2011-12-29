@@ -105,7 +105,7 @@ libforchess_gprof: $(SRC_FILES) $(INC_FILES)
 	ranlib lib/libforchess.a
 
 profiler: $(EXAMPLE_FILES) $(INC_FILES) libforchess_gprof
-	$(CC) $(CFLAGS) --std=c99 $(PROF_FLAGS) $(INCLUDES) $(LIBS) $(EXAMPLE_FILES) -lforchess
+	$(CC) $(CFLAGS) --std=c99 $(PROF_FLAGS) $(INCLUDES) $(LIBS) $(EXAMPLE_FILES) -lforchess -lpthread
 	./a.out
 	gprof ./a.out > gprof.output
 

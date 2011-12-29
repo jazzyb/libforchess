@@ -22,6 +22,8 @@
 #ifndef _FC_FIFO_H_
 #define _FC_FIFO_H_
 
+#include <pthread.h>
+
 typedef struct {
 	unsigned char *q;
 	size_t num_elem;
@@ -29,6 +31,7 @@ typedef struct {
 	size_t count;
 	size_t push_index;
 	size_t pop_index;
+	pthread_mutex_t lock;
 } fc_fifo_t;
 
 /* TODO: Documentation */

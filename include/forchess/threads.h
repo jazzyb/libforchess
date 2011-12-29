@@ -55,7 +55,6 @@ void fc_tpool_free (fc_tpool_t *pool);
 
 int fc_tpool_start_threads (fc_tpool_t *pool);
 int fc_tpool_stop_threads (fc_tpool_t *pool);
-int fc_tpool_kill_threads (fc_tpool_t *pool);
 
 int fc_tpool_push_task (fc_tpool_t *pool,
 		void (*callback) (void *input_data, void *output_data),

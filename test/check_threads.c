@@ -119,11 +119,9 @@ static void test_thread_count_callback2 (void *input, void *output)
 {
 	void *tmp;
 
-	while (1) {
-		tmp = input;
-		input = output;
-		output = tmp;
-	};
+	pthread_mutex_t *mp = (pthread_mutex_t *)input;
+	pthread_mutex_lock(mp);
+	pthread_mutex_unlock(mp);
 }
 
 #undef NUM_TEST_TASKS
@@ -137,9 +135,12 @@ START_TEST (test_thread_count_methods)
 	int id = fc_tpool_push_task(&pool, test_thread_count_callback1, NULL,
 			NULL);
 	fail_unless(id == 1);
+	pthread_mutex_t mutex;
+	pthread_mutex_init(&mutex, NULL);
+	pthread_mutex_lock(&mutex);
 	for (int i = 1; i < NUM_TEST_TASKS; i++) {
 		id = fc_tpool_push_task(&pool, test_thread_count_callback2,
-				NULL, NULL);
+				&mutex, NULL);
 		fail_unless(id == i + 1);
 		if (i == 3) {
 			sleep(1);
@@ -151,7 +152,8 @@ START_TEST (test_thread_count_methods)
 	sleep(1);
 	fail_unless(fc_tpool_num_pending_results(&pool) == 1);
 	fail_unless(fc_tpool_num_pending_tasks(&pool) == NUM_TEST_THREADS - 1);
-	fc_tpool_kill_threads(&pool);
+	pthread_mutex_unlock(&mutex);
+	fc_tpool_stop_threads(&pool);
 	fc_tpool_free(&pool);
 }
 END_TEST
@@ -201,12 +203,9 @@ START_TEST (test_thread_clear)
 	fc_tpool_push_task(&pool, test_thread_clear_callback, &mutex, NULL);
 	sleep(1);
 	fail_unless(fc_tpool_num_busy_threads(&pool) == 1);
-	fc_tpool_kill_threads(&pool);
+	pthread_mutex_unlock(&mutex);
+	fc_tpool_stop_threads(&pool);
 	fc_tpool_free(&pool);
-	/* FIXME:  We have to make sure that threads have enough time to
-	 * cancel.  Otherwise the stack variables above get blown away, and
-	 * then our threads segfault. */
-	sleep(2);
 	printf("done.\n");
 	fflush(stdout);
 }
@@ -222,7 +221,7 @@ Suite *thread_suite (void)
 	tcase_add_test(tc_threads, test_thread_count_methods);
 	tcase_add_test(tc_threads, test_thread_clear);
 	/* if the thread tests need some more time for whatever reason: */
-	tcase_set_timeout(tc_threads, 8);
+	//tcase_set_timeout(tc_threads, 8);
 	suite_add_tcase(s, tc_threads);
 	return s;
 }

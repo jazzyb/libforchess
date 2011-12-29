@@ -707,7 +707,7 @@ void fc_get_queen_moves (fc_board_t *board, fc_mlist_t *moves,
 	}
 }
 
-void fc_board_get_moves (fc_board_t *board, fc_mlist_t *moves,
+void fc_board_get_all_moves (fc_board_t *board, fc_mlist_t *moves,
 		fc_player_t player)
 {
 	assert(board && moves);
@@ -723,7 +723,7 @@ void fc_board_get_moves (fc_board_t *board, fc_mlist_t *moves,
  * Return the pieces that the player is allowed to remove (i.e. all the pieces
  * the player has).
  */
-void fc_board_get_removes (fc_board_t *board, fc_mlist_t *moves,
+void fc_board_get_all_removes (fc_board_t *board, fc_mlist_t *moves,
 		fc_player_t player)
 {
 	uint64_t piece, bb;
@@ -825,7 +825,7 @@ static void append_pawn_promotions_to_moves(fc_board_t *board, fc_mlist_t *list,
 }
 
 /*
- * Called from fc_board_get_valid_moves() below if player has no valid, legal
+ * Called from fc_board_get_moves() below if player has no valid, legal
  * moves available.  Fills the move list with the available removes.
  */
 static void get_valid_removes (fc_board_t *board, fc_mlist_t *list,
@@ -835,7 +835,7 @@ static void get_valid_removes (fc_board_t *board, fc_mlist_t *list,
 	int found_valid_move = 0;
 	fc_move_t *rm;
 
-	fc_board_get_removes(board, list, player);
+	fc_board_get_all_removes(board, list, player);
 
 	/*
 	 * If we only have the king to remove, then remove it.
@@ -867,7 +867,7 @@ static void get_valid_removes (fc_board_t *board, fc_mlist_t *list,
 	 * putting kings into check(mate)). And return the best move.
 	 */
 	fc_mlist_clear(list);
-	fc_board_get_removes(board, list, player);
+	fc_board_get_all_removes(board, list, player);
 	for (i = 0; i < fc_mlist_length(list); i++) {
 		rm = fc_mlist_get(list, i);
 		if (rm->piece == FC_KING) {
@@ -884,7 +884,7 @@ static void get_valid_removes (fc_board_t *board, fc_mlist_t *list,
  * moves are available, return all the valid, legal removes that are
  * available.
  */
-void fc_board_get_valid_moves (fc_board_t *board, fc_mlist_t *list,
+void fc_board_get_moves (fc_board_t *board, fc_mlist_t *list,
 		fc_player_t player)
 {
 	int i;
@@ -893,7 +893,7 @@ void fc_board_get_valid_moves (fc_board_t *board, fc_mlist_t *list,
 	fc_move_t *move;
 	fc_player_t dummy;
 
-	fc_board_get_moves(board, list, player);
+	fc_board_get_all_moves(board, list, player);
 	current_check_status = fc_board_check_status(board, player);
 	partner_check_status = fc_board_check_status(board, FC_PARTNER(player));
 	for (i = 0; i < fc_mlist_length(list); i++) {
@@ -1121,5 +1121,24 @@ void fc_board_copy (fc_board_t *dst, fc_board_t *src)
 	for (p = FC_PAWN; p <= FC_KING; p++) {
 		dst->piece_value[p] = src->piece_value[p];
 	}
+}
+
+/*
+ * Return 1 if player is no longer present in the game; 0 otherwise.
+ */
+int fc_board_is_player_out (fc_board_t *board, fc_player_t player)
+{
+	return !(FC_BITBOARD(board, player, FC_KING));
+}
+
+/*
+ * Return 1 if one side has no remaining moves; 0 otherwise.
+ */
+int fc_board_game_over (fc_board_t *board)
+{
+	return ((fc_board_is_player_out(board, FC_FIRST) &&
+		fc_board_is_player_out(board, FC_THIRD)) ||
+		(fc_board_is_player_out(board, FC_SECOND) &&
+		fc_board_is_player_out(board, FC_FOURTH)));
 }
 

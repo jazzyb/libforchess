@@ -98,7 +98,7 @@ int fc_game_save (fc_game_t *game, const char *filename)
 	}
 
 	fc_mlist_init(&list);
-	fc_board_get_removes(game->board, &list, game->player);
+	fc_board_get_all_removes(game->board, &list, game->player);
 	for (i = 0; i < fc_mlist_length(&list); i++) {
 		move = fc_mlist_get(&list, i);
 		remove2position(str, move->move);
@@ -110,7 +110,7 @@ int fc_game_save (fc_game_t *game, const char *filename)
 	     player != game->player;
 	     player = FC_NEXT_PLAYER(player)) {
 		fc_mlist_clear(&list);
-		fc_board_get_removes(game->board, &list, player);
+		fc_board_get_all_removes(game->board, &list, player);
 		for (i = 0; i < fc_mlist_length(&list); i++) {
 			move = fc_mlist_get(&list, i);
 			remove2position(str, move->move);
@@ -214,7 +214,7 @@ int fc_game_is_move_legal (fc_game_t *game, fc_move_t *move)
 
 	valid_move_exists = 0;
 	fc_mlist_init(&list);
-	fc_board_get_moves(game->board, &list, move->player);
+	fc_board_get_all_moves(game->board, &list, move->player);
 	for (i = 0; i < fc_mlist_length(&list); i++) {
 		other = fc_mlist_get(&list, i);
 		if (move->piece == other->piece && move->move == other->move) {
@@ -229,7 +229,7 @@ int fc_game_is_move_legal (fc_game_t *game, fc_move_t *move)
 	}
 
 	fc_mlist_clear(&list);
-	fc_board_get_removes(game->board, &list, move->player);
+	fc_board_get_all_removes(game->board, &list, move->player);
 
 	/* Check to see if it is okay to remove the king. */
 	if (fc_mlist_length(&list) == 1 && move->piece == FC_KING &&
