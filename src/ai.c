@@ -100,7 +100,7 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	if (fc_board_game_over(board) || depth == 0) {
 		orig = ai->board;
 		ai->board = board;
-		score = fc_ai_score_position(ai, player);
+		score = fc_board_score_position(ai->board, player);
 		ai->board = orig;
 		/*
 		 * Adjusting the scores with the current depth expedites the
@@ -151,7 +151,7 @@ static int negascout (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	if (fc_board_game_over(board) || depth == 0) {
 		fc_board_t *orig = ai->board;
 		ai->board = board;
-		score = fc_ai_score_position(ai, player);
+		score = fc_board_score_position(ai->board, player);
 		ai->board = orig;
 		return score;
 	}
@@ -286,7 +286,7 @@ static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
 	if (fc_board_game_over(board) || depth == 0) {
 		orig = ai->board;
 		ai->board = board;
-		score = fc_ai_score_position(ai, player);
+		score = fc_board_score_position(ai->board, player);
 		ai->board = orig;
 		/* FIXME:  Why is this different than alphabeta above? */
 		return (max) ? score + depth : (-1 * score) - depth;
@@ -383,29 +383,5 @@ int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	free_ai_mlists(ai, depth);
 
 	return 1;
-}
-
-static int get_material_score (fc_ai_t *ai, fc_player_t player)
-{
-	int ret = 0;
-	uint64_t piece, pieces;
-	fc_piece_t i;
-
-	for (i = FC_PAWN; i <= FC_KING; i++) {
-		pieces = FC_BITBOARD(ai->board, player, i);
-		FC_FOREACH(piece, pieces) {
-			ret += fc_board_get_material_value(ai->board, i);
-		}
-	}
-	return ret;
-}
-
-int fc_ai_score_position (fc_ai_t *ai, fc_player_t player)
-{
-	assert(ai);
-	return (get_material_score(ai, player) -
-		get_material_score(ai, FC_NEXT_PLAYER(player)) +
-		get_material_score(ai, FC_PARTNER(player)) -
-		get_material_score(ai, FC_PARTNER(FC_NEXT_PLAYER(player))));
 }
 

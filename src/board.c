@@ -1142,3 +1142,27 @@ int fc_board_game_over (fc_board_t *board)
 		fc_board_is_player_out(board, FC_FOURTH)));
 }
 
+static int get_material_score (fc_board_t *board, fc_player_t player)
+{
+	int ret = 0;
+	uint64_t piece, pieces;
+	fc_piece_t i;
+
+	for (i = FC_PAWN; i <= FC_KING; i++) {
+		pieces = FC_BITBOARD(board, player, i);
+		FC_FOREACH(piece, pieces) {
+			ret += fc_board_get_material_value(board, i);
+		}
+	}
+	return ret;
+}
+
+int fc_board_score_position (fc_board_t *board, fc_player_t player)
+{
+	assert(board);
+	return (get_material_score(board, player) -
+		get_material_score(board, FC_NEXT_PLAYER(player)) +
+		get_material_score(board, FC_PARTNER(player)) -
+		get_material_score(board, FC_PARTNER(FC_NEXT_PLAYER(player))));
+}
+

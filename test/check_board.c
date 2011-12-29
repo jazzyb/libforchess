@@ -734,6 +734,16 @@ START_TEST (test_forchess_board_get_valid_removes3)
 }
 END_TEST
 
+START_TEST (test_board_score_position)
+{
+	fc_board_t board;
+	fc_board_init(&board);
+	fc_player_t dummy;
+	fc_board_setup(&board, "test/boards/test_ai_score_position.1", &dummy);
+	fail_unless(fc_board_score_position(&board, FC_FIRST) == -100);
+}
+END_TEST
+
 Suite *board_suite (void)
 {
 	Suite *s = suite_create("Board");
@@ -756,6 +766,7 @@ Suite *board_suite (void)
 	tcase_add_test(tc_board, test_forchess_board_get_valid_removes1);
 	tcase_add_test(tc_board, test_forchess_board_get_valid_removes2);
 	tcase_add_test(tc_board, test_forchess_board_get_valid_removes3);
+	tcase_add_test(tc_board, test_board_score_position);
 	suite_add_tcase(s, tc_board);
 	return s;
 }
