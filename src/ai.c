@@ -144,6 +144,9 @@ static int negascout (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	fc_mlist_t *list;
 	fc_move_t *move;
 
+	if (time_up(ai)) {
+		return beta;
+	}
 	board = &(ai->bv[depth]);
 	if (fc_board_game_over(board) || depth == 0) {
 		fc_board_t *orig = ai->board;
