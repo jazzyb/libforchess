@@ -82,11 +82,12 @@ static int alphabeta_cutoff (int score, int *alpha, int *beta, fc_move_t *move,
 static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 		int depth, int alpha, int beta, int max)
 {
-	int i;
 	int score;
 	fc_board_t *orig, *board, *copy;
-	fc_mlist_t *list;
+	fc_board_state_t state;
 	fc_move_t *move;
+	fc_mlist_t *list;
+	fc_mlist_iter_t iter;
 
 	if (time_up(ai)) {
 		/*
@@ -117,10 +118,10 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	copy = &(ai->bv[depth - 1]);
 	list = &(ai->mlv[depth - 1]);
 	fc_mlist_clear(list);
-	fc_board_get_moves(board, list, player);
-	for (i = 0; i < fc_mlist_length(list); i++) {
-
-		move = fc_mlist_get(list, i);
+	fc_board_get_all_moves(board, list, player);
+	fc_board_state_init(&state, board, player);
+	fc_mlist_iter_init(&iter, list, &state, fc_board_get_next_move);
+	while ((move = fc_mlist_iter_next(&iter)) != NULL) {
 		fc_board_copy(copy, board);
 		fc_board_make_move(copy, move);
 
@@ -135,6 +136,7 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	return (max) ? alpha : beta;
 }
 
+#if 0
 static int negascout (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 		int depth, int alpha, int beta)
 {
@@ -192,6 +194,7 @@ static int negascout (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 
 	return alpha;
 }
+#endif
 
 static void free_ai_mlists (fc_ai_t *ai, int depth)
 {
@@ -369,7 +372,8 @@ int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	ai->timeout = (seconds) ? time(NULL) + seconds : 0;
 
 	if (num_threads <= 1) {
-		negascout(ai, ret, player, depth, ALPHA_MIN + 1, BETA_MAX);
+		/*negascout(ai, ret, player, depth, ALPHA_MIN + 1, BETA_MAX);*/
+		alphabeta(ai, ret, player, depth, ALPHA_MIN, BETA_MAX, 1);
 	} else {
 		fc_tpool_init(&pool, num_threads, FC_DEFAULT_MLIST_SIZE);
 		fc_tpool_start_threads(&pool);
