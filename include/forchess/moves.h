@@ -73,6 +73,12 @@ typedef struct {
 	uint8_t *sorted;
 } fc_mlist_t;
 
+typedef struct {
+	fc_mlist_t *list;
+	int current;
+	fc_move_t *(*callback) (fc_mlist_t *list, int *current);
+} fc_mlist_iter_t;
+
 uint64_t fc_uint64(const char *move);
 
 #endif /* DOXYGEN_IGNORE */
@@ -205,5 +211,13 @@ void fc_mlist_clear (fc_mlist_t *list);
  * @return a pointer to the move at index
  */
 fc_move_t *fc_mlist_get (fc_mlist_t *list, int index);
+
+/* TODO */
+int fc_mlist_iter_init (fc_mlist_iter_t *mliter, fc_mlist_t *list,
+		fc_move_t *(*callback) (fc_mlist_t *list, int *current));
+
+fc_move_t *fc_mlist_iter_next (fc_mlist_iter_t *mliter);
+
+void fc_mlist_iter_free (fc_mlist_iter_t *mliter);
 
 #endif
