@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "forchess/board.h"
 #include "forchess/moves.h"
 
 /* NOTE: no sanitization of string */
@@ -205,10 +206,12 @@ fc_move_t *fc_mlist_get (fc_mlist_t *list, int index)
 	return list->moves + list->sorted[index];
 }
 
-int fc_mlist_iter_init (fc_mlist_iter_t *mliter, fc_mlist_t *list,
-		fc_move_t *(*callback) (fc_mlist_t *list, int *current))
+int fc_mlist_iter_init (fc_mlist_iter_t *mliter, fc_mlist_t *list, void *data,
+		fc_move_t *(*callback) (void *data, fc_mlist_t *list,
+			int *current))
 {
 	mliter->list = list;
+	mliter->data = data;
 	mliter->callback = callback;
 	mliter->current = 0;
 	return 1;
@@ -218,17 +221,18 @@ fc_move_t *fc_mlist_iter_next (fc_mlist_iter_t *mliter)
 {
 	fc_move_t *move;
 
-	if (mliter->current >= fc_mlist_length(mliter->list)) {
+	if (mliter->current != 0 &&
+			mliter->current >= fc_mlist_length(mliter->list)) {
 		return NULL;
 	}
 
-	move = mliter->callback(mliter->list, &mliter->current);
+	move = mliter->callback(mliter->data, mliter->list, &mliter->current);
 	mliter->current += 1;
 	return move;
 }
 
 void fc_mlist_iter_free (fc_mlist_iter_t *mliter)
 {
-	/* do nothing */
+	/* do nothing for now */
 }
 

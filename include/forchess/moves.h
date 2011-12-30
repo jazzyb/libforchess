@@ -75,8 +75,9 @@ typedef struct {
 
 typedef struct {
 	fc_mlist_t *list;
+	void *data;
 	int current;
-	fc_move_t *(*callback) (fc_mlist_t *list, int *current);
+	fc_move_t *(*callback) (void *data, fc_mlist_t *list, int *current);
 } fc_mlist_iter_t;
 
 uint64_t fc_uint64(const char *move);
@@ -213,8 +214,9 @@ void fc_mlist_clear (fc_mlist_t *list);
 fc_move_t *fc_mlist_get (fc_mlist_t *list, int index);
 
 /* TODO */
-int fc_mlist_iter_init (fc_mlist_iter_t *mliter, fc_mlist_t *list,
-		fc_move_t *(*callback) (fc_mlist_t *list, int *current));
+int fc_mlist_iter_init (fc_mlist_iter_t *mliter, fc_mlist_t *list, void *data,
+		fc_move_t *(*callback) (void *data, fc_mlist_t *list,
+			int *current));
 
 fc_move_t *fc_mlist_iter_next (fc_mlist_iter_t *mliter);
 

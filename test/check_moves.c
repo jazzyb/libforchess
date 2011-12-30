@@ -249,9 +249,12 @@ START_TEST (test_mlist_delete)
 }
 END_TEST
 
-static fc_move_t *test_cb (fc_mlist_t *list, int *current)
+static fc_move_t *test_cb (void *data, fc_mlist_t *list, int *current)
 {
 	fc_move_t *ret;
+	int *last_index = data;
+
+	fail_unless(*current == *last_index + 1);
 
 	do {
 		ret = fc_mlist_get(list, *current);
@@ -262,6 +265,7 @@ static fc_move_t *test_cb (fc_mlist_t *list, int *current)
 		}
 	} while (ret);
 
+	*last_index = *current;
 	return ret;
 }
 
@@ -277,8 +281,9 @@ START_TEST (test_mlist_iter)
 		fail_unless(fc_mlist_insert(&list, &move, 0));
 	}
 
+	int last_index = -1;
 	fc_move_t *mp;
-	fail_unless(fc_mlist_iter_init(&iter, &list, test_cb));
+	fail_unless(fc_mlist_iter_init(&iter, &list, &last_index, test_cb));
 	while ((mp = fc_mlist_iter_next(&iter)) != NULL) {
 		fail_unless(mp->piece != FC_KNIGHT);
 	}
