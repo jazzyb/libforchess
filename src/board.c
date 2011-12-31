@@ -922,6 +922,58 @@ void fc_board_get_moves (fc_board_t *board, fc_mlist_t *list,
 	}
 }
 
+void fc_board_state_init (fc_board_state_t *state, fc_board_t *board,
+		fc_player_t player)
+{
+	state->board = board;
+	state->player = player;
+	state->current_check_status = fc_board_check_status(board, player);
+	state->partner_check_status = fc_board_check_status(board,
+			FC_PARTNER(player));
+	state->all_moves_are_invalid = 1;
+}
+
+fc_move_t *fc_board_get_next_move (void *data, fc_mlist_t *list, int *index)
+{
+	fc_move_t *ret;
+	fc_player_t dummy;
+	fc_board_state_t *state = data;
+	fc_board_t *board = state->board;
+
+	if (*index != 0 && state->all_moves_are_invalid) {
+		/* we've already called get_valid_removes by this point, so we
+		 * can return the remove without worrying about it */
+		return fc_mlist_get(list, *index);
+	}
+
+	while ((ret = fc_mlist_get(list, *index)) != NULL) {
+		if (!is_move_valid_given_check_status(board, ret,
+					state->current_check_status,
+					state->partner_check_status)) {
+			fc_mlist_delete(list, *index);
+			continue;
+		}
+
+		if (fc_board_move_requires_promotion(board, ret, &dummy) &&
+				ret->promote == FC_NONE) {
+			append_pawn_promotions_to_moves(board, list, ret);
+			fc_mlist_delete(list, *index);
+			continue;
+		}
+		state->all_moves_are_invalid = 0;
+		break;
+	}
+
+	if (state->all_moves_are_invalid) {
+		fc_mlist_clear(list);
+		*index = 0;
+		get_valid_removes(board, list, state->player);
+		ret = fc_mlist_get(list, 0);
+	}
+
+	return ret;
+}
+
 /*
  * Give all player 'from's pieces to player 'to'.
  */

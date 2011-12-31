@@ -57,6 +57,22 @@ typedef struct {
 	int piece_value[FC_NUM_PIECES];
 } fc_board_t;
 
+/* The following are used with the mlist_iter_t struct in the AI code.  I'm
+ * not sure yet what to do with these functions or how the API ought to be
+ * used.  Possible FIXME.
+ */
+typedef struct {
+	fc_board_t *board;
+	fc_player_t player;
+	int current_check_status;
+	int partner_check_status;
+	int all_moves_are_invalid;
+} fc_board_state_t;
+void fc_board_state_init (fc_board_state_t *state, fc_board_t *board,
+		fc_player_t player);
+/* mlist_iter callback */
+fc_move_t *fc_board_get_next_move (void *data, fc_mlist_t *list, int *index);
+
 /* macro to get the first 24 bitboards representing pieces */
 #define FC_BITBOARD(board, player, piece) (board->bitb[player * 6 + piece])
 

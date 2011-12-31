@@ -744,6 +744,161 @@ START_TEST (test_board_score_position)
 }
 END_TEST
 
+START_TEST (test_board_get_next_move1)
+{
+	/* stolen from test_forchess_board_get_valid_moves1 */
+	fc_board_t board;
+	fc_board_init(&board);
+	fc_player_t dummy;
+	fc_board_setup(&board,
+			"test/boards/test_forchess_board_get_valid_moves.1",
+			&dummy);
+	fc_mlist_t list, test_list;
+	fc_mlist_init(&list);
+	fc_mlist_init(&test_list);
+	/* test that we can not put our king in check */
+	fc_board_get_all_moves(&board, &list, FC_FOURTH);
+	fc_mlist_iter_t iter;
+	fc_board_state_t state;
+	fc_board_state_init(&state, &board, FC_FOURTH);
+	fc_mlist_iter_init(&iter, &list, &state, fc_board_get_next_move);
+	fc_move_t *mp;
+	while ((mp = fc_mlist_iter_next(&iter)) != NULL) {
+		fc_mlist_insert(&test_list, mp, mp->value);
+	}
+	fail_unless(move_exists_in_mlist(&test_list, "h1-g1"));
+	fail_unless(!move_exists_in_mlist(&test_list, "h1-h2"));
+	fail_unless(!move_exists_in_mlist(&test_list, "h1-g2"));
+	/* test that we cannot put our partner's king in check */
+	fail_unless(!move_exists_in_mlist(&test_list, "a7-c8"));
+	fail_unless(!move_exists_in_mlist(&test_list, "a7-c6"));
+	fail_unless(!move_exists_in_mlist(&test_list, "a7-b5"));
+}
+END_TEST
+
+START_TEST (test_board_get_next_move2)
+{
+	/* stolen from test_forchess_board_get_valid_moves2 */
+	fc_board_t board;
+	fc_board_init(&board);
+	fc_player_t dummy;
+	fc_board_setup(&board,
+			"test/boards/test_forchess_board_get_valid_moves.2",
+			&dummy);
+	fc_mlist_t list, test_list;
+	fc_mlist_init(&list);
+	fc_mlist_init(&test_list);
+	/* test that we must get ourselves out of check */
+	fc_board_get_all_moves(&board, &list, FC_FIRST);
+	fc_mlist_iter_t iter;
+	fc_board_state_t state;
+	fc_board_state_init(&state, &board, FC_FIRST);
+	fc_mlist_iter_init(&iter, &list, &state, fc_board_get_next_move);
+	fc_move_t *mp;
+	while ((mp = fc_mlist_iter_next(&iter)) != NULL) {
+		fc_mlist_insert(&test_list, mp, mp->value);
+	}
+	fail_unless(move_exists_in_mlist(&test_list, "a3-b1"));
+	fail_unless(fc_mlist_length(&test_list) == 1);
+	// test that we can move anything but the king if we are in checkmate
+	fail_unless(fc_board_remove_piece(&board, 2, 0)); // remove knight
+	fc_mlist_clear(&list);
+	fc_mlist_clear(&test_list);
+	fc_board_get_all_moves(&board, &list, FC_FIRST);
+	fc_board_state_init(&state, &board, FC_FIRST);
+	fc_mlist_iter_init(&iter, &list, &state, fc_board_get_next_move);
+	while ((mp = fc_mlist_iter_next(&iter)) != NULL) {
+		fc_mlist_insert(&test_list, mp, mp->value);
+	}
+	fail_unless(!move_exists_in_mlist(&test_list, "a1-b1"));
+	fail_unless(!move_exists_in_mlist(&test_list, "a1-b2"));
+	fail_unless(fc_mlist_length(&test_list) == 12); // number of rook moves
+}
+END_TEST
+
+START_TEST (test_board_get_next_move3)
+{
+	/* stolen from test_forchess_board_get_valid_removes1 */
+	fc_board_t board;
+	fc_board_init(&board);
+	fc_player_t dummy;
+	fc_board_setup(&board,
+			"test/boards/test_forchess_board_get_valid_removes.1",
+			&dummy);
+	fc_mlist_t list, test_list;
+	fc_mlist_init(&list);
+	fc_mlist_init(&test_list);
+	/* test that we must remove the king */
+	fc_board_get_all_moves(&board, &list, FC_FIRST);
+	fc_mlist_iter_t iter;
+	fc_board_state_t state;
+	fc_board_state_init(&state, &board, FC_FIRST);
+	fc_mlist_iter_init(&iter, &list, &state, fc_board_get_next_move);
+	fc_move_t *mp;
+	while ((mp = fc_mlist_iter_next(&iter)) != NULL) {
+		fc_mlist_insert(&test_list, mp, mp->value);
+	}
+	fail_unless(fc_mlist_length(&test_list) == 1);
+	fail_unless(fc_mlist_get(&test_list, 0)->move == 1);
+}
+END_TEST
+
+START_TEST (test_board_get_next_move4)
+{
+	/* stolen from test_forchess_board_get_valid_removes2 */
+	fc_board_t board;
+	fc_board_init(&board);
+	fc_player_t dummy;
+	fc_board_setup(&board,
+			"test/boards/test_forchess_board_get_valid_removes.2",
+			&dummy);
+	fc_mlist_t list, test_list;
+	fc_mlist_init(&list);
+	fc_mlist_init(&test_list);
+	/* test that we must remove a piece that won't put us in check */
+	fc_board_get_all_moves(&board, &list, FC_FIRST);
+	fc_mlist_iter_t iter;
+	fc_board_state_t state;
+	fc_board_state_init(&state, &board, FC_FIRST);
+	fc_mlist_iter_init(&iter, &list, &state, fc_board_get_next_move);
+	fc_move_t *mp;
+	while ((mp = fc_mlist_iter_next(&iter)) != NULL) {
+		fc_mlist_insert(&test_list, mp, mp->value);
+	}
+	fail_unless(fc_mlist_length(&test_list) == 1);
+	fail_unless(fc_mlist_get(&test_list, 0)->move == 512);
+}
+END_TEST
+
+START_TEST (test_board_get_next_move5)
+{
+	fc_board_t board;
+	fc_board_init(&board);
+	fc_player_t dummy;
+	fc_board_setup(&board,
+			"test/boards/test_forchess_board_get_valid_removes.3",
+			&dummy);
+	fc_mlist_t list, test_list;
+	fc_mlist_init(&list);
+	fc_mlist_init(&test_list);
+	/* test that if there are no removes which won't put us in check, then
+	 * remove any piece but the king */
+	fc_board_get_all_moves(&board, &list, FC_FIRST);
+	fc_mlist_iter_t iter;
+	fc_board_state_t state;
+	fc_board_state_init(&state, &board, FC_FIRST);
+	fc_mlist_iter_init(&iter, &list, &state, fc_board_get_next_move);
+	fc_move_t *mp;
+	while ((mp = fc_mlist_iter_next(&iter)) != NULL) {
+		fc_mlist_insert(&test_list, mp, mp->value);
+	}
+	fail_unless(fc_mlist_length(&test_list) == 3);
+	fail_unless(fc_mlist_get(&test_list, 0)->move == 2);
+	fail_unless(fc_mlist_get(&test_list, 1)->move == 256);
+	fail_unless(fc_mlist_get(&test_list, 2)->move == 512);
+}
+END_TEST
+
 Suite *board_suite (void)
 {
 	Suite *s = suite_create("Board");
@@ -767,6 +922,11 @@ Suite *board_suite (void)
 	tcase_add_test(tc_board, test_forchess_board_get_valid_removes2);
 	tcase_add_test(tc_board, test_forchess_board_get_valid_removes3);
 	tcase_add_test(tc_board, test_board_score_position);
+	tcase_add_test(tc_board, test_board_get_next_move1);
+	tcase_add_test(tc_board, test_board_get_next_move2);
+	tcase_add_test(tc_board, test_board_get_next_move3);
+	tcase_add_test(tc_board, test_board_get_next_move4);
+	tcase_add_test(tc_board, test_board_get_next_move5);
 	suite_add_tcase(s, tc_board);
 	return s;
 }

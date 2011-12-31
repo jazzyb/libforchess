@@ -249,6 +249,48 @@ START_TEST (test_mlist_delete)
 }
 END_TEST
 
+static fc_move_t *test_cb (void *data, fc_mlist_t *list, int *current)
+{
+	fc_move_t *ret;
+	int *last_index = data;
+
+	fail_unless(*current == *last_index + 1);
+
+	do {
+		ret = fc_mlist_get(list, *current);
+		if (ret->piece == FC_KNIGHT) {
+			fc_mlist_delete(list, *current);
+		} else {
+			break;
+		}
+	} while (ret);
+
+	*last_index = *current;
+	return ret;
+}
+
+START_TEST (test_mlist_iter)
+{
+	fc_move_t move;
+	fc_mlist_t list;
+	fc_mlist_iter_t iter;
+
+	fail_unless(fc_mlist_init(&list));
+	for (fc_piece_t i = FC_PAWN; i < 37; i++) {
+		move.piece = i % FC_KING;
+		fail_unless(fc_mlist_insert(&list, &move, 0));
+	}
+
+	int last_index = -1;
+	fc_move_t *mp;
+	fail_unless(fc_mlist_iter_init(&iter, &list, &last_index, test_cb));
+	while ((mp = fc_mlist_iter_next(&iter)) != NULL) {
+		fail_unless(mp->piece != FC_KNIGHT);
+	}
+	fc_mlist_iter_free(&iter);
+}
+END_TEST
+
 Suite *move_suite (void)
 {
 	Suite *s = suite_create("Moves");
@@ -260,6 +302,7 @@ Suite *move_suite (void)
 	tcase_add_test(tc_moves, test_mlist_merge);
 	tcase_add_test(tc_moves, test_mlist_insert2);
 	tcase_add_test(tc_moves, test_mlist_delete);
+	tcase_add_test(tc_moves, test_mlist_iter);
 	suite_add_tcase(s, tc_moves);
 	return s;
 }
