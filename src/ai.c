@@ -148,10 +148,7 @@ static int negascout (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	}
 	board = &(ai->bv[depth]);
 	if (fc_board_game_over(board) || depth == 0) {
-		fc_board_t *orig = ai->board;
-		ai->board = board;
-		score = fc_board_score_position(ai->board, player);
-		ai->board = orig;
+		score = fc_board_score_position(board, player);
 		return score;
 	}
 	if (fc_board_is_player_out(board, player)) {
@@ -275,7 +272,7 @@ static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
 	struct ab_output *retval;
 	fc_mlist_t list;
 	fc_move_t *move;
-	fc_board_t *orig, *copy, *board = &(ai->bv[depth]);
+	fc_board_t *copy, *board = &(ai->bv[depth]);
 
 	if (fc_board_is_player_out(board, player)) {
 		return threaded_move_search(ai, pool, NULL,
@@ -284,10 +281,7 @@ static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
 	}
 
 	if (fc_board_game_over(board) || depth == 0) {
-		orig = ai->board;
-		ai->board = board;
-		score = fc_board_score_position(ai->board, player);
-		ai->board = orig;
+		score = fc_board_score_position(board, player);
 		/* FIXME:  Why is this different than alphabeta above? */
 		return (max) ? score + depth : (-1 * score) - depth;
 	}
