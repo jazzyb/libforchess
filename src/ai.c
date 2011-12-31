@@ -46,97 +46,12 @@ static int time_up (fc_ai_t *ai)
 	return time(NULL) >= ai->timeout;
 }
 
-/*
- * Adjusts the alpha and beta values given the score.  If ret is not NULL, it
- * copies the move to ret.  Returns 1 if the given score was a cutoff for the
- * search; 0 otherwise.
- */
-static int alphabeta_cutoff (int score, int *alpha, int *beta, fc_move_t *move,
-		fc_move_t *ret, int max)
-{
-	if (max && score > *alpha) {
-		*alpha = score;
-		if (ret) {
-			fc_move_copy(ret, move);
-		}
-	} else if (!max && score < *beta) {
-		*beta = score;
-		if (ret) {
-			fc_move_copy(ret, move);
-		}
-	}
-	if (*beta <= *alpha) {
-		return 1;
-	}
-
-	return 0;
-}
-
 static void init_move_iterator (fc_mlist_iter_t *iter, fc_board_state_t *state,
 		fc_mlist_t *list, fc_board_t *board, fc_player_t player)
 {
 	fc_board_get_all_moves(board, list, player);
 	fc_board_state_init(state, board, player);
 	fc_mlist_iter_init(iter, list, state, fc_board_get_next_move);
-}
-
-/*
- * Returns the value of the subtree.  If the variable max is set to 1, then the
- * function will try to maximize the value.  If max is set to 0, then it will
- * try to minimize the value.
- *
- * If ret is !NULL, then ret will be set to the move with the best score.
- */
-static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
-		int depth, int alpha, int beta, int max)
-{
-	int score;
-	fc_board_t *board, *copy;
-	fc_board_state_t state;
-	fc_move_t *move;
-	fc_mlist_t *list;
-	fc_mlist_iter_t iter;
-
-	if (time_up(ai)) {
-		/*
-		 * Return a value that will fail the conditions in
-		 * alphabeta_cutoff(), i.e. don't take this move into
-		 * consideration.
-		 */
-		return (max) ? beta : alpha;
-	}
-	board = &(ai->bv[depth]);
-	if (fc_board_game_over(board) || depth == 0) {
-		score = fc_board_score_position(board, player);
-		/*
-		 * Adjusting the scores with the current depth expedites the
-		 * end of the game.  Otherwise the AI will just move from one
-		 * position to the next without making the killing blow.
-		 */
-		return (max) ? score - depth : (-1 * score) + depth;
-	}
-	if (fc_board_is_player_out(board, player)) {
-		return alphabeta(ai, NULL, FC_NEXT_PLAYER(player), depth,
-				alpha, beta, !max);
-	}
-
-	copy = &(ai->bv[depth - 1]);
-	list = &(ai->mlv[depth - 1]);
-	fc_mlist_clear(list);
-	init_move_iterator(&iter, &state, list, board, player);
-	while ((move = fc_mlist_iter_next(&iter)) != NULL) {
-		fc_board_copy(copy, board);
-		fc_board_make_move(copy, move);
-
-		score = alphabeta(ai, NULL, FC_NEXT_PLAYER(player), depth - 1,
-				alpha, beta, !max);
-
-		if (alphabeta_cutoff(score, &alpha, &beta, move, ret, max)) {
-			break;
-		}
-	}
-
-	return (max) ? alpha : beta;
 }
 
 static int negascout (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
@@ -198,43 +113,89 @@ static int negascout (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	return alpha;
 }
 
-static void free_ai_mlists (fc_ai_t *ai, int depth)
+/*
+ * Adjusts the alpha and beta values given the score.  If ret is not NULL, it
+ * copies the move to ret.  Returns 1 if the given score was a cutoff for the
+ * search; 0 otherwise.
+ */
+static int alphabeta_cutoff (int score, int *alpha, int *beta, fc_move_t *move,
+		fc_move_t *ret, int max)
 {
-	int i;
-
-	for (i = 0; i < depth; i++) {
-		fc_mlist_free(&(ai->mlv[i]));
+	if (max && score > *alpha) {
+		*alpha = score;
+		if (ret) {
+			fc_move_copy(ret, move);
+		}
+	} else if (!max && score < *beta) {
+		*beta = score;
+		if (ret) {
+			fc_move_copy(ret, move);
+		}
 	}
-	free(ai->mlv);
-	ai->mlv = NULL;
+	if (*beta <= *alpha) {
+		return 1;
+	}
+
+	return 0;
 }
 
-static void initialize_ai_mlists (fc_ai_t *ai, int depth)
+/*
+ * Returns the value of the subtree.  If the variable max is set to 1, then the
+ * function will try to maximize the value.  If max is set to 0, then it will
+ * try to minimize the value.
+ *
+ * If ret is !NULL, then ret will be set to the move with the best score.
+ */
+static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
+		int depth, int alpha, int beta, int max)
 {
-	int i;
+	int score;
+	fc_board_t *board, *copy;
+	fc_board_state_t state;
+	fc_move_t *move;
+	fc_mlist_t *list;
+	fc_mlist_iter_t iter;
 
-	if (ai->mlv != NULL) {
-		free_ai_mlists(ai, depth);
+	if (time_up(ai)) {
+		/*
+		 * Return a value that will fail the conditions in
+		 * alphabeta_cutoff(), i.e. don't take this move into
+		 * consideration.
+		 */
+		return (max) ? beta : alpha;
 	}
-	ai->mlv = calloc(depth, sizeof(fc_mlist_t));
-	for (i = 0; i < depth; i++) {
-		fc_mlist_init(&(ai->mlv[i]));
+	board = &(ai->bv[depth]);
+	if (fc_board_game_over(board) || depth == 0) {
+		score = fc_board_score_position(board, player);
+		/*
+		 * Adjusting the scores with the current depth expedites the
+		 * end of the game.  Otherwise the AI will just move from one
+		 * position to the next without making the killing blow.
+		 */
+		return (max) ? score - depth : (-1 * score) + depth;
 	}
-}
+	if (fc_board_is_player_out(board, player)) {
+		return alphabeta(ai, NULL, FC_NEXT_PLAYER(player), depth,
+				alpha, beta, !max);
+	}
 
-static void free_ai_boards (fc_ai_t *ai)
-{
-	free(ai->bv);
-	ai->bv = NULL;
-}
+	copy = &(ai->bv[depth - 1]);
+	list = &(ai->mlv[depth - 1]);
+	fc_mlist_clear(list);
+	init_move_iterator(&iter, &state, list, board, player);
+	while ((move = fc_mlist_iter_next(&iter)) != NULL) {
+		fc_board_copy(copy, board);
+		fc_board_make_move(copy, move);
 
-static void initialize_ai_boards (fc_ai_t *ai, int depth)
-{
-	if (ai->bv != NULL) {
-		free_ai_boards(ai);
+		score = alphabeta(ai, NULL, FC_NEXT_PLAYER(player), depth - 1,
+				alpha, beta, !max);
+
+		if (alphabeta_cutoff(score, &alpha, &beta, move, ret, max)) {
+			break;
+		}
 	}
-	ai->bv = calloc(depth + 1, sizeof(fc_board_t));
-	fc_board_copy(&(ai->bv[depth]), ai->board);
+
+	return (max) ? alpha : beta;
 }
 
 struct ab_input {
@@ -346,6 +307,45 @@ static int parallel_alphabeta (fc_ai_t *ai, fc_tpool_t *pool,
 	fc_tpool_clear_tasks(pool);
 	fc_mlist_free(&list);
 	return (max) ? alpha : beta;
+}
+
+static void free_ai_mlists (fc_ai_t *ai, int depth)
+{
+	int i;
+
+	for (i = 0; i < depth; i++) {
+		fc_mlist_free(&(ai->mlv[i]));
+	}
+	free(ai->mlv);
+	ai->mlv = NULL;
+}
+
+static void initialize_ai_mlists (fc_ai_t *ai, int depth)
+{
+	int i;
+
+	if (ai->mlv != NULL) {
+		free_ai_mlists(ai, depth);
+	}
+	ai->mlv = calloc(depth, sizeof(fc_mlist_t));
+	for (i = 0; i < depth; i++) {
+		fc_mlist_init(&(ai->mlv[i]));
+	}
+}
+
+static void free_ai_boards (fc_ai_t *ai)
+{
+	free(ai->bv);
+	ai->bv = NULL;
+}
+
+static void initialize_ai_boards (fc_ai_t *ai, int depth)
+{
+	if (ai->bv != NULL) {
+		free_ai_boards(ai);
+	}
+	ai->bv = calloc(depth + 1, sizeof(fc_board_t));
+	fc_board_copy(&(ai->bv[depth]), ai->board);
 }
 
 #define ALPHA_MIN INT_MIN
