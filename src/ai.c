@@ -83,7 +83,7 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 		int depth, int alpha, int beta, int max)
 {
 	int score;
-	fc_board_t *orig, *board, *copy;
+	fc_board_t *board, *copy;
 	fc_board_state_t state;
 	fc_move_t *move;
 	fc_mlist_t *list;
@@ -99,10 +99,7 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	}
 	board = &(ai->bv[depth]);
 	if (fc_board_game_over(board) || depth == 0) {
-		orig = ai->board;
-		ai->board = board;
-		score = fc_board_score_position(ai->board, player);
-		ai->board = orig;
+		score = fc_board_score_position(board, player);
 		/*
 		 * Adjusting the scores with the current depth expedites the
 		 * end of the game.  Otherwise the AI will just move from one
