@@ -54,7 +54,7 @@ static void init_move_iterator (fc_mlist_iter_t *iter, fc_board_state_t *state,
 	fc_mlist_iter_init(iter, list, state, fc_board_get_next_move);
 }
 
-static int negascout (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
+static int negascout (fc_ai_t *ai, fc_mlist_t *ret, fc_player_t player,
 		int depth, int alpha, int beta)
 {
 	int b, first, score;
@@ -96,11 +96,12 @@ static int negascout (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 		}
 		first = 0;
 
+		if (ret) {
+			fc_mlist_insert(ret, move, score);
+		}
+
 		if (score > alpha) {
 			alpha = score;
-			if (ret) {
-				fc_move_copy(ret, move);
-			}
 		}
 
 		if (alpha >= beta) {
@@ -118,19 +119,12 @@ static int negascout (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
  * copies the move to ret.  Returns 1 if the given score was a cutoff for the
  * search; 0 otherwise.
  */
-static int alphabeta_cutoff (int score, int *alpha, int *beta, fc_move_t *move,
-		fc_move_t *ret, int max)
+static int alphabeta_cutoff (int score, int *alpha, int *beta, int max)
 {
 	if (max && score > *alpha) {
 		*alpha = score;
-		if (ret) {
-			fc_move_copy(ret, move);
-		}
 	} else if (!max && score < *beta) {
 		*beta = score;
-		if (ret) {
-			fc_move_copy(ret, move);
-		}
 	}
 	if (*beta <= *alpha) {
 		return 1;
@@ -146,7 +140,7 @@ static int alphabeta_cutoff (int score, int *alpha, int *beta, fc_move_t *move,
  *
  * If ret is !NULL, then ret will be set to the move with the best score.
  */
-static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
+static int alphabeta (fc_ai_t *ai, fc_mlist_t *ret, fc_player_t player,
 		int depth, int alpha, int beta, int max)
 {
 	int score;
@@ -190,122 +184,15 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 		score = alphabeta(ai, NULL, FC_NEXT_PLAYER(player), depth - 1,
 				alpha, beta, !max);
 
-		if (alphabeta_cutoff(score, &alpha, &beta, move, ret, max)) {
+		if (ret) {
+			fc_mlist_insert(ret, move, score);
+		}
+
+		if (alphabeta_cutoff(score, &alpha, &beta, max)) {
 			break;
 		}
 	}
 
-	return (max) ? alpha : beta;
-}
-
-struct ab_input {
-	fc_board_t board;
-	fc_player_t player;
-	int depth;
-	time_t timeout;
-	int alpha;
-	int beta;
-	int max;
-};
-
-struct ab_output {
-	int score;
-	fc_move_t *move;
-};
-
-void fc_ai_alphabeta_wrapper (void *input, void *output)
-{
-	fc_ai_t ai;
-	struct ab_input *in = input;
-	struct ab_output *out = output;
-
-	fc_ai_init(&ai, &in->board);
-	initialize_ai_mlists(&ai, in->depth);
-	initialize_ai_boards(&ai, in->depth);
-	ai.timeout = in->timeout;
-
-	out->score = alphabeta(&ai, NULL, in->player, in->depth, in->alpha,
-			in->beta, in->max);
-
-	free_ai_boards(&ai);
-	free_ai_mlists(&ai, in->depth);
-}
-
-static int parallel_alphabeta (fc_ai_t *ai, fc_tpool_t *pool,
-		fc_move_t *ret, fc_player_t player, int depth, int alpha,
-		int beta, int max)
-{
-	int rc, count, score;
-	struct ab_input inputs[FC_DEFAULT_MLIST_SIZE];
-	struct ab_output outputs[FC_DEFAULT_MLIST_SIZE];
-	struct ab_output *retval;
-	fc_move_t *move;
-	fc_mlist_t list;
-	fc_mlist_iter_t iter;
-	fc_board_t *copy, *board = &(ai->bv[depth]);
-	fc_board_state_t state;
-
-	if (fc_board_is_player_out(board, player)) {
-		return parallel_alphabeta(ai, pool, NULL,
-				FC_NEXT_PLAYER(player), depth, alpha, beta,
-				!max);
-	}
-
-	if (fc_board_game_over(board) || depth == 0) {
-		score = fc_board_score_position(board, player);
-		/* FIXME:  Why is this different than alphabeta above? */
-		return (max) ? score + depth : (-1 * score) - depth;
-	}
-
-	/* set alpha and beta based on the initial move */
-	copy = &(ai->bv[depth - 1]);
-	fc_board_copy(copy, board);
-	fc_mlist_init(&list);
-	init_move_iterator(&iter, &state, &list, board, player);
-	move = fc_mlist_iter_next(&iter);
-	fc_board_make_move(copy, move);
-
-	score = parallel_alphabeta(ai, pool, NULL, FC_NEXT_PLAYER(player),
-			depth - 1, alpha, beta, !max);
-
-	if (alphabeta_cutoff(score, &alpha, &beta, move, ret, max)) {
-		return (max) ? alpha : beta;
-	}
-
-	/* then go through the rest of the list */
-	count = 0;
-	while ((move = fc_mlist_iter_next(&iter)) != NULL) {
-		fc_board_copy(&inputs[count].board, board);
-		outputs[count].move = move;
-		fc_board_make_move(&inputs[count].board, outputs[count].move);
-		inputs[count].player = FC_NEXT_PLAYER(player);
-		inputs[count].depth = depth - 1;
-		inputs[count].timeout = ai->timeout;
-		inputs[count].alpha = alpha;
-		inputs[count].beta = beta;
-		inputs[count].max = !max;
-
-		rc = fc_tpool_push_task(pool, fc_ai_alphabeta_wrapper,
-				inputs + count, outputs + count);
-		assert(rc);
-		count += 1;
-	}
-
-	while (count) {
-		rc = fc_tpool_pop_result(pool, (void **)&retval);
-		if (!rc) {
-			continue;
-		}
-
-		count -= 1;
-		if (alphabeta_cutoff(retval->score, &alpha, &beta, retval->move,
-					ret, max)) {
-			break;
-		}
-	}
-
-	fc_tpool_clear_tasks(pool);
-	fc_mlist_free(&list);
 	return (max) ? alpha : beta;
 }
 
@@ -348,6 +235,123 @@ static void initialize_ai_boards (fc_ai_t *ai, int depth)
 	fc_board_copy(&(ai->bv[depth]), ai->board);
 }
 
+struct ab_input {
+	fc_board_t board;
+	fc_player_t player;
+	int depth;
+	time_t timeout;
+	int alpha;
+	int beta;
+	int max;
+};
+
+struct ab_output {
+	int score;
+	fc_move_t *move;
+};
+
+void fc_ai_alphabeta_wrapper (void *input, void *output)
+{
+	fc_ai_t ai;
+	struct ab_input *in = input;
+	struct ab_output *out = output;
+
+	fc_ai_init(&ai, &in->board);
+	initialize_ai_mlists(&ai, in->depth);
+	initialize_ai_boards(&ai, in->depth);
+	ai.timeout = in->timeout;
+
+	out->score = alphabeta(&ai, NULL, in->player, in->depth, in->alpha,
+			in->beta, in->max);
+
+	free_ai_boards(&ai);
+	free_ai_mlists(&ai, in->depth);
+}
+
+static int parallel_alphabeta (fc_ai_t *ai, fc_tpool_t *pool,
+		fc_mlist_t *ret, fc_player_t player, int depth, int alpha,
+		int beta, int max)
+{
+	int rc, count, score;
+	struct ab_input inputs[FC_DEFAULT_MLIST_SIZE];
+	struct ab_output outputs[FC_DEFAULT_MLIST_SIZE];
+	struct ab_output *retval;
+	fc_move_t *move;
+	fc_mlist_t list;
+	fc_mlist_iter_t iter;
+	fc_board_t *copy, *board = &(ai->bv[depth]);
+	fc_board_state_t state;
+
+	if (fc_board_is_player_out(board, player)) {
+		return parallel_alphabeta(ai, pool, NULL,
+				FC_NEXT_PLAYER(player), depth, alpha, beta,
+				!max);
+	}
+
+	if (fc_board_game_over(board) || depth == 0) {
+		score = fc_board_score_position(board, player);
+		/* FIXME:  Why is this different than alphabeta above? */
+		return (max) ? score + depth : (-1 * score) - depth;
+	}
+
+	/* set alpha and beta based on the initial move */
+	copy = &(ai->bv[depth - 1]);
+	fc_board_copy(copy, board);
+	fc_mlist_init(&list);
+	init_move_iterator(&iter, &state, &list, board, player);
+	move = fc_mlist_iter_next(&iter);
+	fc_board_make_move(copy, move);
+
+	score = parallel_alphabeta(ai, pool, NULL, FC_NEXT_PLAYER(player),
+			depth - 1, alpha, beta, !max);
+
+	if (ret) {
+		fc_mlist_insert(ret, move, score);
+	}
+
+	if (alphabeta_cutoff(score, &alpha, &beta, max)) {
+		return (max) ? alpha : beta;
+	}
+
+	/* then go through the rest of the list */
+	count = 0;
+	while ((move = fc_mlist_iter_next(&iter)) != NULL) {
+		fc_board_copy(&inputs[count].board, board);
+		outputs[count].move = move;
+		fc_board_make_move(&inputs[count].board, outputs[count].move);
+		inputs[count].player = FC_NEXT_PLAYER(player);
+		inputs[count].depth = depth - 1;
+		inputs[count].timeout = ai->timeout;
+		inputs[count].alpha = alpha;
+		inputs[count].beta = beta;
+		inputs[count].max = !max;
+
+		rc = fc_tpool_push_task(pool, fc_ai_alphabeta_wrapper,
+				inputs + count, outputs + count);
+		assert(rc);
+		count += 1;
+	}
+
+	while (count) {
+		rc = fc_tpool_pop_result(pool, (void **)&retval);
+		if (!rc) {
+			continue;
+		}
+
+		count -= 1;
+		if (ret) {
+			fc_mlist_insert(ret, retval->move, retval->score);
+		}
+		if (alphabeta_cutoff(retval->score, &alpha, &beta, max)) {
+			break;
+		}
+	}
+
+	fc_tpool_clear_tasks(pool);
+	fc_mlist_free(&list);
+	return (max) ? alpha : beta;
+}
+
 #define ALPHA_MIN INT_MIN
 #define BETA_MAX INT_MAX
 /*
@@ -357,11 +361,24 @@ static void initialize_ai_boards (fc_ai_t *ai, int depth)
 int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 		int depth, unsigned int seconds, size_t num_threads)
 {
-	fc_tpool_t pool;
+	int rc;
+	fc_mlist_t list;
 
-	assert(ai && ai->board && ret);
+	fc_mlist_init(&list);
+	rc = fc_ai_next_ranked_moves(ai, &list, player, depth, seconds,
+			num_threads);
+	if (ret) {
+		fc_move_copy(ret, fc_mlist_get(&list, 0));
+	}
+	fc_mlist_free(&list);
+	return rc;
+}
+
+int fc_ai_next_ranked_moves (fc_ai_t *ai, fc_mlist_t *moves, fc_player_t player,
+		int depth, unsigned int seconds, size_t num_threads)
+{
+	assert(ai && ai->board && moves);
 	if (fc_board_is_player_out(ai->board, player) || depth < 1) {
-		ret->move = 0;
 		return 0;
 	}
 
@@ -370,11 +387,12 @@ int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	ai->timeout = (seconds) ? time(NULL) + seconds : 0;
 
 	if (num_threads <= 1) {
-		negascout(ai, ret, player, depth, ALPHA_MIN + 1, BETA_MAX);
+		negascout(ai, moves, player, depth, ALPHA_MIN + 1, BETA_MAX);
 	} else {
+		fc_tpool_t pool;
 		fc_tpool_init(&pool, num_threads, FC_DEFAULT_MLIST_SIZE);
 		fc_tpool_start_threads(&pool);
-		parallel_alphabeta(ai, &pool, ret, player, depth, ALPHA_MIN,
+		parallel_alphabeta(ai, &pool, moves, player, depth, ALPHA_MIN,
 				BETA_MAX, 1);
 		fc_tpool_stop_threads(&pool);
 		fc_tpool_free(&pool);
