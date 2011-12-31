@@ -878,50 +878,6 @@ static void get_valid_removes (fc_board_t *board, fc_mlist_t *list,
 	}
 }
 
-/*
- * Return only the moves that are valid and legal.  Returns all moves that do
- * not put player's or player's partner's king in check.  If no valid, legal
- * moves are available, return all the valid, legal removes that are
- * available.
- */
-void fc_board_get_moves (fc_board_t *board, fc_mlist_t *list,
-		fc_player_t player)
-{
-	int i;
-	int all_moves_are_invalid = 1;
-	int current_check_status, partner_check_status;
-	fc_move_t *move;
-	fc_player_t dummy;
-
-	fc_board_get_all_moves(board, list, player);
-	current_check_status = fc_board_check_status(board, player);
-	partner_check_status = fc_board_check_status(board, FC_PARTNER(player));
-	for (i = 0; i < fc_mlist_length(list); i++) {
-		move = fc_mlist_get(list, i);
-		if (!is_move_valid_given_check_status(board, move,
-					current_check_status,
-					partner_check_status)) {
-			fc_mlist_delete(list, i);
-			i -= 1;
-			continue;
-		}
-
-		if (fc_board_move_requires_promotion(board, move, &dummy) &&
-				move->promote == FC_NONE) {
-			append_pawn_promotions_to_moves(board, list, move);
-			fc_mlist_delete(list, i);
-			i -= 1;
-			continue;
-		}
-		all_moves_are_invalid = 0;
-	}
-
-	if (all_moves_are_invalid) {
-		fc_mlist_clear(list);
-		get_valid_removes(board, list, player);
-	}
-}
-
 void fc_board_state_init (fc_board_state_t *state, fc_board_t *board,
 		fc_player_t player)
 {
@@ -972,6 +928,33 @@ fc_move_t *fc_board_get_next_move (void *data, fc_mlist_t *list, int *index)
 	}
 
 	return ret;
+}
+
+/*
+ * Return only the moves that are valid and legal.  Returns all moves that do
+ * not put player's or player's partner's king in check.  If no valid, legal
+ * moves are available, return all the valid, legal removes that are
+ * available.
+ */
+void fc_board_get_moves (fc_board_t *board, fc_mlist_t *list,
+		fc_player_t player)
+{
+	int i;
+	fc_move_t *move;
+	fc_mlist_t total;
+	fc_board_state_t state;
+
+	fc_board_state_init(&state, board, player);
+	fc_mlist_init(&total);
+	fc_board_get_all_moves(board, &total, player);
+
+	i = 0;
+	while ((move = fc_board_get_next_move(&state, &total, &i)) != NULL) {
+		fc_mlist_insert(list, move, move->value);
+		i += 1;
+	}
+
+	fc_mlist_free(&total);
 }
 
 /*
