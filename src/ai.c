@@ -51,19 +51,12 @@ static int time_up (fc_ai_t *ai)
  * copies the move to ret.  Returns 1 if the given score was a cutoff for the
  * search; 0 otherwise.
  */
-static int alphabeta_cutoff (int score, int *alpha, int *beta, fc_move_t *move,
-		fc_move_t *ret, int max)
+static int alphabeta_cutoff (int score, int *alpha, int *beta, int max)
 {
 	if (max && score > *alpha) {
 		*alpha = score;
-		if (ret) {
-			fc_move_copy(ret, move);
-		}
 	} else if (!max && score < *beta) {
 		*beta = score;
-		if (ret) {
-			fc_move_copy(ret, move);
-		}
 	}
 	if (*beta <= *alpha) {
 		return 1;
@@ -79,7 +72,7 @@ static int alphabeta_cutoff (int score, int *alpha, int *beta, fc_move_t *move,
  *
  * If ret is !NULL, then ret will be set to the move with the best score.
  */
-static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
+static int alphabeta (fc_ai_t *ai, fc_mlist_t *ret, fc_player_t player,
 		int depth, int alpha, int beta, int max)
 {
 	int i;
@@ -127,7 +120,11 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 		score = alphabeta(ai, NULL, FC_NEXT_PLAYER(player), depth - 1,
 				alpha, beta, !max);
 
-		if (alphabeta_cutoff(score, &alpha, &beta, move, ret, max)) {
+		if (ret) {
+			fc_mlist_insert(ret, move, score);
+		}
+
+		if (alphabeta_cutoff(score, &alpha, &beta, max)) {
 			break;
 		}
 	}
@@ -135,7 +132,7 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	return (max) ? alpha : beta;
 }
 
-static int negascout (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
+static int negascout (fc_ai_t *ai, fc_mlist_t *ret, fc_player_t player,
 		int depth, int alpha, int beta)
 {
 	int i, b;
@@ -178,11 +175,12 @@ static int negascout (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 					depth - 1, -beta, -alpha);
 		}
 
+		if (ret) {
+			fc_mlist_insert(ret, move, score);
+		}
+
 		if (score > alpha) {
 			alpha = score;
-			if (ret) {
-				fc_move_copy(ret, move);
-			}
 		}
 
 		if (alpha >= beta) {
@@ -266,7 +264,7 @@ void fc_ai_alphabeta_wrapper (void *input, void *output)
 }
 
 static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
-		fc_move_t *ret, fc_player_t player, int depth, int alpha,
+		fc_mlist_t *ret, fc_player_t player, int depth, int alpha,
 		int beta, int max)
 {
 	int i, rc, count, score;
@@ -303,7 +301,11 @@ static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
 	score = threaded_move_search(ai, pool, NULL, FC_NEXT_PLAYER(player),
 			depth - 1, alpha, beta, !max);
 
-	if (alphabeta_cutoff(score, &alpha, &beta, move, ret, max)) {
+	if (ret) {
+		fc_mlist_insert(ret, move, score);
+	}
+
+	if (alphabeta_cutoff(score, &alpha, &beta, max)) {
 		return (max) ? alpha : beta;
 	}
 
@@ -334,8 +336,10 @@ static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
 		}
 
 		count -= 1;
-		if (alphabeta_cutoff(retval->score, &alpha, &beta, retval->move,
-					ret, max)) {
+		if (ret) {
+			fc_mlist_insert(ret, retval->move, retval->score);
+		}
+		if (alphabeta_cutoff(retval->score, &alpha, &beta, max)) {
 			break;
 		}
 	}
@@ -356,11 +360,24 @@ static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
 int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 		int depth, unsigned int seconds, size_t num_threads)
 {
-	fc_tpool_t pool;
+	int rc;
+	fc_mlist_t list;
 
-	assert(ai && ai->board && ret);
+	fc_mlist_init(&list);
+	rc = fc_ai_next_ranked_moves(ai, &list, player, depth, seconds,
+			num_threads);
+	if (ret) {
+		fc_move_copy(ret, fc_mlist_get(&list, 0));
+	}
+	fc_mlist_free(&list);
+	return rc;
+}
+
+int fc_ai_next_ranked_moves (fc_ai_t *ai, fc_mlist_t *moves, fc_player_t player,
+		int depth, unsigned int seconds, size_t num_threads)
+{
+	assert(ai && ai->board && moves);
 	if (fc_board_is_player_out(ai->board, player) || depth < 1) {
-		ret->move = 0;
 		return 0;
 	}
 
@@ -369,11 +386,12 @@ int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	ai->timeout = (seconds) ? time(NULL) + seconds : 0;
 
 	if (num_threads <= 1) {
-		negascout(ai, ret, player, depth, ALPHA_MIN + 1, BETA_MAX);
+		negascout(ai, moves, player, depth, ALPHA_MIN + 1, BETA_MAX);
 	} else {
+		fc_tpool_t pool;
 		fc_tpool_init(&pool, num_threads, FC_DEFAULT_MLIST_SIZE);
 		fc_tpool_start_threads(&pool);
-		threaded_move_search(ai, &pool, ret, player, depth, ALPHA_MIN,
+		threaded_move_search(ai, &pool, moves, player, depth, ALPHA_MIN,
 				BETA_MAX, 1);
 		fc_tpool_stop_threads(&pool);
 		fc_tpool_free(&pool);

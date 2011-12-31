@@ -78,4 +78,8 @@ void fc_ai_init (fc_ai_t *ai, fc_board_t *board);
 int fc_ai_next_move (fc_ai_t *ai, fc_move_t *move, fc_player_t player,
 		int depth, unsigned int seconds, size_t num_threads);
 
+/* TODO */
+int fc_ai_next_ranked_moves (fc_ai_t *ai, fc_mlist_t *moves, fc_player_t player,
+		int depth, unsigned int seconds, size_t num_threads);
+
 #endif
