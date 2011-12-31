@@ -72,6 +72,14 @@ static int alphabeta_cutoff (int score, int *alpha, int *beta, fc_move_t *move,
 	return 0;
 }
 
+static void init_move_iterator (fc_mlist_iter_t *iter, fc_board_state_t *state,
+		fc_mlist_t *list, fc_board_t *board, fc_player_t player)
+{
+	fc_board_get_all_moves(board, list, player);
+	fc_board_state_init(state, board, player);
+	fc_mlist_iter_init(iter, list, state, fc_board_get_next_move);
+}
+
 /*
  * Returns the value of the subtree.  If the variable max is set to 1, then the
  * function will try to maximize the value.  If max is set to 0, then it will
@@ -115,9 +123,7 @@ static int alphabeta (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	copy = &(ai->bv[depth - 1]);
 	list = &(ai->mlv[depth - 1]);
 	fc_mlist_clear(list);
-	fc_board_get_all_moves(board, list, player);
-	fc_board_state_init(&state, board, player);
-	fc_mlist_iter_init(&iter, list, &state, fc_board_get_next_move);
+	init_move_iterator(&iter, &state, list, board, player);
 	while ((move = fc_mlist_iter_next(&iter)) != NULL) {
 		fc_board_copy(copy, board);
 		fc_board_make_move(copy, move);
@@ -266,13 +272,15 @@ static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
 		fc_move_t *ret, fc_player_t player, int depth, int alpha,
 		int beta, int max)
 {
-	int i, rc, count, score;
-	struct ab_input *inputs;
-	struct ab_output *outputs;
+	int rc, count, score;
+	struct ab_input inputs[FC_DEFAULT_MLIST_SIZE];
+	struct ab_output outputs[FC_DEFAULT_MLIST_SIZE];
 	struct ab_output *retval;
-	fc_mlist_t list;
 	fc_move_t *move;
+	fc_mlist_t list;
+	fc_mlist_iter_t iter;
 	fc_board_t *copy, *board = &(ai->bv[depth]);
+	fc_board_state_t state;
 
 	if (fc_board_is_player_out(board, player)) {
 		return threaded_move_search(ai, pool, NULL,
@@ -290,8 +298,8 @@ static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
 	copy = &(ai->bv[depth - 1]);
 	fc_board_copy(copy, board);
 	fc_mlist_init(&list);
-	fc_board_get_moves(board, &list, player);
-	move = fc_mlist_get(&list, 0);
+	init_move_iterator(&iter, &state, &list, board, player);
+	move = fc_mlist_iter_next(&iter);
 	fc_board_make_move(copy, move);
 
 	score = threaded_move_search(ai, pool, NULL, FC_NEXT_PLAYER(player),
@@ -302,21 +310,20 @@ static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
 	}
 
 	/* then go through the rest of the list */
-	inputs = calloc(fc_mlist_length(&list), sizeof(*inputs));
-	outputs = calloc(fc_mlist_length(&list), sizeof(*outputs));
-	for (i = 1, count = 0; i < fc_mlist_length(&list); i++) {
-		fc_board_copy(&inputs[i].board, board);
-		outputs[i].move = fc_mlist_get(&list, i);
-		fc_board_make_move(&inputs[i].board, outputs[i].move);
-		inputs[i].player = FC_NEXT_PLAYER(player);
-		inputs[i].depth = depth - 1;
-		inputs[i].timeout = ai->timeout;
-		inputs[i].alpha = alpha;
-		inputs[i].beta = beta;
-		inputs[i].max = !max;
+	count = 0;
+	while ((move = fc_mlist_iter_next(&iter)) != NULL) {
+		fc_board_copy(&inputs[count].board, board);
+		outputs[count].move = move;
+		fc_board_make_move(&inputs[count].board, outputs[count].move);
+		inputs[count].player = FC_NEXT_PLAYER(player);
+		inputs[count].depth = depth - 1;
+		inputs[count].timeout = ai->timeout;
+		inputs[count].alpha = alpha;
+		inputs[count].beta = beta;
+		inputs[count].max = !max;
 
 		rc = fc_tpool_push_task(pool, fc_ai_alphabeta_wrapper,
-				inputs + i, outputs + i);
+				inputs + count, outputs + count);
 		assert(rc);
 		count += 1;
 	}
@@ -335,8 +342,6 @@ static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
 	}
 
 	fc_tpool_clear_tasks(pool);
-	free(inputs);
-	free(outputs);
 	fc_mlist_free(&list);
 	return (max) ? alpha : beta;
 }
