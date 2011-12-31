@@ -270,7 +270,7 @@ void fc_ai_alphabeta_wrapper (void *input, void *output)
 	free_ai_mlists(&ai, in->depth);
 }
 
-static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
+static int parallel_alphabeta (fc_ai_t *ai, fc_tpool_t *pool,
 		fc_move_t *ret, fc_player_t player, int depth, int alpha,
 		int beta, int max)
 {
@@ -285,7 +285,7 @@ static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
 	fc_board_state_t state;
 
 	if (fc_board_is_player_out(board, player)) {
-		return threaded_move_search(ai, pool, NULL,
+		return parallel_alphabeta(ai, pool, NULL,
 				FC_NEXT_PLAYER(player), depth, alpha, beta,
 				!max);
 	}
@@ -304,7 +304,7 @@ static int threaded_move_search (fc_ai_t *ai, fc_tpool_t *pool,
 	move = fc_mlist_iter_next(&iter);
 	fc_board_make_move(copy, move);
 
-	score = threaded_move_search(ai, pool, NULL, FC_NEXT_PLAYER(player),
+	score = parallel_alphabeta(ai, pool, NULL, FC_NEXT_PLAYER(player),
 			depth - 1, alpha, beta, !max);
 
 	if (alphabeta_cutoff(score, &alpha, &beta, move, ret, max)) {
@@ -374,7 +374,7 @@ int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	} else {
 		fc_tpool_init(&pool, num_threads, FC_DEFAULT_MLIST_SIZE);
 		fc_tpool_start_threads(&pool);
-		threaded_move_search(ai, &pool, ret, player, depth, ALPHA_MIN,
+		parallel_alphabeta(ai, &pool, ret, player, depth, ALPHA_MIN,
 				BETA_MAX, 1);
 		fc_tpool_stop_threads(&pool);
 		fc_tpool_free(&pool);
