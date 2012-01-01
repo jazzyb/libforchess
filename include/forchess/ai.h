@@ -33,11 +33,17 @@
 
 #include "forchess/board.h"
 
+typedef enum {
+	FC_ALPHABETA,
+	FC_NEGASCOUT
+} fc_ai_algo_t;
+
 typedef struct {
 	fc_board_t *board;
 	fc_board_t *bv; /* board vector */
 	fc_mlist_t *mlv; /* move list vector */
 	time_t timeout;
+	fc_ai_algo_t algo;
 } fc_ai_t;
 
 #endif /* DOXYGEN_IGNORE */
@@ -54,6 +60,9 @@ typedef struct {
  * @return void
  */
 void fc_ai_init (fc_ai_t *ai, fc_board_t *board);
+
+/* TODO */
+void fc_ai_set_algorithm (fc_ai_t *ai, fc_ai_algo_t algo);
 
 /**
  * @brief Returns the best move as determined by the AI.

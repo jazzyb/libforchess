@@ -429,4 +429,7 @@ int fc_board_game_over (fc_board_t *board);
  */
 int fc_board_score_position (fc_board_t *board, fc_player_t player);
 
+/* TODO */
+int fc_board_num_players (fc_board_t *board);
+
 #endif

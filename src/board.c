@@ -1201,3 +1201,11 @@ int fc_board_score_position (fc_board_t *board, fc_player_t player)
 		get_material_score(board, FC_PARTNER(FC_NEXT_PLAYER(player))));
 }
 
+int fc_board_num_players (fc_board_t *board)
+{
+	return  !!FC_BITBOARD(board, FC_FIRST, FC_KING) +
+		!!FC_BITBOARD(board, FC_SECOND, FC_KING) +
+		!!FC_BITBOARD(board, FC_THIRD, FC_KING) +
+		!!FC_BITBOARD(board, FC_FOURTH, FC_KING);
+}
+

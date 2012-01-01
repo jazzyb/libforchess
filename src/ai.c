@@ -35,6 +35,13 @@ void fc_ai_init (fc_ai_t *ai, fc_board_t *board)
 	ai->board = board;
 	ai->bv = NULL;
 	ai->mlv = NULL;
+	ai->algo = FC_NEGASCOUT;
+}
+
+void fc_ai_set_algorithm (fc_ai_t *ai, fc_ai_algo_t algo)
+{
+	assert(ai);
+	ai->algo = algo;
 }
 
 static void free_ai_mlists (fc_ai_t *ai, int depth)
@@ -85,12 +92,42 @@ static int time_up (fc_ai_t *ai)
 	return time(NULL) >= ai->timeout;
 }
 
-static void init_move_iterator (fc_mlist_iter_t *iter, fc_board_state_t *state,
-		fc_mlist_t *list, fc_board_t *board, fc_player_t player)
+/*
+ * Used by init_move_iterator if we have already calculated a list of valid
+ * moves, and we just want to return them one at a time.
+ */
+static fc_move_t *return_move (void *dummy, fc_mlist_t *list, int *index)
 {
-	fc_board_get_all_moves(board, list, player);
-	fc_board_state_init(state, board, player);
-	fc_mlist_iter_init(iter, list, state, fc_board_get_next_move);
+	return fc_mlist_get(list, *index);
+}
+
+static void init_move_iterator (fc_mlist_iter_t *iter, int initial_flag,
+		fc_board_state_t *state, fc_mlist_t *list, fc_board_t *board,
+		fc_player_t player, int depth)
+{
+	if (!initial_flag || depth <= fc_board_num_players(board) * 2) {
+		fc_board_get_all_moves(board, list, player);
+		fc_board_state_init(state, board, player);
+		fc_mlist_iter_init(iter, list, state, fc_board_get_next_move);
+	} else {
+		/*
+		 * If we are searching many turns ahead (like, say, 3), it
+		 * will help to go ahead and search 2 turns ahead, and then
+		 * use that list of moves as a starting point to search
+		 * deeper.  The hypothesis is that a single turn shouldn't
+		 * change the ranking of moves by too much most of the time.
+		 * Initial experiments have seemed to confirm this.
+		 *
+		 * NOTE:  This feature is currently considered experimental.
+		 */
+		fc_ai_t ai;
+		fc_ai_init(&ai, board);
+		fc_ai_set_algorithm(&ai, FC_ALPHABETA);
+		/* FIXME: Do something about the timeout and num_threads. */
+		fc_ai_next_ranked_moves(&ai, list, player,
+				fc_board_num_players(board) * 2, 0, 1);
+		fc_mlist_iter_init(iter, list, state, return_move);
+	}
 }
 
 /*
@@ -155,7 +192,8 @@ static int alphabeta (fc_ai_t *ai, fc_mlist_t *ret, fc_player_t player,
 	copy = &(ai->bv[depth - 1]);
 	list = &(ai->mlv[depth - 1]);
 	fc_mlist_clear(list);
-	init_move_iterator(&iter, &state, list, board, player);
+	init_move_iterator(&iter, ret != NULL, &state, list, board, player,
+			depth);
 	while ((move = fc_mlist_iter_next(&iter)) != NULL) {
 		fc_board_copy(copy, board);
 		fc_board_make_move(copy, move);
@@ -238,7 +276,8 @@ static int parallel_alphabeta (fc_ai_t *ai, fc_tpool_t *pool,
 	copy = &(ai->bv[depth - 1]);
 	fc_board_copy(copy, board);
 	fc_mlist_init(&list);
-	init_move_iterator(&iter, &state, &list, board, player);
+	init_move_iterator(&iter, ret != NULL, &state, &list, board, player,
+			depth);
 	move = fc_mlist_iter_next(&iter);
 	fc_board_make_move(copy, move);
 
@@ -327,7 +366,8 @@ static int negascout (fc_ai_t *ai, fc_mlist_t *ret, fc_player_t player,
 	copy = &(ai->bv[depth - 1]);
 	list = &(ai->mlv[depth - 1]);
 	fc_mlist_clear(list);
-	init_move_iterator(&iter, &state, list, board, player);
+	init_move_iterator(&iter, ret != NULL, &state, list, board, player,
+			depth);
 	b = beta;
 	first = 1;
 	while ((move = fc_mlist_iter_next(&iter)) != NULL) {
@@ -405,7 +445,8 @@ static int parallel_negascout (fc_ai_t *ai, fc_tpool_t *pool,
 	copy = &(ai->bv[depth - 1]);
 	fc_board_copy(copy, board);
 	fc_mlist_init(&list);
-	init_move_iterator(&iter, &state, &list, board, player);
+	init_move_iterator(&iter, ret != NULL, &state, &list, board, player,
+			depth);
 	move = fc_mlist_iter_next(&iter);
 	fc_board_make_move(copy, move);
 
@@ -480,6 +521,43 @@ int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
 	return rc;
 }
 
+static void move_search (fc_ai_t *ai, fc_mlist_t *moves, fc_player_t player,
+		int depth)
+{
+	switch (ai->algo) {
+	case FC_ALPHABETA:
+		alphabeta(ai, moves, player, depth, ALPHA_MIN, BETA_MAX, 1);
+		break;
+	case FC_NEGASCOUT:
+		negascout(ai, moves, player, depth, ALPHA_MIN + 1, BETA_MAX);
+		break;
+	default:
+		assert(0);
+	}
+}
+
+static void threaded_move_search (fc_ai_t *ai, fc_mlist_t *moves,
+		fc_player_t player, int depth, int num_threads)
+{
+	fc_tpool_t pool;
+	fc_tpool_init(&pool, num_threads, FC_DEFAULT_MLIST_SIZE);
+	fc_tpool_start_threads(&pool);
+	switch (ai->algo) {
+	case FC_ALPHABETA:
+		parallel_alphabeta(ai, &pool, moves, player, depth, ALPHA_MIN,
+				BETA_MAX, 1);
+		break;
+	case FC_NEGASCOUT:
+		parallel_negascout(ai, &pool, moves, player, depth,
+				ALPHA_MIN + 1, BETA_MAX);
+		break;
+	default:
+		assert(0);
+	}
+	fc_tpool_stop_threads(&pool);
+	fc_tpool_free(&pool);
+}
+
 int fc_ai_next_ranked_moves (fc_ai_t *ai, fc_mlist_t *moves, fc_player_t player,
 		int depth, unsigned int seconds, size_t num_threads)
 {
@@ -493,19 +571,9 @@ int fc_ai_next_ranked_moves (fc_ai_t *ai, fc_mlist_t *moves, fc_player_t player,
 	ai->timeout = (seconds) ? time(NULL) + seconds : 0;
 
 	if (num_threads <= 1) {
-		negascout(ai, moves, player, depth, ALPHA_MIN + 1, BETA_MAX);
+		move_search(ai, moves, player, depth);
 	} else {
-		fc_tpool_t pool;
-		fc_tpool_init(&pool, num_threads, FC_DEFAULT_MLIST_SIZE);
-		fc_tpool_start_threads(&pool);
-		/*
-		parallel_alphabeta(ai, &pool, moves, player, depth, ALPHA_MIN,
-				BETA_MAX, 1);
-				*/
-		parallel_negascout(ai, &pool, moves, player, depth,
-				ALPHA_MIN + 1, BETA_MAX);
-		fc_tpool_stop_threads(&pool);
-		fc_tpool_free(&pool);
+		threaded_move_search(ai, moves, player, depth, num_threads);
 	}
 
 	free_ai_boards(ai);
