@@ -23,10 +23,10 @@
 #include <stdlib.h>
 #include <strings.h>
 
-#include "forchess/ai.h"
-#include "forchess/board.h"
-#include "forchess/game.h"
-#include "forchess/moves.h"
+#include <forchess/ai.h>
+#include <forchess/board.h>
+#include <forchess/moves.h>
+#include "game.h"
 
 /*
  * A wrapper around the forchess API.

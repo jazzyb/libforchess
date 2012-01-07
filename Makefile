@@ -25,26 +25,22 @@ TEST_FILES=test/check_forchess.c \
 	   test/check_board.c \
 	   test/check_check.c \
 	   test/check_ai.c \
-	   test/check_game.c
 
 INC_FILES=include/forchess/moves.h \
 	  include/forchess/board.h \
-	  include/forchess/ai.h \
-	  include/forchess/game.h
+	  include/forchess/ai.h
 
 SRC_FILES=src/ai.c \
 	  src/board.c \
 	  src/check.c \
-	  src/game.c \
-	  src/moves.c \
+	  src/moves.c
 
 OBJ_FILES=src/ai.o \
 	  src/board.o \
 	  src/check.o \
-	  src/game.o \
-	  src/moves.o \
+	  src/moves.o
 
-EXAMPLE_FILES=examples/cli/simple.c
+EXAMPLE_FILES=example/simple.c example/game.c
 
 
 %.o: %.c $(INC_FILES)
@@ -63,12 +59,12 @@ libforchess: $(OBJ_FILES)
 endif
 
 # FIXME: C99 standard just makes compiling easier; will need to change this
-# later; see also examples and profiler
+# later; see also example and profiler
 check: $(TEST_FILES) libforchess
 	$(CC) -o test_all $(CFLAGS) --std=c99 $(INCLUDES) $(CHECK_FLAGS) $(LIBS) $(TEST_FILES) -lcheck -lforchess
 	./test_all
 
-examples: $(EXAMPLE_FILES) $(INC_FILES) libforchess
+example: $(EXAMPLE_FILES) $(INC_FILES) libforchess
 	$(CC) $(CFLAGS) --std=c99 $(INCLUDES) $(LIBS) $(EXAMPLE_FILES) -lforchess
 
 cscope:
@@ -81,7 +77,7 @@ cscope:
 docs: $(INC_FILES) force
 	doxygen docs/Doxyfile
 
-all: libforchess check examples cscope docs
+all: libforchess check example cscope docs
 
 # Run the gprof profiler.
 libforchess_gprof: $(SRC_FILES) $(INC_FILES)
@@ -89,7 +85,6 @@ libforchess_gprof: $(SRC_FILES) $(INC_FILES)
 	$(CC) -c -o src/board.o $(CFLAGS) $(WARN_FLAGS) $(PROF_FLAGS) $(INCLUDES) src/board.c
 	$(CC) -c -o src/check.o $(CFLAGS) $(WARN_FLAGS) $(PROF_FLAGS) $(INCLUDES) src/check.c
 	$(CC) -c -o src/moves.o $(CFLAGS) $(WARN_FLAGS) $(PROF_FLAGS) $(INCLUDES) src/moves.c
-	$(CC) -c -o src/game.o $(CFLAGS) $(WARN_FLAGS) $(PROF_FLAGS) $(INCLUDES) src/game.c
 	mkdir -p lib
 	ar cr lib/libforchess.a src/*.o
 	ranlib lib/libforchess.a
