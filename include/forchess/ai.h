@@ -33,11 +33,17 @@
 
 #include "forchess/board.h"
 
+typedef enum {
+	FC_ALPHABETA,
+	FC_NEGASCOUT
+} fc_ai_algo_t;
+
 typedef struct {
 	fc_board_t *board;
 	fc_board_t *bv; /* board vector */
 	fc_mlist_t *mlv; /* move list vector */
 	time_t timeout;
+	fc_ai_algo_t algo;
 } fc_ai_t;
 
 #endif /* DOXYGEN_IGNORE */
@@ -55,7 +61,11 @@ typedef struct {
  */
 void fc_ai_init (fc_ai_t *ai, fc_board_t *board);
 
+/* TODO */
+void fc_ai_set_algorithm (fc_ai_t *ai, fc_ai_algo_t algo);
+
 /**
+ * FIXME
  * @brief Returns the best move as determined by the AI.
  *
  * Looks depth moves ahead for player.  Sets the move variable to the best
@@ -75,11 +85,11 @@ void fc_ai_init (fc_ai_t *ai, fc_board_t *board);
  *
  * @return 1 on success; 0 otherwise
  */
-int fc_ai_next_move (fc_ai_t *ai, fc_move_t *move, fc_player_t player,
-		int depth, unsigned int seconds, size_t num_threads);
+int fc_ai_next_move (fc_ai_t *ai, fc_move_t *move, fc_mlist_t *given,
+		fc_player_t player, int depth, unsigned int seconds);
 
-/* TODO */
-int fc_ai_next_ranked_moves (fc_ai_t *ai, fc_mlist_t *moves, fc_player_t player,
-		int depth, unsigned int seconds, size_t num_threads);
+int fc_ai_next_ranked_moves (fc_ai_t *ai, fc_mlist_t *moves,
+		fc_mlist_t *given, fc_player_t player, int depth,
+		unsigned int seconds);
 
 #endif

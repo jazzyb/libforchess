@@ -25,7 +25,7 @@ START_TEST (test_mlist_init)
 {
 	fc_mlist_t l1;
 	int ret = fc_mlist_init(&l1);
-	fail_unless(ret == 1 && l1.moves && l1.index == 0 && l1.sorted);
+	fail_unless(ret == 1 && l1.moves && l1.index == 0);
 }
 END_TEST
 
@@ -194,16 +194,6 @@ START_TEST (test_mlist_insert2)
 }
 END_TEST
 
-static void print_sorted_indices (fc_mlist_t *list)
-{
-	printf("index == %d\n", list->index);
-	printf("sorted = {");
-	for (int i = 0; i < list->index; i++) {
-		printf("%d, ", list->sorted[i]);
-	}
-	printf("}\n");
-}
-
 START_TEST (test_mlist_delete)
 {
 	fc_move_t move;
@@ -229,17 +219,13 @@ START_TEST (test_mlist_delete)
 	fail_unless(fc_mlist_get(&list, 2)->value == 40);
 	fail_unless(fc_mlist_get(&list, 3)->value == 10);
 
-	//print_sorted_indices(&list);
 	move.value = 250;
 	fail_unless(fc_mlist_insert(&list, &move, move.value));
-	//print_sorted_indices(&list);
 	move.value = 15;
 	fail_unless(fc_mlist_insert(&list, &move, move.value));
 	fail_unless(fc_mlist_delete(&list, 2));
-	//print_sorted_indices(&list);
 	move.value = 62;
 	fail_unless(fc_mlist_insert(&list, &move, move.value));
-	//print_sorted_indices(&list);
 	fail_unless(fc_mlist_get(&list, 0)->value == 250);
 	fail_unless(fc_mlist_get(&list, 1)->value == 100);
 	fail_unless(fc_mlist_get(&list, 2)->value == 62);
@@ -249,23 +235,29 @@ START_TEST (test_mlist_delete)
 }
 END_TEST
 
-static fc_move_t *test_cb (void *data, fc_mlist_t *list, int *current)
+static fc_move_t *test_cb (fc_mlist_iter_t *iter)
 {
 	fc_move_t *ret;
-	int *last_index = data;
+	fc_mlist_t *list;
+	int current;
+	int *last_index;
 
-	fail_unless(*current == *last_index + 1);
+	list = fc_mlist_iter_get_mlist(iter);
+	last_index = fc_mlist_iter_get_state(iter);
+	current = fc_mlist_iter_get_index(iter);
+
+	fail_unless(current == *last_index + 1);
 
 	do {
-		ret = fc_mlist_get(list, *current);
+		ret = fc_mlist_get(list, current);
 		if (ret->piece == FC_KNIGHT) {
-			fc_mlist_delete(list, *current);
+			fc_mlist_delete(list, current);
 		} else {
 			break;
 		}
 	} while (ret);
 
-	*last_index = *current;
+	*last_index = current;
 	return ret;
 }
 
@@ -283,11 +275,12 @@ START_TEST (test_mlist_iter)
 
 	int last_index = -1;
 	fc_move_t *mp;
-	fail_unless(fc_mlist_iter_init(&iter, &list, &last_index, test_cb));
-	while ((mp = fc_mlist_iter_next(&iter)) != NULL) {
+	fail_unless(fc_mlist_iter_init(&list, &iter, test_cb));
+	fc_mlist_iter_set_state(&iter, &last_index);
+	while (fc_mlist_iter_next(&iter)) {
+		mp = fc_mlist_iter_get_move(&iter);
 		fail_unless(mp->piece != FC_KNIGHT);
 	}
-	fc_mlist_iter_free(&iter);
 }
 END_TEST
 

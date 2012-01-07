@@ -1,5 +1,0 @@
-TODO: This directory should be filed by three example programs using the
-forchess API: (1) a text based one which simply prints moves made by the AI and
-takes moves as input from the user, (2) a GUI version which allows saving and
-loading games written with a C++ wrapper around the C library, and (3) an
-IRCbot which allows multiple people to play.

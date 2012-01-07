@@ -887,33 +887,42 @@ void fc_board_state_init (fc_board_state_t *state, fc_board_t *board,
 	state->partner_check_status = fc_board_check_status(board,
 			FC_PARTNER(player));
 	state->all_moves_are_invalid = 1;
+	state->initial_flag = 1;
 }
 
-fc_move_t *fc_board_get_next_move (void *data, fc_mlist_t *list, int *index)
+fc_move_t *fc_board_get_next_move (fc_mlist_iter_t *iter)
 {
+	int i;
 	fc_move_t *ret;
 	fc_player_t dummy;
-	fc_board_state_t *state = data;
-	fc_board_t *board = state->board;
+	fc_board_state_t *state;
+	fc_board_t *board;
+	fc_mlist_t *list;
 
-	if (*index != 0 && state->all_moves_are_invalid) {
+	i = fc_mlist_iter_get_index(iter);
+	list = fc_mlist_iter_get_mlist(iter);
+	state = fc_mlist_iter_get_state(iter);
+	board = state->board;
+
+	if (!state->initial_flag && state->all_moves_are_invalid) {
 		/* we've already called get_valid_removes by this point, so we
 		 * can return the remove without worrying about it */
-		return fc_mlist_get(list, *index);
+		return fc_mlist_get(list, i);
 	}
+	state->initial_flag = 0;
 
-	while ((ret = fc_mlist_get(list, *index)) != NULL) {
+	while ((ret = fc_mlist_get(list, i)) != NULL) {
 		if (!is_move_valid_given_check_status(board, ret,
 					state->current_check_status,
 					state->partner_check_status)) {
-			fc_mlist_delete(list, *index);
+			fc_mlist_delete(list, i);
 			continue;
 		}
 
 		if (fc_board_move_requires_promotion(board, ret, &dummy) &&
 				ret->promote == FC_NONE) {
 			append_pawn_promotions_to_moves(board, list, ret);
-			fc_mlist_delete(list, *index);
+			fc_mlist_delete(list, i);
 			continue;
 		}
 		state->all_moves_are_invalid = 0;
@@ -922,7 +931,7 @@ fc_move_t *fc_board_get_next_move (void *data, fc_mlist_t *list, int *index)
 
 	if (state->all_moves_are_invalid) {
 		fc_mlist_clear(list);
-		*index = 0;
+		fc_mlist_iter_set_index(iter, 0);
 		get_valid_removes(board, list, state->player);
 		ret = fc_mlist_get(list, 0);
 	}
@@ -940,18 +949,19 @@ void fc_board_get_moves (fc_board_t *board, fc_mlist_t *list,
 		fc_player_t player)
 {
 	int i;
-	fc_move_t *move;
 	fc_mlist_t total;
+	fc_mlist_iter_t iter;
 	fc_board_state_t state;
 
-	fc_board_state_init(&state, board, player);
 	fc_mlist_init(&total);
 	fc_board_get_all_moves(board, &total, player);
+	fc_board_state_init(&state, board, player);
+	fc_mlist_iter_init(&total, &iter, fc_board_get_next_move);
+	fc_mlist_iter_set_state(&iter, &state);
 
-	i = 0;
-	while ((move = fc_board_get_next_move(&state, &total, &i)) != NULL) {
+	for (i = 0; fc_mlist_iter_next(&iter); i++) {
+		fc_move_t *move = fc_mlist_iter_get_move(&iter);
 		fc_mlist_insert(list, move, move->value);
-		i += 1;
 	}
 
 	fc_mlist_free(&total);
@@ -1199,5 +1209,13 @@ int fc_board_score_position (fc_board_t *board, fc_player_t player)
 		get_material_score(board, FC_NEXT_PLAYER(player)) +
 		get_material_score(board, FC_PARTNER(player)) -
 		get_material_score(board, FC_PARTNER(FC_NEXT_PLAYER(player))));
+}
+
+int fc_board_num_players (fc_board_t *board)
+{
+	return  !!FC_BITBOARD(board, FC_FIRST, FC_KING) +
+		!!FC_BITBOARD(board, FC_SECOND, FC_KING) +
+		!!FC_BITBOARD(board, FC_THIRD, FC_KING) +
+		!!FC_BITBOARD(board, FC_FOURTH, FC_KING);
 }
 

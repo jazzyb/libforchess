@@ -1,3 +1,5 @@
+/* FIXME The -j option doesn't work now.  Remove all threading code form this
+ * file. */
 #include <assert.h>
 #include <getopt.h>
 #include <stdio.h>
@@ -6,33 +8,31 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "forchess/ai.h"
-#include "forchess/board.h"
-#include "forchess/game.h"
+#include <forchess/ai.h>
+#include <forchess/board.h>
+#include "game.h"
 
 void query_human_for_move (fc_game_t *game, fc_player_t player);
 void get_move (fc_game_t *game, fc_move_t *move, fc_player_t player);
 void str2move (fc_game_t *game, fc_move_t *move, char *str);
 fc_piece_t get_pawn_promotion (void);
 void make_computer_move (fc_game_t *game, fc_player_t player, int depth,
-		int timeout, int threads);
+		int timeout);
 void get_time (char *str, time_t t);
 void move2str (fc_game_t *game, char *str, fc_move_t *move);
 
-int get_arguments (int argc, char **argv, char *file, int *depth, int *timeout,
-		int *threads)
+int get_arguments (int argc, char **argv, char *file, int *depth, int *timeout)
 {
 	int c;
 	*depth = *timeout = 0;
-	*threads = 1;
-	while ((c = getopt(argc, argv, "d:f:hj:t:")) != -1) {
+	while ((c = getopt(argc, argv, "d:f:ht:")) != -1) {
 		switch (c) {
 		case 'd':
 			*depth = strtol(optarg, NULL, 10);
 			break;
 		case 'h':
 			fprintf(stderr,
-				"%s {[-h] | [-d <plycount>] [-f <filename>] [-j <threads>] [-t <seconds>] [1] [2] [3] [4]}\n"
+				"%s {[-h] | [-d <depth>] [-f <filename>] [-t <seconds>] [1] [2] [3] [4]}\n"
 				"    Play forchess!\n"
 				"\n"
 				"    -h: show this help message\n"
@@ -41,13 +41,11 @@ int get_arguments (int argc, char **argv, char *file, int *depth, int *timeout,
 				"           will be played by humans; the remainder\n"
 				"           will be played by the AI\n"
 				"    options:\n"
-				"           -d: the number of moves that you wish the\n"
+				"           -d: the number of turns that you wish the\n"
 				"               program to search; by default the program\n"
-				"               will search depth = num_players * 2\n"
+				"               will search 2 turns ahead\n"
 				"           -f: game file to load; if none given then a\n"
 				"               new game will be started\n"
-				"           -j: the number of worker threads that will\n"
-				"               search for the best move\n"
 				"           -t: the maximum number of seconds the program\n"
 				"               should spend searching for a move\n"
 				"    for example: '%s 1 3' will start a game in\n"
@@ -56,9 +54,6 @@ int get_arguments (int argc, char **argv, char *file, int *depth, int *timeout,
 			exit(0);
 		case 'f':
 			strcpy(file, optarg);
-			break;
-		case 'j':
-			*threads = strtol(optarg, NULL, 10);
 			break;
 		case 't':
 			*timeout = strtol(optarg, NULL, 10);
@@ -82,9 +77,9 @@ int get_arguments (int argc, char **argv, char *file, int *depth, int *timeout,
 
 int main (int argc, char **argv)
 {
-	int depth, timeout, threads;
-	char filename[256] = "examples/cli/simple.fc";
-	int optind = get_arguments(argc, argv, filename, &depth, &timeout, &threads);
+	int depth, timeout;
+	char filename[256] = "example/simple.fc";
+	int optind = get_arguments(argc, argv, filename, &depth, &timeout);
 
 	int player_is_human[] = {0, 0, 0, 0};
 	for (int i = optind; i < argc; i++) {
@@ -111,7 +106,7 @@ int main (int argc, char **argv)
 		if (player_is_human[player]) {
 			query_human_for_move(&game, player);
 		} else {
-			make_computer_move(&game, player, depth, timeout, threads);
+			make_computer_move(&game, player, depth, timeout);
 		}
 	}
 
@@ -185,20 +180,44 @@ fc_piece_t get_pawn_promotion (void)
 	} while (0);
 }
 
+/*
+ * Called by make_computer_move below.
+ */
+void get_best_move (fc_game_t *game, fc_move_t *move, fc_player_t player,
+		int depth, int timeout)
+{
+	int rc;
+	fc_mlist_t *tmp = NULL;
+	fc_ai_t ai;
+	if (depth > fc_game_number_of_players(game) * 2) {
+		tmp = calloc(1, sizeof(fc_mlist_t));
+		fc_mlist_init(tmp);
+		fc_ai_init(&ai, fc_game_get_board(game));
+		rc = fc_ai_next_ranked_moves(&ai, tmp, NULL, player,
+				fc_game_number_of_players(game) * 2, 0);
+		assert(rc);
+	}
+	fc_ai_init(&ai, fc_game_get_board(game));
+	rc = fc_ai_next_move(&ai, move, tmp, player, depth, timeout);
+	assert(rc);
+	if (tmp) {
+		fc_mlist_free(tmp);
+		free(tmp);
+	}
+}
+
 void make_computer_move (fc_game_t *game, fc_player_t player, int depth,
-		int timeout, int threads)
+		int timeout)
 {
 	fc_move_t move;
 	if (!depth) {
 		depth = fc_game_number_of_players(game) * 2;
+	} else {
+		depth = fc_game_number_of_players(game) * depth;
 	}
-	fc_ai_t ai;
-	fc_ai_init(&ai, fc_game_get_board(game));
 
 	time_t start = time(NULL);
-	if (!fc_ai_next_move(&ai, &move, player, depth, timeout, threads)) {
-		assert(0);
-	}
+	get_best_move(game, &move, player, depth, timeout);
 	char time_str[100];
 	get_time(time_str, time(NULL) - start);
 

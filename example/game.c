@@ -23,10 +23,10 @@
 #include <stdlib.h>
 #include <strings.h>
 
-#include "forchess/ai.h"
-#include "forchess/board.h"
-#include "forchess/game.h"
-#include "forchess/moves.h"
+#include <forchess/ai.h>
+#include <forchess/board.h>
+#include <forchess/moves.h>
+#include "game.h"
 
 /*
  * A wrapper around the forchess API.
@@ -153,10 +153,7 @@ fc_player_t fc_game_next_player (fc_game_t *game)
 
 int fc_game_number_of_players (fc_game_t *game)
 {
-	return !!FC_BITBOARD(game->board, FC_FIRST, FC_KING) +
-	       !!FC_BITBOARD(game->board, FC_SECOND, FC_KING) +
-	       !!FC_BITBOARD(game->board, FC_THIRD, FC_KING) +
-	       !!FC_BITBOARD(game->board, FC_FOURTH, FC_KING);
+	return fc_board_num_players(game->board);
 }
 
 int fc_game_king_check_status (fc_game_t *game, fc_player_t player)
