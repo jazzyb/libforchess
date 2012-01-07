@@ -67,11 +67,12 @@ typedef struct {
 	int current_check_status;
 	int partner_check_status;
 	int all_moves_are_invalid;
+	int initial_flag;
 } fc_board_state_t;
 void fc_board_state_init (fc_board_state_t *state, fc_board_t *board,
 		fc_player_t player);
 /* mlist_iter callback */
-fc_move_t *fc_board_get_next_move (void *data, fc_mlist_t *list, int *index);
+fc_move_t *fc_board_get_next_move (fc_mlist_iter_t *iter);
 
 /* macro to get the first 24 bitboards representing pieces */
 #define FC_BITBOARD(board, player, piece) (board->bitb[player * 6 + piece])

@@ -73,11 +73,12 @@ typedef struct {
 	uint8_t *sorted;
 } fc_mlist_t;
 
-typedef struct {
+typedef struct fc_mlist_iter_ {
 	fc_mlist_t *list;
-	void *data;
-	int current;
-	fc_move_t *(*callback) (void *data, fc_mlist_t *list, int *current);
+	void *state;
+	int current_index;
+	fc_move_t *move;
+	fc_move_t *(*callback) (struct fc_mlist_iter_ *iter);
 } fc_mlist_iter_t;
 
 uint64_t fc_uint64(const char *move);
@@ -214,12 +215,26 @@ void fc_mlist_clear (fc_mlist_t *list);
 fc_move_t *fc_mlist_get (fc_mlist_t *list, int index);
 
 /* TODO */
-int fc_mlist_iter_init (fc_mlist_iter_t *mliter, fc_mlist_t *list, void *data,
-		fc_move_t *(*callback) (void *data, fc_mlist_t *list,
-			int *current));
+int fc_mlist_iter_init (fc_mlist_t *list, fc_mlist_iter_t *iter,
+		fc_move_t *(*callback) (fc_mlist_iter_t *iter));
 
-fc_move_t *fc_mlist_iter_next (fc_mlist_iter_t *mliter);
+/* update the iter struct so that the next call to _get_move will return the
+ * move */
+fc_mlist_iter_t *fc_mlist_iter_next (fc_mlist_iter_t *iter);
+fc_move_t *fc_mlist_iter_get_move (fc_mlist_iter_t *iter);
 
-void fc_mlist_iter_free (fc_mlist_iter_t *mliter);
+void *fc_mlist_iter_get_state (fc_mlist_iter_t *iter);
+void fc_mlist_iter_set_state (fc_mlist_iter_t *iter, void *state);
+
+/* return a pointer to the mlist */
+fc_mlist_t *fc_mlist_iter_get_mlist (fc_mlist_iter_t *iter);
+
+/* return the current index; after the initial call to the callback, the index
+ * is incremented for each subsequent call; if the user wishes to change the
+ * index value, he should set the index to something with the understanding
+ * that it will be incremented for the next call
+ */
+int fc_mlist_iter_get_index (fc_mlist_iter_t *iter);
+void fc_mlist_iter_set_index (fc_mlist_iter_t *iter, int index);
 
 #endif

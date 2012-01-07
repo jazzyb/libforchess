@@ -53,32 +53,28 @@ static int time_up (fc_ai_t *ai)
 }
 
 /*
- * Used by init_move_iterator if we have already calculated a list of valid
+ * Used by create_mlist_iterator if we have already calculated a list of valid
  * moves, and we just want to return them one at a time.
  */
-static fc_move_t *return_move (void *dummy, fc_mlist_t *list, int *index)
+static fc_move_t *return_move (fc_mlist_iter_t *iter)
 {
-	return fc_mlist_get(list, *index);
+	return fc_mlist_get(fc_mlist_iter_get_mlist(iter),
+			fc_mlist_iter_get_index(iter));
 }
 
-static void init_move_iterator (fc_mlist_iter_t *iter, fc_mlist_t *given,
+static void create_mlist_iterator (fc_mlist_iter_t *iter, fc_mlist_t *given,
 		fc_board_state_t *state, fc_mlist_t *list, fc_board_t *board,
-		fc_player_t player, int depth)
+		fc_player_t player)
 {
 	if (given) {
-		/*
-		 * If we are searching many turns ahead (like, say, 3), it
-		 * will help to go ahead and search, e.g., 2 turns ahead, and
-		 * then use that list of moves as a starting point to search
-		 * deeper.  The hypothesis is that a single turn shouldn't
-		 * change the ranking of moves by too much most of the time.
-		 * Initial experiments have seemed to confirm this.
-		 */
-		fc_mlist_iter_init(iter, given, state, return_move);
+		/* just use the list we were given */
+		fc_mlist_iter_init(given, iter, return_move);
 	} else {
+		fc_mlist_clear(list);
 		fc_board_get_all_moves(board, list, player);
 		fc_board_state_init(state, board, player);
-		fc_mlist_iter_init(iter, list, state, fc_board_get_next_move);
+		fc_mlist_iter_init(list, iter, fc_board_get_next_move);
+		fc_mlist_iter_set_state(iter, state);
 	}
 }
 
@@ -143,10 +139,10 @@ static int alphabeta (fc_ai_t *ai, fc_mlist_t *ret, fc_mlist_t *given,
 
 	copy = &(ai->bv[depth - 1]);
 	list = &(ai->mlv[depth - 1]);
-	fc_mlist_clear(list);
-	init_move_iterator(&iter, given, &state, list, board, player, depth);
-	while ((move = fc_mlist_iter_next(&iter)) != NULL) {
+	create_mlist_iterator(&iter, given, &state, list, board, player);
+	while (fc_mlist_iter_next(&iter)) {
 		fc_board_copy(copy, board);
+		move = fc_mlist_iter_get_move(&iter);
 		fc_board_make_move(copy, move);
 
 		score = alphabeta(ai, NULL, NULL, FC_NEXT_PLAYER(player),
@@ -163,7 +159,8 @@ static int alphabeta (fc_ai_t *ai, fc_mlist_t *ret, fc_mlist_t *given,
 
 	/* insert the remaining moves if any onto the end of the list */
 	if (ret) {
-		while ((move = fc_mlist_iter_next(&iter)) != NULL) {
+		while (fc_mlist_iter_next(&iter)) {
+			move = fc_mlist_iter_get_move(&iter);
 			fc_mlist_insert(ret, move, INT_MIN);
 		}
 	}
@@ -205,12 +202,10 @@ static int negascout (fc_ai_t *ai, fc_mlist_t *ret, fc_mlist_t *given,
 
 	copy = &(ai->bv[depth - 1]);
 	list = &(ai->mlv[depth - 1]);
-	fc_mlist_clear(list);
-	init_move_iterator(&iter, given, &state, list, board, player, depth);
-	b = beta;
-	first = 1;
-	while ((move = fc_mlist_iter_next(&iter)) != NULL) {
+	create_mlist_iterator(&iter, given, &state, list, board, player);
+	for (first = 1, b = beta; fc_mlist_iter_next(&iter); b = alpha + 1) {
 		fc_board_copy(copy, board);
+		move = fc_mlist_iter_get_move(&iter);
 		fc_board_make_move(copy, move);
 
 		score = -negascout(ai, NULL, NULL, FC_NEXT_PLAYER(player),
@@ -230,12 +225,11 @@ static int negascout (fc_ai_t *ai, fc_mlist_t *ret, fc_mlist_t *given,
 		if (negascout_cutoff(score, &alpha, &beta)) {
 			break;
 		}
-
-		b = alpha + 1;
 	}
 
 	if (ret) {
-		while ((move = fc_mlist_iter_next(&iter)) != NULL) {
+		while (fc_mlist_iter_next(&iter)) {
+			move = fc_mlist_iter_get_move(&iter);
 			fc_mlist_insert(ret, move, INT_MIN);
 		}
 	}

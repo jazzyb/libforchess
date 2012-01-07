@@ -206,33 +206,63 @@ fc_move_t *fc_mlist_get (fc_mlist_t *list, int index)
 	return list->moves + list->sorted[index];
 }
 
-int fc_mlist_iter_init (fc_mlist_iter_t *mliter, fc_mlist_t *list, void *data,
-		fc_move_t *(*callback) (void *data, fc_mlist_t *list,
-			int *current))
+int fc_mlist_iter_init (fc_mlist_t *list, fc_mlist_iter_t *iter,
+		fc_move_t *(*callback) (fc_mlist_iter_t *iter))
 {
-	mliter->list = list;
-	mliter->data = data;
-	mliter->callback = callback;
-	mliter->current = 0;
+	iter->list = list;
+	iter->current_index = 0;
+	iter->state = NULL;
+	iter->move = NULL;
+	iter->callback = callback;
 	return 1;
 }
 
-fc_move_t *fc_mlist_iter_next (fc_mlist_iter_t *mliter)
+fc_mlist_iter_t *fc_mlist_iter_next (fc_mlist_iter_t *iter)
 {
-	fc_move_t *move;
-
-	if (mliter->current != 0 &&
-			mliter->current >= fc_mlist_length(mliter->list)) {
+	/*
+	 * We check for current_index being 0 because we could have the
+	 * situation where a user passes in an empty list intending for the
+	 * callback to fill it, so we want to call the callback at least once.
+	 */
+	if (iter->current_index != 0 &&
+			iter->current_index >= fc_mlist_length(iter->list)) {
 		return NULL;
 	}
-
-	move = mliter->callback(mliter->data, mliter->list, &mliter->current);
-	mliter->current += 1;
-	return move;
+	iter->move = iter->callback(iter);
+	if (iter->move == NULL) {
+		return NULL;
+	}
+	iter->current_index += 1;
+	return iter;
 }
 
-void fc_mlist_iter_free (fc_mlist_iter_t *mliter)
+fc_move_t *fc_mlist_iter_get_move (fc_mlist_iter_t *iter)
 {
-	/* do nothing for now */
+	return iter->move;
+}
+
+void *fc_mlist_iter_get_state (fc_mlist_iter_t *iter)
+{
+	return iter->state;
+}
+
+void fc_mlist_iter_set_state (fc_mlist_iter_t *iter, void *state)
+{
+	iter->state = state;
+}
+
+fc_mlist_t *fc_mlist_iter_get_mlist (fc_mlist_iter_t *iter)
+{
+	return iter->list;
+}
+
+int fc_mlist_iter_get_index (fc_mlist_iter_t *iter)
+{
+	return iter->current_index;
+}
+
+void fc_mlist_iter_set_index (fc_mlist_iter_t *iter, int index)
+{
+	iter->current_index = index;
 }
 

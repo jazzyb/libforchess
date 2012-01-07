@@ -761,9 +761,11 @@ START_TEST (test_board_get_next_move1)
 	fc_mlist_iter_t iter;
 	fc_board_state_t state;
 	fc_board_state_init(&state, &board, FC_FOURTH);
-	fc_mlist_iter_init(&iter, &list, &state, fc_board_get_next_move);
+	fc_mlist_iter_init(&list, &iter, fc_board_get_next_move);
+	fc_mlist_iter_set_state(&iter, &state);
 	fc_move_t *mp;
-	while ((mp = fc_mlist_iter_next(&iter)) != NULL) {
+	while (fc_mlist_iter_next(&iter)) {
+		mp = fc_mlist_iter_get_move(&iter);
 		fc_mlist_insert(&test_list, mp, mp->value);
 	}
 	fail_unless(move_exists_in_mlist(&test_list, "h1-g1"));
@@ -793,9 +795,11 @@ START_TEST (test_board_get_next_move2)
 	fc_mlist_iter_t iter;
 	fc_board_state_t state;
 	fc_board_state_init(&state, &board, FC_FIRST);
-	fc_mlist_iter_init(&iter, &list, &state, fc_board_get_next_move);
+	fc_mlist_iter_init(&list, &iter, fc_board_get_next_move);
+	fc_mlist_iter_set_state(&iter, &state);
 	fc_move_t *mp;
-	while ((mp = fc_mlist_iter_next(&iter)) != NULL) {
+	while (fc_mlist_iter_next(&iter)) {
+		mp = fc_mlist_iter_get_move(&iter);
 		fc_mlist_insert(&test_list, mp, mp->value);
 	}
 	fail_unless(move_exists_in_mlist(&test_list, "a3-b1"));
@@ -806,8 +810,10 @@ START_TEST (test_board_get_next_move2)
 	fc_mlist_clear(&test_list);
 	fc_board_get_all_moves(&board, &list, FC_FIRST);
 	fc_board_state_init(&state, &board, FC_FIRST);
-	fc_mlist_iter_init(&iter, &list, &state, fc_board_get_next_move);
-	while ((mp = fc_mlist_iter_next(&iter)) != NULL) {
+	fc_mlist_iter_init(&list, &iter, fc_board_get_next_move);
+	fc_mlist_iter_set_state(&iter, &state);
+	while (fc_mlist_iter_next(&iter)) {
+		mp = fc_mlist_iter_get_move(&iter);
 		fc_mlist_insert(&test_list, mp, mp->value);
 	}
 	fail_unless(!move_exists_in_mlist(&test_list, "a1-b1"));
@@ -833,9 +839,11 @@ START_TEST (test_board_get_next_move3)
 	fc_mlist_iter_t iter;
 	fc_board_state_t state;
 	fc_board_state_init(&state, &board, FC_FIRST);
-	fc_mlist_iter_init(&iter, &list, &state, fc_board_get_next_move);
+	fc_mlist_iter_init(&list, &iter, fc_board_get_next_move);
+	fc_mlist_iter_set_state(&iter, &state);
 	fc_move_t *mp;
-	while ((mp = fc_mlist_iter_next(&iter)) != NULL) {
+	while (fc_mlist_iter_next(&iter)) {
+		mp = fc_mlist_iter_get_move(&iter);
 		fc_mlist_insert(&test_list, mp, mp->value);
 	}
 	fail_unless(fc_mlist_length(&test_list) == 1);
@@ -860,9 +868,11 @@ START_TEST (test_board_get_next_move4)
 	fc_mlist_iter_t iter;
 	fc_board_state_t state;
 	fc_board_state_init(&state, &board, FC_FIRST);
-	fc_mlist_iter_init(&iter, &list, &state, fc_board_get_next_move);
+	fc_mlist_iter_init(&list, &iter, fc_board_get_next_move);
+	fc_mlist_iter_set_state(&iter, &state);
 	fc_move_t *mp;
-	while ((mp = fc_mlist_iter_next(&iter)) != NULL) {
+	while (fc_mlist_iter_next(&iter)) {
+		mp = fc_mlist_iter_get_move(&iter);
 		fc_mlist_insert(&test_list, mp, mp->value);
 	}
 	fail_unless(fc_mlist_length(&test_list) == 1);
@@ -872,6 +882,7 @@ END_TEST
 
 START_TEST (test_board_get_next_move5)
 {
+	/* stolen from test_forchess_board_get_valid_removes3 */
 	fc_board_t board;
 	fc_board_init(&board);
 	fc_player_t dummy;
@@ -887,9 +898,11 @@ START_TEST (test_board_get_next_move5)
 	fc_mlist_iter_t iter;
 	fc_board_state_t state;
 	fc_board_state_init(&state, &board, FC_FIRST);
-	fc_mlist_iter_init(&iter, &list, &state, fc_board_get_next_move);
+	fc_mlist_iter_init(&list, &iter, fc_board_get_next_move);
+	fc_mlist_iter_set_state(&iter, &state);
 	fc_move_t *mp;
-	while ((mp = fc_mlist_iter_next(&iter)) != NULL) {
+	while (fc_mlist_iter_next(&iter)) {
+		mp = fc_mlist_iter_get_move(&iter);
 		fc_mlist_insert(&test_list, mp, mp->value);
 	}
 	fail_unless(fc_mlist_length(&test_list) == 3);

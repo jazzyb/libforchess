@@ -249,23 +249,29 @@ START_TEST (test_mlist_delete)
 }
 END_TEST
 
-static fc_move_t *test_cb (void *data, fc_mlist_t *list, int *current)
+static fc_move_t *test_cb (fc_mlist_iter_t *iter)
 {
 	fc_move_t *ret;
-	int *last_index = data;
+	fc_mlist_t *list;
+	int current;
+	int *last_index;
 
-	fail_unless(*current == *last_index + 1);
+	list = fc_mlist_iter_get_mlist(iter);
+	last_index = fc_mlist_iter_get_state(iter);
+	current = fc_mlist_iter_get_index(iter);
+
+	fail_unless(current == *last_index + 1);
 
 	do {
-		ret = fc_mlist_get(list, *current);
+		ret = fc_mlist_get(list, current);
 		if (ret->piece == FC_KNIGHT) {
-			fc_mlist_delete(list, *current);
+			fc_mlist_delete(list, current);
 		} else {
 			break;
 		}
 	} while (ret);
 
-	*last_index = *current;
+	*last_index = current;
 	return ret;
 }
 
@@ -283,11 +289,12 @@ START_TEST (test_mlist_iter)
 
 	int last_index = -1;
 	fc_move_t *mp;
-	fail_unless(fc_mlist_iter_init(&iter, &list, &last_index, test_cb));
-	while ((mp = fc_mlist_iter_next(&iter)) != NULL) {
+	fail_unless(fc_mlist_iter_init(&list, &iter, test_cb));
+	fc_mlist_iter_set_state(&iter, &last_index);
+	while (fc_mlist_iter_next(&iter)) {
+		mp = fc_mlist_iter_get_move(&iter);
 		fail_unless(mp->piece != FC_KNIGHT);
 	}
-	fc_mlist_iter_free(&iter);
 }
 END_TEST
 
