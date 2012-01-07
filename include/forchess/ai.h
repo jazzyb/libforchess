@@ -91,4 +91,12 @@ int fc_ai_next_move (fc_ai_t *ai, fc_move_t *move, fc_player_t player,
 int fc_ai_next_ranked_moves (fc_ai_t *ai, fc_mlist_t *moves, fc_player_t player,
 		int depth, unsigned int seconds, size_t num_threads);
 
+int fc_ai_next_move_from_given (fc_ai_t *ai, fc_move_t *move,
+		fc_mlist_t *given, fc_player_t player, int depth,
+		unsigned int seconds, size_t num_threads);
+
+int fc_ai_next_ranked_moves_from_given (fc_ai_t *ai, fc_mlist_t *moves,
+		fc_mlist_t *given, fc_player_t player, int depth,
+		unsigned int seconds, size_t num_threads);
+
 #endif

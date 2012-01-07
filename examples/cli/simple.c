@@ -185,6 +185,33 @@ fc_piece_t get_pawn_promotion (void)
 	} while (0);
 }
 
+/*
+ * Called by make_computer_move below.
+ */
+void get_best_move (fc_game_t *game, fc_move_t *move, fc_player_t player,
+		int depth, int timeout, int threads)
+{
+	int rc;
+	fc_mlist_t *tmp = NULL;
+	fc_ai_t ai;
+	if (depth > fc_game_number_of_players(game) * 2) {
+		tmp = calloc(1, sizeof(fc_mlist_t));
+		fc_mlist_init(tmp);
+		fc_ai_init(&ai, fc_game_get_board(game));
+		rc = fc_ai_next_ranked_moves(&ai, tmp, player,
+				fc_game_number_of_players(game) * 2, 0, 1);
+		assert(rc);
+	}
+	fc_ai_init(&ai, fc_game_get_board(game));
+	rc = fc_ai_next_move_from_given(&ai, move, tmp, player, depth, timeout,
+			threads);
+	assert(rc);
+	if (tmp) {
+		fc_mlist_free(tmp);
+		free(tmp);
+	}
+}
+
 void make_computer_move (fc_game_t *game, fc_player_t player, int depth,
 		int timeout, int threads)
 {
@@ -192,13 +219,9 @@ void make_computer_move (fc_game_t *game, fc_player_t player, int depth,
 	if (!depth) {
 		depth = fc_game_number_of_players(game) * 2;
 	}
-	fc_ai_t ai;
-	fc_ai_init(&ai, fc_game_get_board(game));
 
 	time_t start = time(NULL);
-	if (!fc_ai_next_move(&ai, &move, player, depth, timeout, threads)) {
-		assert(0);
-	}
+	get_best_move(game, &move, player, depth, timeout, threads);
 	char time_str[100];
 	get_time(time_str, time(NULL) - start);
 
