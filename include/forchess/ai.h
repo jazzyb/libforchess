@@ -65,6 +65,7 @@ void fc_ai_init (fc_ai_t *ai, fc_board_t *board);
 void fc_ai_set_algorithm (fc_ai_t *ai, fc_ai_algo_t algo);
 
 /**
+ * FIXME
  * @brief Returns the best move as determined by the AI.
  *
  * Looks depth moves ahead for player.  Sets the move variable to the best
@@ -84,18 +85,11 @@ void fc_ai_set_algorithm (fc_ai_t *ai, fc_ai_algo_t algo);
  *
  * @return 1 on success; 0 otherwise
  */
-int fc_ai_next_move (fc_ai_t *ai, fc_move_t *move, fc_player_t player,
-		int depth, unsigned int seconds, size_t num_threads);
+int fc_ai_next_move (fc_ai_t *ai, fc_move_t *move, fc_mlist_t *given,
+		fc_player_t player, int depth, unsigned int seconds,
+		size_t num_threads);
 
-/* TODO */
-int fc_ai_next_ranked_moves (fc_ai_t *ai, fc_mlist_t *moves, fc_player_t player,
-		int depth, unsigned int seconds, size_t num_threads);
-
-int fc_ai_next_move_from_given (fc_ai_t *ai, fc_move_t *move,
-		fc_mlist_t *given, fc_player_t player, int depth,
-		unsigned int seconds, size_t num_threads);
-
-int fc_ai_next_ranked_moves_from_given (fc_ai_t *ai, fc_mlist_t *moves,
+int fc_ai_next_ranked_moves (fc_ai_t *ai, fc_mlist_t *moves,
 		fc_mlist_t *given, fc_player_t player, int depth,
 		unsigned int seconds, size_t num_threads);
 

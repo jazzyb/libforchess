@@ -510,7 +510,11 @@ static int parallel_negascout (fc_ai_t *ai, fc_tpool_t *pool,
 #define ALPHA_MIN INT_MIN
 #define BETA_MAX INT_MAX
 
-int fc_ai_next_move_from_given (fc_ai_t *ai, fc_move_t *ret, fc_mlist_t *given,
+/*
+ * Sets the parameter ret to the best move based on alphabeta pruning of the
+ * minmax game tree.
+ */
+int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_mlist_t *given,
 		fc_player_t player, int depth, unsigned int seconds,
 		size_t num_threads)
 {
@@ -518,24 +522,13 @@ int fc_ai_next_move_from_given (fc_ai_t *ai, fc_move_t *ret, fc_mlist_t *given,
 	fc_mlist_t list;
 
 	fc_mlist_init(&list);
-	rc = fc_ai_next_ranked_moves_from_given(ai, &list, given, player,
-			depth, seconds, num_threads);
+	rc = fc_ai_next_ranked_moves(ai, &list, given, player, depth, seconds,
+			num_threads);
 	if (ret) {
 		fc_move_copy(ret, fc_mlist_get(&list, 0));
 	}
 	fc_mlist_free(&list);
 	return rc;
-}
-
-/*
- * Sets the parameter ret to the best move based on alphabeta pruning of the
- * minmax game tree.
- */
-int fc_ai_next_move (fc_ai_t *ai, fc_move_t *ret, fc_player_t player,
-		int depth, unsigned int seconds, size_t num_threads)
-{
-	return fc_ai_next_move_from_given(ai, ret, NULL, player, depth,
-			seconds, num_threads);
 }
 
 static void move_search (fc_ai_t *ai, fc_mlist_t *moves, fc_mlist_t *given,
@@ -578,9 +571,9 @@ static void threaded_move_search (fc_ai_t *ai, fc_mlist_t *moves,
 	fc_tpool_free(&pool);
 }
 
-int fc_ai_next_ranked_moves_from_given (fc_ai_t *ai, fc_mlist_t *ret,
-		fc_mlist_t *given, fc_player_t player, int depth,
-		unsigned int seconds, size_t num_threads)
+int fc_ai_next_ranked_moves (fc_ai_t *ai, fc_mlist_t *ret, fc_mlist_t *given,
+		fc_player_t player, int depth, unsigned int seconds,
+		size_t num_threads)
 {
 	assert(ai && ai->board && ret);
 	if (fc_board_is_player_out(ai->board, player) || depth < 1) {
@@ -602,12 +595,5 @@ int fc_ai_next_ranked_moves_from_given (fc_ai_t *ai, fc_mlist_t *ret,
 	free_ai_mlists(ai, depth);
 
 	return 1;
-}
-
-int fc_ai_next_ranked_moves (fc_ai_t *ai, fc_mlist_t *moves, fc_player_t player,
-		int depth, unsigned int seconds, size_t num_threads)
-{
-	return fc_ai_next_ranked_moves_from_given(ai, moves, NULL, player,
-			depth, seconds, num_threads);
 }
 
