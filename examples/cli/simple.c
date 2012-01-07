@@ -1,3 +1,5 @@
+/* FIXME The -j option doesn't work now.  Remove all threading code form this
+ * file. */
 #include <assert.h>
 #include <getopt.h>
 #include <stdio.h>
@@ -198,13 +200,12 @@ void get_best_move (fc_game_t *game, fc_move_t *move, fc_player_t player,
 		tmp = calloc(1, sizeof(fc_mlist_t));
 		fc_mlist_init(tmp);
 		fc_ai_init(&ai, fc_game_get_board(game));
-		rc = fc_ai_next_ranked_moves(&ai, tmp, player,
-				fc_game_number_of_players(game) * 2, 0, 1);
+		rc = fc_ai_next_ranked_moves(&ai, tmp, NULL, player,
+				fc_game_number_of_players(game) * 2, 0);
 		assert(rc);
 	}
 	fc_ai_init(&ai, fc_game_get_board(game));
-	rc = fc_ai_next_move_from_given(&ai, move, tmp, player, depth, timeout,
-			threads);
+	rc = fc_ai_next_move(&ai, move, tmp, player, depth, timeout);
 	assert(rc);
 	if (tmp) {
 		fc_mlist_free(tmp);

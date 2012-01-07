@@ -86,11 +86,10 @@ void fc_ai_set_algorithm (fc_ai_t *ai, fc_ai_algo_t algo);
  * @return 1 on success; 0 otherwise
  */
 int fc_ai_next_move (fc_ai_t *ai, fc_move_t *move, fc_mlist_t *given,
-		fc_player_t player, int depth, unsigned int seconds,
-		size_t num_threads);
+		fc_player_t player, int depth, unsigned int seconds);
 
 int fc_ai_next_ranked_moves (fc_ai_t *ai, fc_mlist_t *moves,
 		fc_mlist_t *given, fc_player_t player, int depth,
-		unsigned int seconds, size_t num_threads);
+		unsigned int seconds);
 
 #endif
