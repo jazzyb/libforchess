@@ -25,7 +25,7 @@ START_TEST (test_mlist_init)
 {
 	fc_mlist_t l1;
 	int ret = fc_mlist_init(&l1);
-	fail_unless(ret == 1 && l1.moves && l1.index == 0 && l1.sorted);
+	fail_unless(ret == 1 && l1.moves && l1.index == 0);
 }
 END_TEST
 
@@ -194,16 +194,6 @@ START_TEST (test_mlist_insert2)
 }
 END_TEST
 
-static void print_sorted_indices (fc_mlist_t *list)
-{
-	printf("index == %d\n", list->index);
-	printf("sorted = {");
-	for (int i = 0; i < list->index; i++) {
-		printf("%d, ", list->sorted[i]);
-	}
-	printf("}\n");
-}
-
 START_TEST (test_mlist_delete)
 {
 	fc_move_t move;
@@ -229,17 +219,13 @@ START_TEST (test_mlist_delete)
 	fail_unless(fc_mlist_get(&list, 2)->value == 40);
 	fail_unless(fc_mlist_get(&list, 3)->value == 10);
 
-	//print_sorted_indices(&list);
 	move.value = 250;
 	fail_unless(fc_mlist_insert(&list, &move, move.value));
-	//print_sorted_indices(&list);
 	move.value = 15;
 	fail_unless(fc_mlist_insert(&list, &move, move.value));
 	fail_unless(fc_mlist_delete(&list, 2));
-	//print_sorted_indices(&list);
 	move.value = 62;
 	fail_unless(fc_mlist_insert(&list, &move, move.value));
-	//print_sorted_indices(&list);
 	fail_unless(fc_mlist_get(&list, 0)->value == 250);
 	fail_unless(fc_mlist_get(&list, 1)->value == 100);
 	fail_unless(fc_mlist_get(&list, 2)->value == 62);

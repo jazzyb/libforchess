@@ -69,8 +69,7 @@ typedef struct {
 
 typedef struct {
 	fc_move_t *moves;
-	uint8_t index;
-	uint8_t *sorted;
+	uint32_t index;
 } fc_mlist_t;
 
 typedef struct fc_mlist_iter_ {

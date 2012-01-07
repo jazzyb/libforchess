@@ -64,23 +64,16 @@ int fc_mlist_init (fc_mlist_t *list)
 	if (!list->moves) {
 		return 0;
 	}
-	list->sorted = calloc(FC_DEFAULT_MLIST_SIZE, sizeof(*list->sorted));
-	if (!list->sorted) {
-		free(list->moves);
-		list->moves = NULL;
-		return 0;
-	}
 
 	return 1;
 }
 
 int fc_mlist_copy (fc_mlist_t *dst, fc_mlist_t *src)
 {
-	uint8_t i;
+	uint32_t i;
 
 	for (i = 0; i < src->index; i++) {
 		fc_move_copy(dst->moves + i, src->moves + i);
-		dst->sorted[i] = src->sorted[i];
 	}
 	dst->index = src->index;
 	return 1;
@@ -95,27 +88,24 @@ int fc_mlist_copy (fc_mlist_t *dst, fc_mlist_t *src)
  */
 int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move, int32_t value)
 {
-	uint8_t i;
-	fc_move_t *new, *old;
+	uint32_t i;
+	fc_move_t *old;
 
-	assert((uint32_t)list->index + 1 <= FC_DEFAULT_MLIST_SIZE);
-
-	new = &(list->moves[list->index]);
-	fc_move_copy(new, move);
-	new->value = value;
+	assert(list->index + 1 <= FC_DEFAULT_MLIST_SIZE);
 
 	/*
 	 * TODO binary search might be faster
 	 */
 	for (i = 0; i < list->index; i++) {
-		old = list->moves + list->sorted[i];
-		if (new->value > old->value) {
+		old = list->moves + i;
+		if (value > old->value) {
 			break;
 		}
 	}
-	(void)memmove(list->sorted + i + 1, list->sorted + i,
-			(list->index - i) * sizeof(uint8_t));
-	list->sorted[i] = list->index;
+	(void)memmove(list->moves + i + 1, list->moves + i,
+			(list->index - i) * sizeof(*list->moves));
+	fc_move_copy(list->moves + i, move);
+	list->moves[i].value = value;
 	list->index += 1;
 	return 1;
 }
@@ -129,22 +119,12 @@ int fc_mlist_insert (fc_mlist_t *list, fc_move_t *move, int32_t value)
  */
 int fc_mlist_delete (fc_mlist_t *list, int index)
 {
-	int i, old_index;
-
 	if (index < 0 || index >= list->index) {
 		return 0;
 	}
 
-	old_index = list->sorted[index];
-	memmove(list->sorted + index, list->sorted + index + 1,
-			(list->index - index) * sizeof(uint8_t));
-	memmove(list->moves + old_index, list->moves + old_index + 1,
-			(list->index - old_index) * sizeof(fc_move_t));
-	for (i = 0; i < list->index; i++) {
-		if (list->sorted[i] > old_index) {
-			list->sorted[i] -= 1;
-		}
-	}
+	memmove(list->moves + index, list->moves + index + 1,
+			(list->index - index) * sizeof(*list->moves));
 	list->index -= 1;
 	return 1;
 }
@@ -154,10 +134,10 @@ int fc_mlist_delete (fc_mlist_t *list, int index)
  */
 int fc_mlist_merge (fc_mlist_t *dst, fc_mlist_t *src)
 {
-	uint8_t i;
+	uint32_t i;
 	fc_move_t *move;
 
-	assert((uint32_t)dst->index + (uint32_t)src->index <=
+	assert((uint64_t)dst->index + (uint64_t)src->index <=
 			FC_DEFAULT_MLIST_SIZE);
 
 	for (i = 0; i < src->index; i++) {
@@ -175,7 +155,6 @@ int fc_mlist_merge (fc_mlist_t *dst, fc_mlist_t *src)
 void fc_mlist_free (fc_mlist_t *list)
 {
 	free(list->moves);
-	free(list->sorted);
 	list->index = 0;
 }
 
@@ -203,7 +182,7 @@ fc_move_t *fc_mlist_get (fc_mlist_t *list, int index)
 	if (index >= list->index) {
 		return NULL;
 	}
-	return list->moves + list->sorted[index];
+	return list->moves + index;
 }
 
 int fc_mlist_iter_init (fc_mlist_t *list, fc_mlist_iter_t *iter,
