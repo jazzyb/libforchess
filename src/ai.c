@@ -144,7 +144,7 @@ static int alphabeta (fc_ai_t *ai, fc_mlist_t *ret, fc_mlist_t *given,
 		 * end of the game.  Otherwise the AI will just move from one
 		 * position to the next without making the killing blow.
 		 */
-		return (max) ? score - depth : (-1 * score) + depth;
+		return (max) ? score - depth : depth - score;
 	}
 	if (fc_board_is_player_out(board, player)) {
 		return alphabeta(ai, NULL, NULL, FC_NEXT_PLAYER(player), depth,
@@ -171,7 +171,6 @@ static int alphabeta (fc_ai_t *ai, fc_mlist_t *ret, fc_mlist_t *given,
 		}
 	}
 
-	/* insert the remaining moves if any onto the end of the list */
 	if (ret) {
 		append_remaining_moves_onto_list(ret, &iter);
 	}
