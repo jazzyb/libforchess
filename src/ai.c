@@ -78,6 +78,20 @@ static void create_mlist_iterator (fc_mlist_iter_t *iter, fc_mlist_t *given,
 	}
 }
 
+static void append_remaining_moves_onto_list (fc_mlist_t *list,
+		fc_mlist_iter_t *iter)
+{
+	int32_t min_val;
+	fc_move_t *last;
+
+	last = fc_mlist_get(list, fc_mlist_length(list) - 1);
+	min_val = (last) ? last->value - 1 : 0;
+	while (fc_mlist_iter_next(iter)) {
+		fc_move_t *move = fc_mlist_iter_get_move(iter);
+		fc_mlist_insert(list, move, min_val);
+	}
+}
+
 /*
  * Adjusts the alpha and beta values given the score.  If ret is not NULL, it
  * copies the move to ret.  Returns 1 if the given score was a cutoff for the
@@ -159,10 +173,7 @@ static int alphabeta (fc_ai_t *ai, fc_mlist_t *ret, fc_mlist_t *given,
 
 	/* insert the remaining moves if any onto the end of the list */
 	if (ret) {
-		while (fc_mlist_iter_next(&iter)) {
-			move = fc_mlist_iter_get_move(&iter);
-			fc_mlist_insert(ret, move, INT_MIN);
-		}
+		append_remaining_moves_onto_list(ret, &iter);
 	}
 
 	return (max) ? alpha : beta;
@@ -228,10 +239,7 @@ static int negascout (fc_ai_t *ai, fc_mlist_t *ret, fc_mlist_t *given,
 	}
 
 	if (ret) {
-		while (fc_mlist_iter_next(&iter)) {
-			move = fc_mlist_iter_get_move(&iter);
-			fc_mlist_insert(ret, move, INT_MIN);
-		}
+		append_remaining_moves_onto_list(ret, &iter);
 	}
 
 	return alpha;
