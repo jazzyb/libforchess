@@ -1,5 +1,3 @@
-/* FIXME The -j option doesn't work now.  Remove all threading code form this
- * file. */
 #include <assert.h>
 #include <getopt.h>
 #include <stdio.h>
