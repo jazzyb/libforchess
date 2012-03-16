@@ -36,7 +36,9 @@ TROUBLE-SHOOTING
     "error while loading shared libraries: libforchess.so: cannot open shared
     object file: No such file or directory", then you may need to update your
     LD path.  Try running "sudo ldconfig $(pwd)/lib" from the top level repo
-    directory and try again.
+    directory and try again.  If you do not want to update your library path
+    for the system, you may still be able to run the executable with
+    "/lib/ld-linux.so.2 --library-path ./lib/ <executable>".
 
     If you try to compile the test suite, and you get errors about it not being
     able to find "check", then make sure that check.h is in your include path
