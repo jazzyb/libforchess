@@ -13,13 +13,6 @@ INCLUDES=-I./include
 
 LIBS=-Llib
 
-# Include MacPorts directories for the check library.
-ifeq (darwin, $(findstring darwin,$(OSTYPE)))
-CHECK_INC=-I/opt/local/include
-CHECK_LIB=-L/opt/local/lib
-endif
-CHECK_FLAGS=$(CHECK_INC) $(CHECK_LIB)
-
 TEST_FILES=test/check_forchess.c \
 	   test/check_moves.c \
 	   test/check_board.c \
@@ -46,38 +39,20 @@ EXAMPLE_FILES=example/simple.c example/game.c
 %.o: %.c $(INC_FILES)
 	$(CC) -c -o $@ $(CFLAGS) $(WARN_FLAGS) $(INCLUDES) $<
 
-# static or shared library?
-ifeq ($(STATIC), 1)
-libforchess: $(OBJ_FILES)
-	mkdir -p lib
-	ar cr lib/libforchess.a $^
-	ranlib lib/libforchess.a
-else
 libforchess: $(OBJ_FILES)
 	mkdir -p lib
 	$(CC) -shared -o lib/libforchess.so $^
-endif
 
 # FIXME: C99 standard just makes compiling easier; will need to change this
 # later; see also example and profiler
 check: $(TEST_FILES) libforchess
-	$(CC) -o test_all $(CFLAGS) --std=c99 $(INCLUDES) $(CHECK_FLAGS) $(LIBS) $(TEST_FILES) -lcheck -lforchess
+	$(CC) -o test_all $(CFLAGS) --std=c99 $(INCLUDES) $(LIBS) $(TEST_FILES) -lcheck -lforchess
 	./test_all
 
 example: $(EXAMPLE_FILES) $(INC_FILES) libforchess
 	$(CC) $(CFLAGS) --std=c99 $(INCLUDES) $(LIBS) $(EXAMPLE_FILES) -lforchess
 
-cscope:
-	find src -type f | egrep '.*\.h|.*\.c$$' > cscope.files
-	cscope -b -i cscope.files
-
-# Even though the header files are the dependencies of generating the
-# documentation, sometimes make thinks they are up to date when they aren't.
-# In that case we always want to force doxygen to run.
-docs: $(INC_FILES) force
-	doxygen docs/Doxyfile
-
-all: libforchess check example cscope docs
+all: libforchess check example
 
 # Run the gprof profiler.
 libforchess_gprof: $(SRC_FILES) $(INC_FILES)
@@ -96,5 +71,3 @@ profiler: $(EXAMPLE_FILES) $(INC_FILES) libforchess_gprof
 
 clean:
 	rm -rf test_all a.out src/*.o lib/ *.dSYM docs/man/ gmon.out gprof.output cscope.files cscope.out
-
-force: ;

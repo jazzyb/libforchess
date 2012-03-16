@@ -17,25 +17,30 @@ REQUIREMENTS
     to be installed.  For example, on Ubuntu this can be installed with:
         sudo aptitude install check
 
-    In order to build the documentation files, Doxygen needs to be installed.
-    For example, on Ubuntu this can be installed with:
-        sudo aptitude install doxygen
-
 
 INSTALLATION
     To build the LibForchess AI library run "make libforchess".  This will
-    create the archive file "lib/libforchess.a".  To test the library run
-    "export OSTYPE" followed by "make check".
+    create the shared object file "lib/libforchess.so".  To test the library
+    run "make check".
 
 
 USAGE
-    Documentation in manpage format can be made available by running
-    "make docs".  The relevant documentation will be built and placed in
-    docs/man.  An example program can be found in examples/cli/simple.c which
-    should give a developer an idea of how to build their own Forchess playing
-    program with this API.  In order to build the example program run
-    "make examples".  The resulting program is built as a.out in the top
-    directory.  See "./a.out --help" for instructions.
+    An example program can be found in examples/cli/simple.c which should give
+    a developer an idea of how to build their own Forchess playing program with
+    this API.  In order to build the example program run "make examples".  The
+    resulting program is built as a.out in the top directory.  See
+    "./a.out --help" for instructions.
+
+TROUBLE-SHOOTING
+    If while trying to run the test suite or example program, you get the error:
+    "error while loading shared libraries: libforchess.so: cannot open shared
+    object file: No such file or directory", then you may need to update your
+    LD path.  Try running "sudo ldconfig $(pwd)/lib" from the top level repo
+    directory and try again.
+
+    If you try to compile the test suite, and you get errors about it not being
+    able to find "check", then make sure that check.h is in your include path
+    and libcheck is in the library path.
 
 
 https://github.com/jazzyb/libforchess/
