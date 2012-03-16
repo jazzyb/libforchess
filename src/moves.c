@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "config.h"
 #include "forchess/board.h"
 #include "forchess/moves.h"
 

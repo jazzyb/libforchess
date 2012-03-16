@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <strings.h>
 
+#include "config.h"
 #include "forchess/board.h"
 
 

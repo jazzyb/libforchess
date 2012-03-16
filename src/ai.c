@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <time.h>
 
+#include "config.h"
 #include "forchess/ai.h"
 #include "forchess/board.h"
 #include "forchess/moves.h"

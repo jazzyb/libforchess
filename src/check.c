@@ -21,6 +21,7 @@
 
 #include <assert.h>
 
+#include "config.h"
 #include "forchess/board.h"
 
 static int is_threatened_by_king (fc_board_t *board, fc_player_t player,
