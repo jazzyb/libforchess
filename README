@@ -19,9 +19,9 @@ REQUIREMENTS
 
 
 INSTALLATION
-    To build the LibForchess AI library run "make libforchess".  This will
-    create the shared object file "lib/libforchess.so".  To test the library
-    run "make check".
+    To build the LibForchess AI library run "./configure" followed by "make
+    libforchess".  This will create the shared object file
+    "lib/libforchess.so".  To test the library run "make check".
 
 
 USAGE
