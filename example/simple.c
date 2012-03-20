@@ -108,6 +108,7 @@ int main (int argc, char **argv)
 		}
 	}
 
+	fc_game_free(&game);
 	return 0;
 }
 
